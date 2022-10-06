@@ -1,0 +1,12 @@
+[flake8]
+count = True
+show_source = True
+statistics = True
+max_line_length = 127
+per_file_ignores = 
+docstring_convention = numpy
+ignore = D105, D401, E203, E302
+exclude =
+    .git,
+    __pycache__,
+ignore_decorators=inherit_docs
