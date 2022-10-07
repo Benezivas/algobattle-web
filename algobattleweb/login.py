@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse
 
-from algobattleweb import templates
+from algobattleweb.templates import templates
 
 router = APIRouter(prefix="/login", tags=["login"])
 

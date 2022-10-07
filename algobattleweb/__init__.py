@@ -1,5 +1,8 @@
 from __future__ import annotations
-from pathlib import Path
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI
 
-templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+from algobattleweb.login import router as login_router
+
+app = FastAPI()
+
+app.include_router(login_router)
