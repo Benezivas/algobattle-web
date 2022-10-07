@@ -4,7 +4,7 @@ from enum import Enum
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse
 
-from algobattleweb.templates import templates
+from algobattle_web.templates import templates
 
 router = APIRouter(prefix="/login", tags=["login"])
 
