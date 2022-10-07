@@ -3,20 +3,21 @@
 
 <div class="row justify-content-center mt-5">
 <div class="col-5">
-    {% if error %}
+    {% if error == 1 %}
     <div class="alert alert-danger" role="alert">
-        Error logging in.
+        Invalid token.
+    </div>
+    {% endif %}
+    {% if error == 2 %}
+    <div class="alert alert-danger" role="alert">
+        That email is not registered to a user.
     </div>
     {% endif %}
 
     <form method="post">
         <div class="mb-3">
-            <label for="username" class="form-label">Username</label>
-            <input type="text" class="form-control" id="username" name="username" required="required">
-        </div>
-        <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password" required="required">
+            <label for="email" class="form-label">email address</label>
+            <input type="email" class="form-control" id="username" name="email" required="required" value="{{email}}">
         </div>
         <button type="submit" class="btn btn-primary">Login</button>
     </form>
