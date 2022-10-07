@@ -17,4 +17,5 @@ classifiers = [
 dependencies = [
     "algobattle",
     "fastapi",
+    "jinja2",
 ]
