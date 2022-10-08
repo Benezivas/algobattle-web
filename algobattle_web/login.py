@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import timedelta, datetime
 from enum import Enum
 from typing import cast
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from algobattle_web.database import get_user, user_exists
-from algobattle_web.models.user import User, user_cookie
+from algobattle_web.models.user import User, get_user_maybe, user_cookie
 
 from algobattle_web.templates import templates as t
 from algobattle_web.util import send_email
@@ -26,14 +26,18 @@ class LoginError(Enum):
 
 
 @router.get("", response_class=HTMLResponse)
-async def login_get(request: Request, token: str | None = None):
+async def login_get(request: Request, token: str | None = None, user: User | None = Depends(get_user_maybe)):
     res = decode_login_token(token)
     if isinstance(res, User):
         response = RedirectResponse("/")
         response.set_cookie(**user_cookie(res))
         return response
     else:
-        return t.TemplateResponse("login.jinja", {"request": request, "error": res.value})
+        return t.TemplateResponse("login.jinja", {
+            "request": request,
+            "error": res.value,
+            "logged_in": str(user) if user is not None else "",
+        })
 
 
 @router.post("", response_class=HTMLResponse)

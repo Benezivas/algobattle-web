@@ -1,5 +1,6 @@
 "Module specifying the login page."
 from __future__ import annotations
+from base64 import decode
 from datetime import timedelta, datetime
 from typing import Any, cast
 from uuid import UUID, uuid4
@@ -20,6 +21,12 @@ class User(BaseModel):
     name: str | None = None
     id: UUID = Field(default_factory=uuid4)
     token_id: UUID = Field(default_factory=uuid4)
+
+    def __str__(self) -> str:
+        if self.name is not None:
+            return self.name
+        else:
+            return self.email
 
 add_user(User(email="me@me"))
 
@@ -60,3 +67,7 @@ def get_user(user_token: str | None = Cookie(default=None)) -> User:
         )
     else:
         return user
+
+
+def get_user_maybe(user_token: str | None = Cookie(default=None)) -> User | None:
+    return decode_user_token(user_token)

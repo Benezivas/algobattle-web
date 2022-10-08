@@ -3,6 +3,12 @@
 
 <div class="row justify-content-center mt-5">
 <div class="col-5">
+    {% if logged_in %}
+    <div class="alert alert-warning" role="alert">
+        You are already logged in as {{logged_in}}. Are you sure you want to log in with a different account?
+    </div>
+    {% endif %}
+
     {% if error == 1 %}
     <div class="alert alert-danger" role="alert">
         Email is not registered to a user.
