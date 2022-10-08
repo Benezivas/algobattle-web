@@ -16,4 +16,5 @@ dependencies = [
     "algobattle",
     "fastapi",
     "jinja2",
+    "python-jose[cryptography]",
 ]

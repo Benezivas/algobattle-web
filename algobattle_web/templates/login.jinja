@@ -5,11 +5,15 @@
 <div class="col-5">
     {% if error == 1 %}
     <div class="alert alert-danger" role="alert">
-        Invalid token.
+        Email is not registered to a user.
     </div>
     {% elif error == 2 %}
     <div class="alert alert-danger" role="alert">
-        Email is not registered to a user.
+        Invalid token.
+    </div>
+    {% elif error == 3 %}
+    <div class="alert alert-danger" role="alert">
+        Expired token.
     </div>
     {% endif %}
 
