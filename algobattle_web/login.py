@@ -1,14 +1,14 @@
 "Module specifying the login page."
 from __future__ import annotations
-from dataclasses import field, dataclass
 from datetime import timedelta, datetime
 from enum import Enum
 from typing import cast
-from uuid import UUID, uuid1
-from fastapi import APIRouter, Request, Form
+from uuid import UUID, uuid4
+from fastapi import APIRouter, Request, Form, Cookie, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
+from pydantic import BaseModel, Field
 
 from algobattle_web.templates import templates as t
 from algobattle_web.util import send_email
@@ -18,17 +18,16 @@ router = APIRouter(prefix="/login", tags=["login"])
 ALGORITHM = "HS256"
 
 
-@dataclass
-class User:
+class User(BaseModel):
     email: str
     name: str | None = None
-    id: UUID = field(default_factory=uuid1)
-    token_id: UUID = field(default_factory=uuid1)
+    id: UUID = Field(default_factory=uuid4)
+    token_id: UUID = Field(default_factory=uuid4)
 
 db: dict[UUID, User] = {}
 def add_user(user: User) -> None:
     db[user.id] = user
-add_user(User("me@me"))
+add_user(User(email="me@me"))
 
 def user_exists(email: str) -> bool:
     return any(u.email == email for u in db.values())
@@ -51,10 +50,10 @@ class LoginError(Enum):
 
 @router.get("", response_class=HTMLResponse)
 async def login_get(request: Request, token: str | None = None):
-    res = verify_login_token(token)
+    res = decode_login_token(token)
     if isinstance(res, User):
         response = RedirectResponse("/")
-        response.set_cookie("auth", auth_token(res))
+        response.set_cookie("auth_token", auth_token(res))
         return response
     else:
         return t.TemplateResponse("login.jinja", {"request": request, "error": res.value})
@@ -79,7 +78,7 @@ def login_token(email: str, lifetime: timedelta = timedelta(hours=1)) -> str:
     return jwt.encode(payload, JWT_SECRET, ALGORITHM)
 
 
-def verify_login_token(token: str | None) -> User | LoginError:
+def decode_login_token(token: str | None) -> User | LoginError:
     if token is None:
         return LoginError.NoToken
     try:
@@ -98,8 +97,34 @@ def verify_login_token(token: str | None) -> User | LoginError:
 def auth_token(user: User):
     payload = {
         "type": "auth",
-        "user_id": str(user.id),
-        "token_id": str(user.token_id),
+        "user_id": user.id.hex,
+        "token_id": user.token_id.hex,
         "exp": datetime.now() + timedelta(weeks=4)
     }
     return jwt.encode(payload, JWT_SECRET, ALGORITHM)
+
+
+def decode_auth_token(token: str | None) -> User | None:
+    if token is None:
+        return
+    try:
+        payload = jwt.decode(token, JWT_SECRET, ALGORITHM)
+        if payload["type"] == "auth":
+            user_id = UUID(cast(str, payload["user_id"]))
+            token_id = UUID(cast(str, payload["token_id"]))
+            if user_id in db and db[user_id].token_id == token_id:
+                return db[user_id]
+    except (JWTError, ExpiredSignatureError, NameError):
+        return
+
+
+def get_curr_user(auth_token: str | None = Cookie(default=None)) -> User:
+    user = decode_auth_token(auth_token)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+            headers={"Location": "/login"}
+        )
+    else:
+        return user
+
