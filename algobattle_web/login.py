@@ -6,7 +6,7 @@ from enum import Enum
 from typing import cast
 from uuid import UUID, uuid1
 from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 
@@ -47,8 +47,7 @@ async def login_get(request: Request, token: str | None = None):
     res = verify_login_token(token)
     if isinstance(res, str):
         # give session token
-        # redirect to user page
-        return "user page"
+        return RedirectResponse("/")
     else:
         return t.TemplateResponse("login.jinja", {"request": request, "error": res.value})
 
