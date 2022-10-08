@@ -7,10 +7,9 @@
     <div class="alert alert-danger" role="alert">
         Invalid token.
     </div>
-    {% endif %}
-    {% if error == 2 %}
+    {% elif error == 2 %}
     <div class="alert alert-danger" role="alert">
-        That email is not registered to a user.
+        Email is not registered to a user.
     </div>
     {% endif %}
 
