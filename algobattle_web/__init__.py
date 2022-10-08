@@ -2,7 +2,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from algobattle_web.login import router as login
-from algobattle_web.homepage import router as home
+from algobattle_web.home import router as home
 
 app = FastAPI()
 
