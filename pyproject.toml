@@ -17,6 +17,8 @@ dependencies = [
     "fastapi",
     "jinja2",
     "python-jose[cryptography]",
+    "sqlalchemy",
+    "sqlalchemy_utils",
 ]
 
 [tool.pyright]

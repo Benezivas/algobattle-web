@@ -1,22 +1,21 @@
 "Module specifying the login page."
 from __future__ import annotations
-from typing import Any
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-from uuid import UUID
+from algobattle_web.secrets import SQLALCHEMY_DATABASE_URL
 
 
 
-db: dict[UUID, Any] = {}
-def add_user(user: Any) -> None:
-    db[user.id] = user
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-def user_exists(email: str) -> bool:
-    return any(u.email == email for u in db.values())
-
-def get_user(email:str) -> Any | None:
-    users = [u for u in db.values() if u.email == email]
-    if users:
-        return users[0]
-    else:
-        return None
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 

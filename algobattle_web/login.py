@@ -7,9 +7,9 @@ from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from algobattle_web.database import get_user, user_exists
-from algobattle_web.models.user import User, get_user_maybe, user_cookie
-
+from sqlalchemy.orm import Session
+from algobattle_web.database import get_db
+from algobattle_web.models.user import User, curr_user_maybe, get_user, user_cookie
 from algobattle_web.templates import templates as t
 from algobattle_web.util import send_email
 from algobattle_web.secrets import JWT_SECRET
@@ -26,8 +26,8 @@ class LoginError(Enum):
 
 
 @router.get("", response_class=HTMLResponse)
-async def login_get(request: Request, token: str | None = None, user: User | None = Depends(get_user_maybe)):
-    res = decode_login_token(token)
+async def login_get(request: Request, db: Session = Depends(get_db), token: str | None = None, user: User | None = Depends(curr_user_maybe)):
+    res = decode_login_token(db, token)
     if isinstance(res, User):
         response = RedirectResponse("/")
         response.set_cookie(**user_cookie(res))
@@ -36,13 +36,13 @@ async def login_get(request: Request, token: str | None = None, user: User | Non
         return t.TemplateResponse("login.jinja", {
             "request": request,
             "error": res.value,
-            "logged_in": str(user) if user is not None else "",
+            "logged_in": user.name if user is not None else "",
         })
 
 
 @router.post("", response_class=HTMLResponse)
-async def login_post(request: Request, email: str = Form()):
-    if user_exists(email):
+async def login_post(request: Request, db: Session = Depends(get_db), email: str = Form()):
+    if get_user(db, email) is not None:
         token = login_token(email)
         send_email(email, f"{request.url_for('login_post')}?token={token}")
         return t.TemplateResponse("login_email_sent.jinja", {"request": request})
@@ -59,13 +59,13 @@ def login_token(email: str, lifetime: timedelta = timedelta(hours=1)) -> str:
     return jwt.encode(payload, JWT_SECRET, ALGORITHM)
 
 
-def decode_login_token(token: str | None) -> User | LoginError:
+def decode_login_token(db: Session, token: str | None) -> User | LoginError:
     if token is None:
         return LoginError.NoToken
     try:
         payload = jwt.decode(token, JWT_SECRET, ALGORITHM)
         if payload["type"] == "login":
-            user = get_user(cast(str, payload["email"]))
+            user = get_user(db, cast(str, payload["email"]))
             if user is not None:
                 return user
     except ExpiredSignatureError:

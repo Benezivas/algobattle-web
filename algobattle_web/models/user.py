@@ -6,44 +6,61 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Cookie, HTTPException, Depends, status
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from pydantic import BaseModel, Field
+from sqlalchemy import Column, String
+from sqlalchemy_utils import UUIDType
+from sqlalchemy.orm import Session
 
 from algobattle_web.secrets import JWT_SECRET
-from algobattle_web.database import db, add_user
+from algobattle_web.database import Base, get_db
+from algobattle_web.util import OrmModel
 
 router = APIRouter(prefix="/login", tags=["login"])
 ALGORITHM = "HS256"
 
 
-class User(BaseModel):
+class User(Base):
+    __tablename__ = "users"
+    id = Column(UUIDType, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    name = Column(String, index=True)
+    token_id = Column(UUIDType, index=True)
+
+
+class UserBase(OrmModel):
     email: str
-    name: str | None = None
-    id: UUID = Field(default_factory=uuid4)
-    token_id: UUID = Field(default_factory=uuid4)
+    name: str
 
-    def __str__(self) -> str:
-        if self.name is not None:
-            return self.name
-        else:
-            return self.email
+class UserCreate(UserBase):
+    pass
 
-add_user(User(email="me@me"))
+class UserSchema(UserBase):
+    id: UUID
+    token_id: UUID
 
-def user_token(user: User) -> str:
+def get_user(db: Session, user: UUID | str) -> User | None:
+    """Queries the user db by either the user id or their email."""
+    filter_type = User.email if isinstance(user, str) else User.id
+    return db.query(User).filter(filter_type == user).first()
+
+def create_user(db: Session, user: UserCreate) -> User:
+    new_user = User(**user.dict(), id=uuid4(), token_id=uuid4())
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+
+def user_cookie(user: User) -> dict[str, Any]:
     payload = {
         "type": "user",
         "user_id": user.id.hex,
         "token_id": user.token_id.hex,
         "exp": datetime.now() + timedelta(weeks=4)
     }
-    return jwt.encode(payload, JWT_SECRET, ALGORITHM)
+    return {"key": "user_token", "value": jwt.encode(payload, JWT_SECRET, ALGORITHM)}
 
 
-def user_cookie(user: User) -> dict[str, Any]:
-    return {"key": "user_token", "value": user_token(user)}
-
-
-def decode_user_token(token: str | None) -> User | None:
+def decode_user_token(db: Session, token: str | None) -> User | None:
     if token is None:
         return
     try:
@@ -51,17 +68,18 @@ def decode_user_token(token: str | None) -> User | None:
         if payload["type"] == "user":
             user_id = UUID(cast(str, payload["user_id"]))
             token_id = UUID(cast(str, payload["token_id"]))
-            if user_id in db and db[user_id].token_id == token_id:
-                return db[user_id]
+            user = get_user(db, user_id)
+            if user is not None and user.token_id == token_id:
+                return user
     except (JWTError, ExpiredSignatureError, NameError):
         return
 
 
-def get_user_maybe(user_token: str | None = Cookie(default=None)) -> User | None:
-    return decode_user_token(user_token)
+def curr_user_maybe(db: Session = Depends(get_db), user_token: str | None = Cookie(default=None)) -> User | None:
+    return decode_user_token(db, user_token)
 
 
-def get_user(user: User | None = Depends(get_user_maybe)) -> User:
+def curr_user(user: User | None = Depends(curr_user_maybe)) -> User:
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_307_TEMPORARY_REDIRECT,
