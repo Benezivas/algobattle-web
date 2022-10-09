@@ -1,10 +1,9 @@
-"Module specifying the login page."
+"User model and authentication system."
 from __future__ import annotations
-from base64 import decode
 from datetime import timedelta, datetime
 from typing import Any, cast
 from uuid import UUID, uuid4
-from fastapi import APIRouter, Cookie, HTTPException, status
+from fastapi import APIRouter, Cookie, HTTPException, Depends, status
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from pydantic import BaseModel, Field
@@ -58,8 +57,11 @@ def decode_user_token(token: str | None) -> User | None:
         return
 
 
-def get_user(user_token: str | None = Cookie(default=None)) -> User:
-    user = decode_user_token(user_token)
+def get_user_maybe(user_token: str | None = Cookie(default=None)) -> User | None:
+    return decode_user_token(user_token)
+
+
+def get_user(user: User | None = Depends(get_user_maybe)) -> User:
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_307_TEMPORARY_REDIRECT,
@@ -67,7 +69,3 @@ def get_user(user_token: str | None = Cookie(default=None)) -> User:
         )
     else:
         return user
-
-
-def get_user_maybe(user_token: str | None = Cookie(default=None)) -> User | None:
-    return decode_user_token(user_token)
