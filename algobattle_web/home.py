@@ -12,7 +12,7 @@ router = APIRouter(tags=["home"])
 
 @router.get("/", response_class=HTMLResponse)
 async def home_get(request: Request, user: User = Depends(curr_user)):
-    return t.TemplateResponse("home.jinja", {"request": request})
+    return t.TemplateResponse("home.jinja", {"request": request, "user": user.name})
 
 
 
