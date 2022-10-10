@@ -10,7 +10,7 @@ from sqlalchemy import Column, String
 from sqlalchemy_utils import UUIDType
 from sqlalchemy.orm import Session
 
-from algobattle_web.secrets import JWT_SECRET
+from algobattle_web.config import SECRET_KEY
 from algobattle_web.database import Base, get_db
 from algobattle_web.util import OrmModel
 
@@ -60,14 +60,14 @@ def user_cookie(user: User) -> dict[str, Any]:
         "token_id": user.token_id.hex,
         "exp": datetime.now() + timedelta(weeks=4)
     }
-    return {"key": "user_token", "value": jwt.encode(payload, JWT_SECRET, ALGORITHM)}
+    return {"key": "user_token", "value": jwt.encode(payload, SECRET_KEY, ALGORITHM)}
 
 
 def decode_user_token(db: Session, token: str | None) -> User | None:
     if token is None:
         return
     try:
-        payload = jwt.decode(token, JWT_SECRET, ALGORITHM)
+        payload = jwt.decode(token, SECRET_KEY, ALGORITHM)
         if payload["type"] == "user":
             user_id = UUID(cast(str, payload["user_id"]))
             token_id = UUID(cast(str, payload["token_id"]))

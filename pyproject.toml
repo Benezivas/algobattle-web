@@ -19,6 +19,7 @@ dependencies = [
     "python-jose[cryptography]",
     "sqlalchemy",
     "sqlalchemy_utils",
+    "tomli",
 ]
 
 [tool.pyright]

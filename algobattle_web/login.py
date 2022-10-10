@@ -12,7 +12,7 @@ from algobattle_web.database import get_db
 from algobattle_web.models.user import User, curr_user_maybe, get_user, user_cookie
 from algobattle_web.templates import templates as t
 from algobattle_web.util import send_email
-from algobattle_web.secrets import JWT_SECRET
+from algobattle_web.config import SECRET_KEY
 
 router = APIRouter(prefix="/login", tags=["login"])
 ALGORITHM = "HS256"
@@ -56,14 +56,14 @@ def login_token(email: str, lifetime: timedelta = timedelta(hours=1)) -> str:
         "email": email,
         "exp": datetime.now() + lifetime,
     }
-    return jwt.encode(payload, JWT_SECRET, ALGORITHM)
+    return jwt.encode(payload, SECRET_KEY, ALGORITHM)
 
 
 def decode_login_token(db: Session, token: str | None) -> User | LoginError:
     if token is None:
         return LoginError.NoToken
     try:
-        payload = jwt.decode(token, JWT_SECRET, ALGORITHM)
+        payload = jwt.decode(token, SECRET_KEY, ALGORITHM)
         if payload["type"] == "login":
             user = get_user(db, cast(str, payload["email"]))
             if user is not None:
