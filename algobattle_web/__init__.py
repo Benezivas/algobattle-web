@@ -4,9 +4,9 @@ from fastapi import FastAPI
 
 import algobattle_web.database as database
 from algobattle_web.models.user import UserCreate, create_user, get_user
-from algobattle_web.login import router as login
-from algobattle_web.home import router as home
 from algobattle_web.config import ADMIN_EMAIL
+from algobattle_web.routers.login import router as login
+from algobattle_web.routers.home import router as home
 
 
 
