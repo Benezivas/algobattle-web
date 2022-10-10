@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from algobattle_web.config import SECRET_KEY
 from algobattle_web.database import Base, get_db
-from algobattle_web.util import OrmModel
+from algobattle_web.util import BaseSchema
 
 router = APIRouter(prefix="/login", tags=["login"])
 ALGORITHM = "HS256"
@@ -26,7 +26,7 @@ class User(Base):
     token_id = Column(UUIDType, index=True)
 
 
-class UserBase(OrmModel):
+class UserBase(BaseSchema):
     email: str
     name: str
 

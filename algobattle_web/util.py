@@ -8,7 +8,7 @@ def send_email(email: str, content: str):
     print(f"sending email to {email}: {content}")
 
 
-class OrmModel(BaseModel):
+class BaseSchema(BaseModel):
     class Config:
         orm_mode = True
 
