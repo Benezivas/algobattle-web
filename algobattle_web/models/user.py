@@ -43,6 +43,9 @@ def get_user(db: Session, user: UUID | str) -> User | None:
     return db.query(User).filter(filter_type == user).first()
 
 def create_user(db: Session, user: UserCreate) -> User:
+    """Creates a new user, raises `ValueError` if the email is already in use."""
+    if get_user(db, user.email) is not None:
+        raise ValueError
     new_user = User(**user.dict(), id=uuid4(), token_id=uuid4())
     db.add(new_user)
     db.commit()
