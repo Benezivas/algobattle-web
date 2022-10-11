@@ -6,6 +6,7 @@
     {% if error %}
     <div class="alert alert-danger" role="alert">
         The email {{error.email}} is already used by another user!
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     {% endif %}
     <form method="post">
