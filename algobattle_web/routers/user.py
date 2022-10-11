@@ -12,7 +12,7 @@ router = APIRouter(prefix="/user", tags=["user"])
 
 @router.get("", response_class=HTMLResponse)
 @templated
-async def user_get(user: User = Depends(curr_user)):
+async def user_get():
     return "user.jinja"
 
 
