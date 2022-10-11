@@ -28,6 +28,12 @@ class User(Base):
     name: str = Column(String, index=True)  # type: ignore
     token_id: UUID = Column(UUIDType, index=True)   # type: ignore
 
+    def __eq__(self, o: object) -> bool:
+        if isinstance(o, User):
+            return self.id == o.id
+        else:
+            return super().__eq__(o)
+
 
 class UserBase(BaseSchema):
     email: str
@@ -58,10 +64,11 @@ def create_user(db: Session, user: UserCreate) -> User:
 
 def update_user(db: Session, user: User, email: str | None = None, name: str | None = None) -> User:
     if email is not None:
-        if get_user(db, email) != user:
-            user.email = email
-        else:
+        email_user = get_user(db, email)
+        if email_user is not None and email_user != user:
             raise EmailTaken(email)
+        else:
+            user.email = email
     if name is not None:
         user.name = name
     db.commit()
