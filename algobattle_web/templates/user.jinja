@@ -1,14 +1,16 @@
 {% extends "sidebar.jinja" %}
 {% block content %}
 <div class="row justify-content-center mt-5">
-<div class="col-5">
-<h3>Edit user data</h3>
+<div class="col-9">
     {% if error %}
     <div class="alert alert-danger" role="alert">
         The email {{error.email}} is already used by another user!
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     {% endif %}
+</div>
+<div class="col-6">
+<h3>Edit user data</h3>
     <form method="post">
         <div class="mb-3">
             <label for="email" class="form-label">email address</label>
