@@ -7,15 +7,13 @@ from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy.orm import Session
-from algobattle_web.database import get_db
+from algobattle_web.database import get_db, Session
 from algobattle_web.models.user import User, curr_user_maybe, get_user, user_cookie
 from algobattle_web.templates import templates as t
 from algobattle_web.util import send_email
-from algobattle_web.config import SECRET_KEY
+from algobattle_web.config import SECRET_KEY, ALGORITHM
 
 router = APIRouter(prefix="/login", tags=["login"])
-ALGORITHM = "HS256"
 
 
 class LoginError(Enum):

@@ -3,6 +3,8 @@ import tomli
 from pathlib import Path
 from base64 import b64decode
 
+ALGORITHM = "HS256"
+
 try:
     with open(Path(__file__).parent / "config.toml", "rb") as f:
         toml_dict = tomli.load(f)

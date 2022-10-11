@@ -1,5 +1,6 @@
 "User model and authentication system."
 from __future__ import annotations
+from dataclasses import dataclass
 from datetime import timedelta, datetime
 from typing import Any, cast
 from uuid import UUID, uuid4
@@ -8,22 +9,24 @@ from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Column, String
 from sqlalchemy_utils import UUIDType
-from sqlalchemy.orm import Session
 
-from algobattle_web.config import SECRET_KEY
-from algobattle_web.database import Base, get_db
+from algobattle_web.config import SECRET_KEY, ALGORITHM
+from algobattle_web.database import get_db, Base, Session
 from algobattle_web.util import BaseSchema
 
 router = APIRouter(prefix="/login", tags=["login"])
-ALGORITHM = "HS256"
 
+
+@dataclass
+class EmailTaken(Exception):
+    email: str
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(UUIDType, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    name = Column(String, index=True)
-    token_id = Column(UUIDType, index=True)
+    id: UUID = Column(UUIDType, primary_key=True, index=True)   # type: ignore
+    email: str = Column(String, unique=True, index=True)    # type: ignore
+    name: str = Column(String, index=True)  # type: ignore
+    token_id: UUID = Column(UUIDType, index=True)   # type: ignore
 
 
 class UserBase(BaseSchema):
@@ -43,14 +46,26 @@ def get_user(db: Session, user: UUID | str) -> User | None:
     return db.query(User).filter(filter_type == user).first()
 
 def create_user(db: Session, user: UserCreate) -> User:
-    """Creates a new user, raises `ValueError` if the email is already in use."""
+    """Creates a new user, raises `EmailTaken` if the email is already in use."""
     if get_user(db, user.email) is not None:
-        raise ValueError
+        raise EmailTaken(user.email)
     new_user = User(**user.dict(), id=uuid4(), token_id=uuid4())
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
+
+
+def update_user(db: Session, user: User, email: str | None = None, name: str | None = None) -> User:
+    if email is not None:
+        if get_user(db, email) != user:
+            user.email = email
+        else:
+            raise EmailTaken(email)
+    if name is not None:
+        user.name = name
+    db.commit()
+    return user
 
 
 def user_cookie(user: User) -> dict[str, Any]:
