@@ -16,7 +16,12 @@ def templated(fn: Callable[P, Awaitable[Tuple[str, dict[str, Any]] | str]]) -> C
             template_file, context = ret
         else:
             template_file, context = ret, {}
-        return templates.TemplateResponse(template_file, {"request": request} | context)
+
+        new_context: dict[str, Any] = {"request": request}
+        if "user" in kwargs:
+            new_context["user"] = kwargs["user"]
+            
+        return templates.TemplateResponse(template_file, new_context | context)
 
     annotations = {n: Parameter.empty for n in signature(fn).parameters} | get_annotations(fn, eval_str=True)
     parameters = [p.replace(annotation=annotations[p.name]) for p in signature(fn).parameters.values()]
@@ -37,7 +42,12 @@ def templated_sync(fn: Callable[P, Tuple[str, dict[str, Any]] | str]) -> Callabl
             template_file, context = ret
         else:
             template_file, context = ret, {}
-        return templates.TemplateResponse(template_file, {"request": request} | context)
+
+        new_context: dict[str, Any] = {"request": request}
+        if "user" in kwargs:
+            new_context["user"] = kwargs["user"]
+            
+        return templates.TemplateResponse(template_file, new_context | context)
 
     annotations = {n: Parameter.empty for n in signature(fn).parameters} | get_annotations(fn, eval_str=True)
     parameters = [p.replace(annotation=annotations[p.name]) for p in signature(fn).parameters.values()]

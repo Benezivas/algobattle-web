@@ -13,7 +13,7 @@ router = APIRouter(prefix="/user", tags=["user"])
 @router.get("", response_class=HTMLResponse)
 @templated
 async def user_get(user: User = Depends(curr_user)):
-    return "user.jinja", {"user": user}
+    return "user.jinja"
 
 
 @router.post("", response_class=HTMLResponse)
@@ -24,7 +24,7 @@ async def user_post(
     email: str | None = Form(default=None),
     name: str | None = Form(default=None),
 ):
-    context: dict[str, Any] = {"user": user}
+    context: dict[str, Any] = {}
     try:
         update_user(db, user, email, name)
     except EmailTaken as e:
