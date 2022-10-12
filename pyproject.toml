@@ -24,3 +24,6 @@ dependencies = [
 
 [tool.pyright]
 diagnosticMode = "workspace"
+
+[tool.setuptools]
+packages = ["algobattle_web"]
