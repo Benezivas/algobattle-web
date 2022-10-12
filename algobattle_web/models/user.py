@@ -8,10 +8,12 @@ from fastapi import Cookie, HTTPException, Depends, status
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Column, String, Boolean
+from sqlalchemy.orm import relationship, RelationshipProperty as Rel
 from sqlalchemy_utils import UUIDType
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import get_db, Base, Session
+from algobattle_web.models.team import team_members, Team
 from algobattle_web.util import BaseSchema
 
 
@@ -26,6 +28,8 @@ class User(Base):
     name: str = Column(String)  # type: ignore
     token_id: UUID = Column(UUIDType, default=uuid4)   # type: ignore
     is_admin: bool = Column(Boolean, default=False) # type: ignore
+
+    teams: Rel[list[Team]] = relationship("Team", secondary=team_members, back_populates="members")
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, User):
