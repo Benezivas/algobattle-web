@@ -21,6 +21,11 @@
                         <span class="d-none d-sm-inline mx-1">{{user.name}}</span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
+                        {% if user.teams.__len__() > 0 %}
+                        <li>
+                            <a class="dropdown-item" href="/teams">Teams</a>
+                        </li>
+                        {% endif %}
                         <li><a class="dropdown-item" href="/user">Profile</a></li>
                         <li>
                             <hr class="dropdown-divider">
