@@ -18,10 +18,10 @@
                 <hr>
                 <div class="btn-group dropup pb-4">
                     <a type="button" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="d-none d-sm-inline mx-1">{{user.name}}</span>
+                        <i class="bi bi-person-circle"></i> <span class="d-none d-sm-inline mx-1">{{user.name}}</span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
-                        {% if user.teams.__len__() > 0 %}
+                        {% if user.teams %}
                         <li>
                             <a class="dropdown-item" href="/teams">Teams</a>
                         </li>
