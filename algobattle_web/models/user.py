@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Cookie, HTTPException, Depends, status
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Boolean
 from sqlalchemy_utils import UUIDType
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
@@ -27,6 +27,7 @@ class User(Base):
     email: str = Column(String, unique=True, index=True)    # type: ignore
     name: str = Column(String, index=True)  # type: ignore
     token_id: UUID = Column(UUIDType, index=True)   # type: ignore
+    is_admin: bool = Column(Boolean, default=False) # type: ignore
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, User):
