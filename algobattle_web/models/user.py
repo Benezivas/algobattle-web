@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta, datetime
 from typing import Any, cast
 from uuid import UUID, uuid4
-from fastapi import APIRouter, Cookie, HTTPException, Depends, status
+from fastapi import Cookie, HTTPException, Depends, status
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Column, String, Boolean
@@ -13,8 +13,6 @@ from sqlalchemy_utils import UUIDType
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import get_db, Base, Session
 from algobattle_web.util import BaseSchema
-
-router = APIRouter(prefix="/login", tags=["login"])
 
 
 @dataclass
