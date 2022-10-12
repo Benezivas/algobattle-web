@@ -7,18 +7,18 @@
             <div class="d-flex flex-column px-3 pt-2 text-white min-vh-100">
                 <a href="/" class="d-flex align-items-center pb-3 mb-md-0 me-md-auto text-white text-decoration-none">
                     <span class="fs-5 d-none d-sm-inline">Algobattle</span>
-                </a>          
+                </a>
                 <hr>
                 <ul class="nav nav-pills flex-column mb-auto" id="menu">
                     <li class="nav-item">
-                        <a href="/" class="nav-link align-middle px-0">
+                        <a href="/" class="nav-link align-middle {{'active' if request.url.path == '/'}}">
                             <i class="bi bi-house"></i> <span class="ms-1 d-none d-sm-inline">Home</span>
                         </a>
                     </li>
                     {% if user.is_admin %}
                     <hr>
                     <li class="nav-item">
-                        <a href="/admin/users" class="nav-link align-middle px-0">
+                        <a href="/admin/users" class="nav-link align-middle {{'active' if request.url.path == '/admin/users'}}">
                             <i class="bi bi-people"></i></i> <span class="ms-1 d-none d-sm-inline">Users</span>
                         </a>
                     </li>
