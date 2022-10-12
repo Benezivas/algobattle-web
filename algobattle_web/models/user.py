@@ -23,10 +23,10 @@ class EmailTaken(Exception):
 
 class User(Base):
     __tablename__ = "users"
-    id: UUID = Column(UUIDType, primary_key=True, index=True)   # type: ignore
-    email: str = Column(String, unique=True, index=True)    # type: ignore
-    name: str = Column(String, index=True)  # type: ignore
-    token_id: UUID = Column(UUIDType, index=True)   # type: ignore
+    id: UUID = Column(UUIDType, primary_key=True, default=uuid4)   # type: ignore
+    email: str = Column(String, unique=True)    # type: ignore
+    name: str = Column(String)  # type: ignore
+    token_id: UUID = Column(UUIDType, default=uuid4)   # type: ignore
     is_admin: bool = Column(Boolean, default=False) # type: ignore
 
     def __eq__(self, o: object) -> bool:
@@ -56,7 +56,7 @@ def create_user(db: Session, user: UserCreate) -> User:
     """Creates a new user, raises `EmailTaken` if the email is already in use."""
     if get_user(db, user.email) is not None:
         raise EmailTaken(user.email)
-    new_user = User(**user.dict(), id=uuid4(), token_id=uuid4())
+    new_user = User(**user.dict())
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
