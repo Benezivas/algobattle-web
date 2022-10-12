@@ -62,12 +62,13 @@ def _fix_signature(inner: Callable[P, S], fn: Callable[R, Any]) -> Tuple[Callabl
         new_parameters.append(Parameter("request", Parameter.POSITIONAL_OR_KEYWORD, annotation=Request))
     else:
         orig_params.add("request")
+    new_parameters.extend(parameters)
     if "user" not in annotations:
         new_parameters.append(Parameter("user", Parameter.POSITIONAL_OR_KEYWORD, annotation=User, default=Depends(curr_user)))
     else:
         orig_params.add("user")
     inner.__signature__ = Signature(
-        parameters = [*new_parameters, *parameters],
+        parameters = new_parameters,
         return_annotation = signature(inner).return_annotation,
     )
     inner.__annotations__ = {"request": Request, "user": User, **inner.__annotations__}
