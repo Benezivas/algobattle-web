@@ -8,6 +8,7 @@ from algobattle_web.config import ADMIN_EMAIL
 from algobattle_web.routers.login import router as login
 from algobattle_web.routers.home import router as home
 from algobattle_web.routers.user import router as user
+from algobattle_web.routers.admin import router as admin
 
 
 
@@ -21,5 +22,5 @@ app = FastAPI()
 app.include_router(login)
 app.include_router(home)
 app.include_router(user)
-
+app.include_router(admin)
 
