@@ -75,7 +75,11 @@
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-                        <li><a class="dropdown-item" href="/user/logout">Sign out</a></li>
+                        <li>
+                            <form action="/user/logout" method="post">
+                                <button class="dropdown-item" type="submit" name="LogoutButton" value="test">Sign out</button>
+                            </form>
+                        </li>
                     </ul>
                 </div>
             </div>
