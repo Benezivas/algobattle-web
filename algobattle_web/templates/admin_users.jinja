@@ -9,6 +9,7 @@
         <th scope="col">Name</th>
         <th scope="col">Email</th>
         <th scope="col">Teams</th>
+        <th scope="col"></th>
       </tr>
     </thead>
     <tbody>
@@ -17,6 +18,19 @@
         <td>{{ usr.name }}{%if usr.is_admin%} <i class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>{%endif%}</td>
         <td>{{ usr.email }}</td>
         <td>{{ usr.teams | join(", ") }}</td>
+        <td class="text-center">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Edit user">
+            {% if usr != user %}
+            <button type="button" class="btn btn-outline-success" data-bs-toggle="tooltip" title="{{'Add' if usr.is_admin else 'Remove'}} admin permissions">
+              <i class="bi bi-patch-{{'minus' if usr.is_admin else 'plus'}}-fill"></i>
+            </button>
+            {% endif %}
+            <button type="button" class="btn btn-outline-warning" data-bs-toggle="tooltip" title="Edit"><i class="bi bi-pencil-fill"></i></button>
+            {% if usr != user %}
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="tooltip" title="Delete"><i class="bi bi-x"></i></button>
+            {% endif %}
+          </div>
+        </td>
       </tr>
     {% endfor %}
     </tbody>
