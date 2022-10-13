@@ -1,6 +1,26 @@
 {% extends "base.jinja" %}
 {% block content %}
 
-admin users page
+<div class="col-8">
+  <h3>Users</h3>
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Email</th>
+        <th scope="col">Teams</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for usr in users %}
+      <tr {% if usr == user %} class="table-primary" {% endif %}>
+        <td>{{ usr.name }}{%if usr.is_admin%} <i class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>{%endif%}</td>
+        <td>{{ usr.email }}</td>
+        <td>{{ usr.teams | join(", ") }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 
 {% endblock %}

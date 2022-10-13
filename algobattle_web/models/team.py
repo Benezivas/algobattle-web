@@ -34,3 +34,6 @@ class Team(Base):
 
     context: Rel[Context] = relationship("Context", back_populates="teams", uselist=False)
     members: Rel[list["User"]] = relationship("User", secondary=team_members, back_populates="teams")
+
+    def __str__(self) -> str:
+        return self.name
