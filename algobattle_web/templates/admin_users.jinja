@@ -21,7 +21,7 @@
         <td class="text-center">
           <div class="btn-group btn-group-sm" role="group" aria-label="Edit user">
             {% if usr != user %}
-            <button type="button" class="btn btn-outline-success" data-bs-toggle="tooltip" title="{{'Add' if usr.is_admin else 'Remove'}} admin permissions">
+            <button type="button" class="btn btn-outline-success" data-bs-toggle="tooltip" title="{{'Remove' if usr.is_admin else 'Make'}} admin">
               <i class="bi bi-patch-{{'minus' if usr.is_admin else 'plus'}}-fill"></i>
             </button>
             {% endif %}
