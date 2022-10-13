@@ -43,7 +43,7 @@ async def login_post(request: Request, db: Session = Depends(get_db), email: str
     if get_user(db, email) is not None:
         token = login_token(email)
         send_email(email, f"{request.url_for('login_post')}?token={token}")
-        return t.TemplateResponse("login_email_sent.jinja", {"request": request})
+        return t.TemplateResponse("login.jinja", {"request": request, "email_sent": True})
     else:
         return t.TemplateResponse("login.jinja", {"request": request, "email": email, "error": LoginError.UnregisteredUser.value})
 

@@ -8,6 +8,11 @@
     <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
   {% endif %}
+  {% if email_sent %}
+  <div class="alert alert-success" role="alert">
+    We've sent you an email, click the link in it to login.
+  </div>
+  {% endif %}
 
   {% if error == 1 %}
   <div class="alert alert-danger" role="alert">
@@ -26,6 +31,7 @@
   </div>
   {% endif %}
 </div>
+{% if not email_sent %}
 <div class="col-6">
   <form method="post">
     <div class="mb-3">
@@ -35,5 +41,6 @@
     <button type="submit" class="btn btn-primary">Login</button>
   </form>
 </div>
+{% endif %}
 
 {% endblock %}
