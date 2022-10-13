@@ -1,40 +1,39 @@
 {% extends "base.jinja" %}
 {% block content %}
 
-<div class="row justify-content-center mt-5">
-  <div class="col-5">
-    {% if logged_in %}
-    <div class="alert alert-warning" role="alert">
-      You are already logged in as {{logged_in}}. Are you sure you want to log in with a different account?
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endif %}
-
-    {% if error == 1 %}
-    <div class="alert alert-danger" role="alert">
-      Email is not registered to a user.
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% elif error == 2 %}
-    <div class="alert alert-danger" role="alert">
-      Invalid token.
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% elif error == 3 %}
-    <div class="alert alert-danger" role="alert">
-      Expired token.
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    {% endif %}
-
-    <form method="post">
-      <div class="mb-3">
-        <label for="email" class="form-label">email address</label>
-        <input type="email" class="form-control" id="username" name="email" required="required" value="{{email}}">
-      </div>
-      <button type="submit" class="btn btn-primary">Login</button>
-    </form>
+<div class="col-8">
+  {% if logged_in %}
+  <div class="alert alert-warning" role="alert">
+    You are already logged in as {{logged_in}}. Are you sure you want to log in with a different account?
+    <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
+  {% endif %}
+
+  {% if error == 1 %}
+  <div class="alert alert-danger" role="alert">
+    That email address is not registered to a user.
+    <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% elif error == 2 %}
+  <div class="alert alert-danger" role="alert">
+    Invalid login session.
+    <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% elif error == 3 %}
+  <div class="alert alert-danger" role="alert">
+    User session expired.
+    <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {% endif %}
+</div>
+<div class="col-6">
+  <form method="post">
+    <div class="mb-3">
+      <label for="email" class="form-label">email address</label>
+      <input type="email" class="form-control" id="username" name="email" required="required" value="{{email}}">
+    </div>
+    <button type="submit" class="btn btn-primary">Login</button>
+  </form>
 </div>
 
 {% endblock %}
