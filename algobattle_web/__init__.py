@@ -1,6 +1,7 @@
 from __future__ import annotations
 from contextlib import contextmanager
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 import algobattle_web.database as database
 from algobattle_web.models.user import UserCreate, create_user, get_user
@@ -24,3 +25,4 @@ app.include_router(home)
 app.include_router(user)
 app.include_router(admin)
 
+app.mount("/images", StaticFiles(directory="images"), name="images")
