@@ -3,13 +3,12 @@
 
 <div class="container-fluid">
   <div class="row flex-nowrap">
-    <div class="col-auto col-md-3 col-xl-2 px-sm-2 px-0 text-bg-dark">
-      <div class="d-flex flex-column px-3 pt-2 text-white min-vh-100">
-        <a href="/" class="d-flex align-items-center pb-3 mb-md-0 me-md-auto text-white text-decoration-none">
-          <span class="fs-5 d-none d-sm-inline">Algobattle</span>
+    <div class="d-flex flex-column col-2 col-sm-3 col-xl-2 py-3 px-0 px-sm-3 text-bg-dark text-white min-vh-100">
+        <a href="/" class="d-flex align-items-center mb-md-0 me-md-auto text-white text-decoration-none">
+          <span class="fs-4 d-none d-sm-inline">Algobattle</span>
         </a>
-        <hr>
-        <ul class="nav nav-pills flex-column mb-auto" id="menu">
+        <hr class="d-none d-sm-inline">
+        <ul class="nav nav-pills flex-column mb-auto mx-auto mx-sm-0" id="menu">
           <li class="nav-item">
             <a href="/" class="nav-link align-middle {{'active' if request.url.path == '/'}}">
               <i class="bi bi-house"></i> <span class="ms-1 d-none d-sm-inline">Home</span>
@@ -24,10 +23,10 @@
           </li>
           {% endif %}
         </ul>
-        <hr>
-        <div class="dropup">
-          <a type="button" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-person-circle"></i> <span class="d-none d-sm-inline mx-1">{{user.name}}</span>
+        <hr class="d-none d-sm-inline">
+        <div class="dropup px-3 p-sm-0">
+          <a class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-person-circle me-2"></i> <strong class="d-none d-sm-inline">{{user.name}}</strong>
           </a>
           <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
             {% if user.teams %}
@@ -45,7 +44,6 @@
               </form>
             </li>
           </ul>
-        </div>
       </div>
     </div>
     <div class="col py-3">
