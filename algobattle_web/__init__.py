@@ -1,5 +1,6 @@
 from __future__ import annotations
 from contextlib import contextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -25,4 +26,4 @@ app.include_router(home)
 app.include_router(user)
 app.include_router(admin)
 
-app.mount("/images", StaticFiles(directory="images"), name="images")
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
