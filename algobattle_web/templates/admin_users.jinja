@@ -1,9 +1,14 @@
 {% extends "base.jinja" %}
 {% block content %}
 
+<template id="admin-check">
+  <i class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
+</template>
+
+<script src="/static/scripts/admin_users.js"></script>
 <div class="col-8">
   <h3>Users</h3>
-  <table class="table">
+  <table class="table" id="users">
     <thead>
       <tr>
         <th scope="col">Name</th>
@@ -14,14 +19,14 @@
     </thead>
     <tbody>
     {% for usr in users %}
-      <tr {% if usr == user %} class="table-primary" {% endif %}>
+      <tr {% if usr == user %} class="table-primary" {% endif %} data-uid="{{usr.id}}" data-is_admin="{{usr.is_admin}}">
         <td>{{ usr.name }}{%if usr.is_admin%} <i class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>{%endif%}</td>
         <td>{{ usr.email }}</td>
         <td>{{ usr.teams | join(", ") }}</td>
         <td class="text-end">
           <div class="btn-group btn-group-sm" role="group" aria-label="Edit user">
             {% if usr != user %}
-            <button type="button" class="btn btn-success" data-bs-toggle="tooltip" title="{{'Remove' if usr.is_admin else 'Make'}} admin">
+            <button type="button" class="btn btn-success user-toggle-admin" data-bs-toggle="tooltip" title="{{'Remove' if usr.is_admin else 'Make'}} admin">
               <i class="bi bi-patch-{{'minus' if usr.is_admin else 'plus'}}"></i>
             </button>
             <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit"><i class="bi bi-pencil"></i></button>
