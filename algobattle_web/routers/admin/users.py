@@ -18,16 +18,21 @@ async def user_get(db: Session = Depends(get_db)):
     return "admin_users.jinja", {"users": reversed(users)}
 
 
-class UserAdmin(BaseSchema):
+class EditUser(BaseSchema):
     id: UUID
-    make_admin: bool
+    name: str | None = None
+    email: str | None = None
+    is_admin: bool | None = None
 
-@router.post("/setadmin")
-async def make_admin(*, db: Session = Depends(get_db), user: UserAdmin):
-    user_db = get_user(db, user.id)
-    if user_db is not None:
-        user_db.is_admin = user.make_admin
-        db.commit()
-    else:
+
+@router.post("/edit")
+async def make_admin(*, db: Session = Depends(get_db), edit: EditUser):
+    print(edit)
+    user = get_user(db, edit.id)
+    if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    for attr, val in edit.dict().items():
+        if attr != "id" and val is not None:
+            setattr(user, attr, val)
+    db.commit()
 

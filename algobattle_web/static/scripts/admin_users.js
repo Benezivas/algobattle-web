@@ -22,10 +22,10 @@ function bool(stringValue) {
 async function toggle_admin(event) {
     var row = event.currentTarget.closest("tr")
     var data = row.dataset;
-    var response = await fetch("/admin/users/setadmin", {
+    var response = await fetch("/admin/users/edit", {
         "method": "POST",
         "headers": {"Content-type": "application/json"},
-        "body": JSON.stringify({"id": data.uid, "make_admin": !bool(data.is_admin)}),
+        "body": JSON.stringify({"id": data.uid, "is_admin": !bool(data.is_admin)}),
     });
     if (response.ok) {
         data.is_admin = !bool(data.is_admin);
