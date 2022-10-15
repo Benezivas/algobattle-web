@@ -28,10 +28,9 @@ class EditUser(BaseSchema):
 @router.post("/edit")
 async def edit_user(*, db: Session = Depends(get_db), edit: EditUser):
     print(edit)
-    return
     user = get_user(db, edit.id)
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    update_user(db, user, edit.email, edit.name)    
+    update_user(db, user, edit.email, edit.name, edit.is_admin)    
     db.commit()
 
