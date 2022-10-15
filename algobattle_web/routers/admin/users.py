@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
 from algobattle_web.database import get_db, Session
-from algobattle_web.models.user import User, get_user
+from algobattle_web.models.user import User, get_user, update_user
 from algobattle_web.templates import templated
 from algobattle_web.util import BaseSchema
 
@@ -28,11 +28,10 @@ class EditUser(BaseSchema):
 @router.post("/edit")
 async def edit_user(*, db: Session = Depends(get_db), edit: EditUser):
     print(edit)
+    return
     user = get_user(db, edit.id)
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    for attr, val in edit.dict().items():
-        if attr != "id" and val is not None:
-            setattr(user, attr, val)
+    update_user(db, user, edit.email, edit.name)    
     db.commit()
 
