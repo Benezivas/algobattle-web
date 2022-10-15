@@ -26,7 +26,7 @@ class EditUser(BaseSchema):
 
 
 @router.post("/edit")
-async def make_admin(*, db: Session = Depends(get_db), edit: EditUser):
+async def edit_user(*, db: Session = Depends(get_db), edit: EditUser):
     print(edit)
     user = get_user(db, edit.id)
     if user is None:
