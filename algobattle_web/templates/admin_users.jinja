@@ -5,6 +5,14 @@
   <i class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
 </template>
 
+<template id="input-name">
+  <input type="text" class="form-control" aria-label="Username">
+</template>
+
+<template id="input-email">
+  <input type="email" class="form-control" aria-label="Username">
+</template>
+
 <script src="/static/scripts/admin_users.js"></script>
 <div class="col-8">
   <h3>Users</h3>
@@ -19,17 +27,22 @@
     </thead>
     <tbody>
     {% for usr in users %}
-      <tr {% if usr == user %} class="table-primary" {% endif %} data-uid="{{usr.id}}" data-is_admin="{{usr.is_admin}}">
-        <td>{{ usr.name }}{%if usr.is_admin%} <i class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>{%endif%}</td>
-        <td>{{ usr.email }}</td>
-        <td>{{ usr.teams | join(", ") }}</td>
+      <tr {% if usr == user %} class="table-primary" {% endif %} data-uid="{{usr.id}}" data-is_admin="{{usr.is_admin}}" data-name="{{usr.name}}" data-email="{{usr.email}}">
+        <td>
+          <span>{{ usr.name }} </span>
+          {%if usr.is_admin%}
+          <i class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
+          {%endif%}
+        </td>
+        <td><span>{{ usr.email }}</span></td>
+        <td><span>{{ usr.teams | join(", ") }}</span></td>
         <td class="text-end">
           <div class="btn-group btn-group-sm" role="group" aria-label="Edit user">
             {% if usr != user %}
             <button type="button" class="btn btn-success user-toggle-admin" data-bs-toggle="tooltip" title="{{'Remove' if usr.is_admin else 'Make'}} admin">
               <i class="bi bi-patch-{{'minus' if usr.is_admin else 'plus'}}"></i>
             </button>
-            <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit"><i class="bi bi-pencil"></i></button>
+            <button type="button" class="btn btn-warning user-edit" data-bs-toggle="tooltip" title="Edit"><i class="bi bi-pencil"></i></button>
             <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete"><i class="bi bi-x"></i></button>
             {% endif %}
           </div>
