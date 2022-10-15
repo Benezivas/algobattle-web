@@ -66,13 +66,13 @@ def create_user(db: Session, user: UserCreate, is_admin: bool = False) -> User:
 
 
 def update_user(db: Session, user: User, email: str | None = None, name: str | None = None, is_admin: bool | None = None) -> User:
-    if email is not None:
+    if email:
         email_user = get_user(db, email)
         if email_user is not None and email_user != user:
             raise EmailTaken(email)
         else:
             user.email = email
-    if name is not None:
+    if name:
         user.name = name
     if is_admin is not None:
         user.is_admin = is_admin
