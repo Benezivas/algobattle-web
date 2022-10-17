@@ -1,25 +1,6 @@
 import { createApp, reactive } from "https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.es.js?module"
 
 
-function bool(stringValue) {
-    switch(stringValue.toLowerCase().trim()){
-        case "true": 
-        case "yes": 
-        case "1": 
-          return true;
-
-        case "false": 
-        case "no": 
-        case "0":
-        case "none":
-        case null: 
-        case undefined:
-          return false;
-
-        default: 
-          return JSON.parse(stringValue);
-    }
-}
 
 async function send_request(content) {
     var response = await fetch("/admin/users/edit", {
@@ -32,95 +13,29 @@ async function send_request(content) {
     }
 }
 
-async function toggle_admin(event) {
-    var row = event.currentTarget.closest("tr")
-    var data = row.dataset;
-    var response = await send_request({"id": data.uid, "is_admin": !bool(data.is_admin)})
-    if (response) {
-        data.is_admin = response.is_admin
 
-        var admin_button_icon = row.children[3].children[0].children[0].children[0];
-        if (bool(data.is_admin)) {
-            admin_button_icon.classList.replace("bi-patch-plus", "bi-patch-minus");
-        } else {
-            admin_button_icon.classList.replace("bi-patch-minus", "bi-patch-plus");
-        }
-        if (bool(data.is_admin)) {
-            var check_icon = document.getElementById("admin-check").content.cloneNode(true);
-            row.children[0].appendChild(check_icon);
-        } else {
-            var check_icon = row.children[0].children[1];
-            row.children[0].removeChild(check_icon);
-        }
-    }
-    
-}
+async function send_form(event) {
+    var fields = event.currentTarget.elements
+    var user = this.curr_row.user
 
-async function show_edit(event) {
-    var row = event.currentTarget.closest("tr")
-    var data = row.dataset
-
-    var name_field = document.getElementById("input-name").content.cloneNode(true)
-    name_field.querySelector("input").setAttribute("placeholder", data.name)
-    row.children[0].children[0].replaceWith(name_field)
-    name_field.addEventListener("keypress", async (event) => {
-        console.log(event.key)
-        if (event.key === "Enter") {
-            submit_edit(event)
-        }
+    var response = await send_request({
+        id: user.id,
+        name: fields.name.value,
+        email: fields.email.value,
+        is_admin: fields.is_admin.checked,
     })
-
-    var email_field = document.getElementById("input-email").content.cloneNode(true)
-    email_field.querySelector("input").setAttribute("placeholder", data.email)
-    row.children[1].children[0].replaceWith(email_field)
-    email_field.addEventListener("keypress", async (event) => {
-        if (event.key === "Enter") {
-            submit_edit(event)
-        }
-    })
-
-    event.currentTarget.removeEventListener("click", show_edit)
-    event.currentTarget.addEventListener("click", submit_edit)
-}
-
-async function submit_edit(event) {
-    var row = event.currentTarget.closest("tr")
-    var button = event.currentTarget
-    var data = row.dataset
-
-    var name_field = row.children[0].children[0]
-    var email_field = row.children[1].children[0]
-
-    var response = await send_request({"id": data.uid, "name": name_field.value, "email": email_field.value})
     if (response) {
-        data.name = response.name
-        data.email = response.email
-
-        var name_str = document.createElement("span")
-        name_str.innerHTML = data.name + " "
-        name_field.replaceWith(name_str)
-        var email_str = document.createElement("span")
-        email_str.innerHTML = data.email
-        email_field.replaceWith(email_str)
-
-        button.removeEventListener("click", submit_edit)
-        button.addEventListener("click", show_edit)
+        user.name = response.name
+        user.email = response.email
+        user.is_admin = response.is_admin
+        this.curr_row.editing = false
     }
-}
 
-
-
-const store = reactive({
-    curr_user: "",
-})
-
-
-function send_form(event) {
-    var data = event.currentTarget.elements
-    console.log("user: ", store.curr_user)
-    console.log("name: ", data.name.value)
-    console.log("email: ", data.email.value)
-    console.log("is_admin: ", data.is_admin.checked)
+    console.log("user: ", this.curr_row.user.id)
+    console.log("name: ", fields.name.value)
+    console.log("email: ", fields.email.value)
+    console.log("is_admin: ", fields.is_admin.checked)
+    console.log("old name: ", this.curr_row.user.name)
 }
 
 
@@ -133,7 +48,7 @@ function TableRow(user) {
         toggle_editing() {
             this.editing = !this.editing
             if (this.editing) {
-                store.curr_user = this.user.id
+                this.curr_row = this
                 // make all other rows not editing
             }
         }
@@ -143,6 +58,7 @@ function TableRow(user) {
 
 createApp({
     $delimiters: ["${", "}"],
+    curr_row: {},
     send_form,
     TableRow,
 }).mount()
