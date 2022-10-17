@@ -18,21 +18,23 @@
 
 <div class="col-8" id="app">
   <h3>Users</h3>
-  <table class="table" id="users">
-    <thead>
-      <tr>
-        <th scope="col">Name</th>
-        <th scope="col">Email</th>
-        <th scope="col">Teams</th>
-        <th scope="col"></th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for usr in users %}
-      <tr v-scope='TableRow({{usr | tojson}})' {% if user == usr %} class="table-primary" {% endif %}></tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  <form action="/edit" method="post">
+    <table class="table" id="users">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Email</th>
+          <th scope="col">Teams</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for usr in users %}
+        <tr v-scope='TableRow({{usr | tojson}})' {% if user == usr %} class="table-primary" {% endif %}></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </form>
 </div>
 
 {% endblock %}
