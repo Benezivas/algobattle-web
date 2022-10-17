@@ -4,9 +4,8 @@
 <script src="/static/scripts/admin_users.js" type="module"></script>
 
 <template id="table_row">
-  <tr>
     <td>
-      <span>user.name </span>
+      <span>${user.name} </span>
       <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
     </td>
     <td><span>user.email</span></td>
@@ -14,7 +13,6 @@
     <td class="text-end">
       <button v-if="user.id != '{{user.id}}'" type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit user"><i class="bi bi-pencil"></i></button>
     </td>
-  </tr>
 </template>
 
 
@@ -30,7 +28,7 @@
       </tr>
     </thead>
     <tbody>
-      <div v-scope="TableRow({id: '123', name: 'test', email: 'test@blep', is_admin: 'true'})"></div>
+      <tr v-scope="TableRow({id: '123', name: 'test', email: 'test@blep', is_admin: 'true'})"></tr>
     </tbody>
   </table>
 </div>
