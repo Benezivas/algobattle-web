@@ -1,3 +1,5 @@
+import { createApp } from "https://unpkg.com/petite-vue@0.2.2/dist/petite-vue.es.js"
+
 
 function bool(stringValue) {
     switch(stringValue.toLowerCase().trim()){
@@ -110,11 +112,23 @@ async function submit_edit(event) {
 
 
 
-document.addEventListener("DOMContentLoaded", () => {
-    for (var button of document.getElementsByClassName("user-toggle-admin")) {
-        button.addEventListener("click", toggle_admin);
+
+function swap_admin() {
+    this.user.is_admin = !this.user.is_admin
+}
+
+
+
+function TableRow(user) {
+    return {
+        $template: "#table_row",
+        user: user,
     }
-    for (var button of document.getElementsByClassName("user-edit")) {
-        button.addEventListener("click", show_edit);
-    }
-})
+}
+
+
+createApp({
+    $delimeters: ["${", "}"],
+    TableRow,
+}).mount()
+

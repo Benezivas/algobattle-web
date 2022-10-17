@@ -13,10 +13,32 @@
   <input type="email" class="form-control" aria-label="Username">
 </template>
 
-<script src="/static/scripts/admin_users.js"></script>
-<div class="col-8">
+
+
+
+
+
+
+<script src="/static/scripts/admin_users.js" type="module"></script>
+
+<template id="table_row">
+  <tr>
+    <td>
+      <span>user.name </span>
+      <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
+    </td>
+    <td><span>user.email</span></td>
+    <td><span>${user.teams.join(", ")}</span></td>
+    <td class="text-end">
+      <button v-if="user.id != '{{user.id}}'" type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit user"><i class="bi bi-pencil"></i></button>
+    </td>
+  </tr>
+</template>
+
+
+<div class="col-8" id="app">
   <h3>Users</h3>
-  <form method="post" action="/admin/users/edit">
+  <form method="post" action="/admin/users/edit" id="users-form">
     <table class="table" id="users">
       <thead>
         <tr>
@@ -27,29 +49,7 @@
         </tr>
       </thead>
       <tbody>
-      {% for usr in users %}
-        <tr {% if usr == user %} class="table-primary" {% endif %} data-uid="{{usr.id}}" data-is_admin="{{usr.is_admin}}" data-name="{{usr.name}}" data-email="{{usr.email}}">
-          <td>
-            <span>{{ usr.name }} </span>
-            {%if usr.is_admin%}
-            <i class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
-            {%endif%}
-          </td>
-          <td><span>{{ usr.email }}</span></td>
-          <td><span>{{ usr.teams | join(", ") }}</span></td>
-          <td class="text-end">
-            <div class="btn-group btn-group-sm" role="group" aria-label="Edit user">
-              {% if usr != user %}
-              <button type="button" class="btn btn-success user-toggle-admin" data-bs-toggle="tooltip" title="{{'Remove' if usr.is_admin else 'Make'}} admin">
-                <i class="bi bi-patch-{{'minus' if usr.is_admin else 'plus'}}"></i>
-              </button>
-              <button type="button" class="btn btn-warning user-edit" data-bs-toggle="tooltip" title="Edit"><i class="bi bi-pencil"></i></button>
-              <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete"><i class="bi bi-x"></i></button>
-              {% endif %}
-            </div>
-          </td>
-        </tr>
-      {% endfor %}
+        <div v-scope="TableRow({id: '123', name: 'test', email: 'test@blep', is_admin: 'true'})"></div>
       </tbody>
     </table>
   </form>
