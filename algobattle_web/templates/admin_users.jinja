@@ -5,20 +5,34 @@
 
 <template id="table_row">
   <td>
-    <span>${user.name} </span>
-    <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
+    <div v-if="editing">
+      <input class="form-control" name="name" :placeholder="user.name">
+      <input type="checkbox" class="btn-check" autocomplete="off" id="set-admin" name="is_admin">
+      <label class="btn btn-success btn-sm" for="set-admin"><i class="bi bi-patch-check"></i></label>
+    </div>
+    <div v-else>
+      <span>${user.name} </span>
+      <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
+    </div>
   </td>
-  <td><span>${user.email}</span></td>
+  <td>
+    <input v-if="editing" class="form-control" name="email" :placeholder="user.email">
+    <span v-else>${user.email}</span>
+  </td>
   <td><span>${user.teams?.join(", ")}</span></td>
   <td class="text-end">
-    <button v-if="user.id != '{{user.id}}'" type="button" class="btn btn-warning btn-sm" data-bs-toggle="tooltip" title="Edit user"><i class="bi bi-pencil"></i></button>
+    <div class="btn-group btn-group-sm" role="group" v-if="user.id != '{{user.id}}'">
+      <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete user" v-if="editing"><i class="bi bi-person-x"></i></button>
+      <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit user" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
+      <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
+    </div>
   </td>
 </template>
 
 
 <div class="col-8" id="app">
   <h3>Users</h3>
-  <form action="/edit" method="post">
+  <form id="users-form" v-scope @submit.prevent="send_form">
     <table class="table" id="users">
       <thead>
         <tr>

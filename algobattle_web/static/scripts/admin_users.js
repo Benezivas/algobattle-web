@@ -1,4 +1,4 @@
-import { createApp } from "https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.es.js?module"
+import { createApp, reactive } from "https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.es.js?module"
 
 
 function bool(stringValue) {
@@ -110,11 +110,17 @@ async function submit_edit(event) {
 
 
 
+const store = reactive({
+    curr_user: "",
+})
 
 
-
-function swap_admin() {
-    this.user.is_admin = !this.user.is_admin
+function send_form(event) {
+    var data = event.currentTarget.elements
+    console.log("user: ", store.curr_user)
+    console.log("name: ", data.name.value)
+    console.log("email: ", data.email.value)
+    console.log("is_admin: ", data.is_admin.checked)
 }
 
 
@@ -123,12 +129,21 @@ function TableRow(user) {
     return {
         $template: "#table_row",
         user: user,
+        editing: false,
+        toggle_editing() {
+            this.editing = !this.editing
+            if (this.editing) {
+                store.curr_user = this.user.id
+                // make all other rows not editing
+            }
+        }
     }
 }
 
 
 createApp({
     $delimiters: ["${", "}"],
+    send_form,
     TableRow,
 }).mount()
 
