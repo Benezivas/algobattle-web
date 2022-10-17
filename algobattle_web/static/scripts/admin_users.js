@@ -1,4 +1,4 @@
-import { createApp } from "https://unpkg.com/petite-vue@0.2.2/dist/petite-vue.es.js"
+import { createApp } from "https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.es.js?module"
 
 
 function bool(stringValue) {

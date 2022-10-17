@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta, datetime
-from typing import Any, cast
+from typing import Any, Mapping, cast
 from uuid import UUID, uuid4
 from fastapi import Cookie, HTTPException, Depends, status
 from jose import jwt
@@ -34,9 +34,13 @@ class User(Base):
     def __eq__(self, o: object) -> bool:
         if isinstance(o, User):
             return self.id == o.id
-        else:
-            return super().__eq__(o)
-
+        elif isinstance(o, Mapping):
+            if "id" in o:
+                if isinstance(o["id"], UUID):
+                    return self.id == o["id"]
+                elif isinstance(o["id"], str):
+                    return str(self.id) == o["id"]
+        return NotImplemented
 
 class UserBase(BaseSchema):
     email: str

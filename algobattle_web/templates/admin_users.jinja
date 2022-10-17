@@ -4,15 +4,15 @@
 <script src="/static/scripts/admin_users.js" type="module"></script>
 
 <template id="table_row">
-    <td>
-      <span>${user.name} </span>
-      <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
-    </td>
-    <td><span>user.email</span></td>
-    <td><span>${user.teams.join(", ")}</span></td>
-    <td class="text-end">
-      <button v-if="user.id != '{{user.id}}'" type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit user"><i class="bi bi-pencil"></i></button>
-    </td>
+  <td>
+    <span>${user.name} </span>
+    <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
+  </td>
+  <td><span>${user.email}</span></td>
+  <td><span>${user.teams?.join(", ")}</span></td>
+  <td class="text-end">
+    <button v-if="user.id != '{{user.id}}'" type="button" class="btn btn-warning btn-sm" data-bs-toggle="tooltip" title="Edit user"><i class="bi bi-pencil"></i></button>
+  </td>
 </template>
 
 
@@ -28,7 +28,9 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-scope="TableRow({id: '123', name: 'test', email: 'test@blep', is_admin: 'true'})"></tr>
+    {% for usr in users %}
+      <tr v-scope='TableRow({{usr | tojson}})' {% if user == usr %} class="table-primary" {% endif %}></tr>
+    {% endfor %}
     </tbody>
   </table>
 </div>

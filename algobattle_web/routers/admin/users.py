@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse
+from fastapi.encoders import jsonable_encoder
 from algobattle_web.database import get_db, Session
 from algobattle_web.models.user import User, get_user, update_user
 from algobattle_web.templates import templated
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 @templated
 async def user_get(db: Session = Depends(get_db)):
     users = db.query(User).order_by(User.is_admin).all()
-    return "admin_users.jinja", {"users": reversed(users)}
+    return "admin_users.jinja", {"users": jsonable_encoder(reversed(users))}
 
 
 class EditUser(BaseSchema):
