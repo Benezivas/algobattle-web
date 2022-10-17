@@ -1,24 +1,6 @@
 {% extends "base.jinja" %}
 {% block content %}
 
-<template id="admin-check">
-  <i class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
-</template>
-
-<template id="input-name">
-  <input type="text" class="form-control" aria-label="Username">
-</template>
-
-<template id="input-email">
-  <input type="email" class="form-control" aria-label="Username">
-</template>
-
-
-
-
-
-
-
 <script src="/static/scripts/admin_users.js" type="module"></script>
 
 <template id="table_row">
@@ -38,21 +20,19 @@
 
 <div class="col-8" id="app">
   <h3>Users</h3>
-  <form method="post" action="/admin/users/edit" id="users-form">
-    <table class="table" id="users">
-      <thead>
-        <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Email</th>
-          <th scope="col">Teams</th>
-          <th scope="col"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <div v-scope="TableRow({id: '123', name: 'test', email: 'test@blep', is_admin: 'true'})"></div>
-      </tbody>
-    </table>
-  </form>
+  <table class="table" id="users">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Email</th>
+        <th scope="col">Teams</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <div v-scope="TableRow({id: '123', name: 'test', email: 'test@blep', is_admin: 'true'})"></div>
+    </tbody>
+  </table>
 </div>
 
 {% endblock %}

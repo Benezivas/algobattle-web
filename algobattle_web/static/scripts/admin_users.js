@@ -128,7 +128,7 @@ function TableRow(user) {
 
 
 createApp({
-    $delimeters: ["${", "}"],
+    $delimiters: ["${", "}"],
     TableRow,
 }).mount()
 
