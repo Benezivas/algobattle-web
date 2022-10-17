@@ -20,8 +20,8 @@ async function send_form(event) {
 
     var response = await send_request({
         id: user.id,
-        name: fields.name.value,
-        email: fields.email.value,
+        name: fields.name.value ? fields.name.value : undefined,
+        email: fields.email.value ? fields.email.value : undefined,
         is_admin: fields.is_admin.checked,
     })
     if (response) {
