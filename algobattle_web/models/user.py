@@ -45,6 +45,7 @@ class User(Base):
 class UserBase(BaseSchema):
     email: str
     name: str
+    is_admin: bool = False
 
 class UserCreate(UserBase):
     pass
@@ -58,11 +59,11 @@ def get_user(db: Session, user: UUID | str) -> User | None:
     filter_type = User.email if isinstance(user, str) else User.id
     return db.query(User).filter(filter_type == user).first()
 
-def create_user(db: Session, user: UserCreate, is_admin: bool = False) -> User:
+def create_user(db: Session, user: UserCreate) -> User:
     """Creates a new user, raises `EmailTaken` if the email is already in use."""
     if get_user(db, user.email) is not None:
         raise EmailTaken(user.email)
-    new_user = User(**user.dict(), is_admin=is_admin)
+    new_user = User(**user.dict())
     db.add(new_user)
     db.commit()
     db.refresh(new_user)

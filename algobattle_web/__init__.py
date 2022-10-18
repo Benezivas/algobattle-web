@@ -17,7 +17,7 @@ from algobattle_web.routers.admin import router as admin
 database.Base.metadata.create_all(bind=database.engine)
 with contextmanager(database.get_db)() as db:
     if get_user(db, ADMIN_EMAIL) is None:
-        create_user(db, UserCreate(email=ADMIN_EMAIL, name="Admin"), is_admin=True)
+        create_user(db, UserCreate(email=ADMIN_EMAIL, name="Admin", is_admin=True))
 
 
 app = FastAPI()
