@@ -7,7 +7,7 @@
   <td>
     <div v-if="editing">
       <input class="form-control" name="name" :placeholder="user.name">
-      <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="user.is_admin">
+      <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" :checked="user.is_admin ? 'checked' : null">
       <label class="btn btn-success btn-sm" for="set-admin"><i class="bi bi-patch-check"></i></label>
     </div>
     <div v-else>
