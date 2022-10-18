@@ -53,18 +53,18 @@ def _fix_signature(inner: Callable[P, S], fn: Callable[R, Any]) -> Tuple[Callabl
     # we need to get the annotations as actual objects and not strings,
     # get_annotations will eval all annotated ones but misses args that aren't annotated
     annotations = {n: Parameter.empty for n in signature(fn).parameters} | get_annotations(fn, eval_str=True)
-    parameters = [p.replace(annotation=annotations[p.name]) for p in signature(fn).parameters.values()]
+    parameters = [p.replace(annotation=annotations[p.name], kind=Parameter.KEYWORD_ONLY) for p in signature(fn).parameters.values()]
 
     # add new parameters if they aren't already present
     new_parameters = []
     orig_params = set()
     if "request" not in annotations:
-        new_parameters.append(Parameter("request", Parameter.POSITIONAL_OR_KEYWORD, annotation=Request))
+        new_parameters.append(Parameter("request", Parameter.KEYWORD_ONLY, annotation=Request))
     else:
         orig_params.add("request")
     new_parameters.extend(parameters)
     if "user" not in annotations:
-        new_parameters.append(Parameter("user", Parameter.POSITIONAL_OR_KEYWORD, annotation=User, default=Depends(curr_user)))
+        new_parameters.append(Parameter("user", Parameter.KEYWORD_ONLY, annotation=User, default=Depends(curr_user)))
     else:
         orig_params.add("user")
     inner.__signature__ = Signature(
