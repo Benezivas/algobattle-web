@@ -1,5 +1,4 @@
-import { createApp, reactive } from "https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.es.js?module"
-
+import { createApp } from "https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.es.js?module"
 
 
 async function send_request(content) {
@@ -30,14 +29,7 @@ async function send_form(event) {
         user.is_admin = response.is_admin
         this.curr_row.editing = false
     }
-
-    console.log("user: ", this.curr_row.user.id)
-    console.log("name: ", fields.name.value)
-    console.log("email: ", fields.email.value)
-    console.log("is_admin: ", fields.is_admin.checked)
-    console.log("old name: ", this.curr_row.user.name)
 }
-
 
 
 function TableRow(user) {
@@ -62,4 +54,3 @@ createApp({
     send_form,
     TableRow,
 }).mount()
-
