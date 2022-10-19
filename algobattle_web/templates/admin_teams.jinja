@@ -65,7 +65,7 @@
         <div class="form-floating mb-3">
           <select class="form-select" id="context-select">
             {% for context in contexts %}
-              <option value="{{context}}">{{context}}</option>
+              <option value="{{context.name}}">{{context.name}}</option>
             {% endfor %}
           </select>
           <label for="context-select">Context</label>
