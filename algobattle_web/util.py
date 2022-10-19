@@ -1,5 +1,6 @@
 """Util functions."""
 from __future__ import annotations
+from dataclasses import dataclass
 from pydantic import BaseModel
 
 
@@ -12,3 +13,7 @@ class BaseSchema(BaseModel):
     class Config:
         orm_mode = True
 
+
+@dataclass
+class NameTaken(Exception):
+    name: str

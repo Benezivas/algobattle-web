@@ -1,6 +1,5 @@
 "User model and authentication system."
 from __future__ import annotations
-from dataclasses import dataclass
 from datetime import timedelta, datetime
 from typing import Any, Mapping, cast
 from uuid import UUID, uuid4
@@ -14,12 +13,8 @@ from sqlalchemy_utils import UUIDType
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import get_db, Base, Session
 from algobattle_web.models.team import team_members, Team
-from algobattle_web.util import BaseSchema
+from algobattle_web.util import BaseSchema, NameTaken
 
-
-@dataclass
-class EmailTaken(Exception):
-    email: str
 
 class User(Base):
     __tablename__ = "users"
@@ -62,7 +57,7 @@ def get_user(db: Session, user: UUID | str) -> User | None:
 def create_user(db: Session, user: UserCreate) -> User:
     """Creates a new user, raises `EmailTaken` if the email is already in use."""
     if get_user(db, user.email) is not None:
-        raise EmailTaken(user.email)
+        raise NameTaken(user.email)
     new_user = User(**user.dict())
     db.add(new_user)
     db.commit()
@@ -74,7 +69,7 @@ def update_user(db: Session, user: User, email: str | None = None, name: str | N
     if email:
         email_user = get_user(db, email)
         if email_user is not None and email_user != user:
-            raise EmailTaken(email)
+            raise NameTaken(email)
         else:
             user.email = email
     if name:

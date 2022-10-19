@@ -1,6 +1,5 @@
 "Team model."
 from __future__ import annotations
-from dataclasses import dataclass
 from uuid import UUID, uuid4
 from typing import TYPE_CHECKING
 from sqlalchemy import Column, String, ForeignKey, Table
@@ -8,14 +7,10 @@ from sqlalchemy_utils import UUIDType
 from sqlalchemy.orm import relationship, RelationshipProperty as Rel
 
 from algobattle_web.database import Base, Session
+from algobattle_web.util import NameTaken
 
 if TYPE_CHECKING:
     from algobattle_web.models.user import User
-
-
-@dataclass
-class NameTaken(Exception):
-    name: str
 
 
 class Context(Base):

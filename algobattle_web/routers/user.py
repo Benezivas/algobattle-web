@@ -4,8 +4,9 @@ from typing import Any
 from fastapi import APIRouter, Depends, Form, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from algobattle_web.database import get_db, Session
-from algobattle_web.models.user import EmailTaken, User, curr_user, update_user
+from algobattle_web.models.user import User, curr_user, update_user
 from algobattle_web.templates import templated
+from algobattle_web.util import NameTaken
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -27,7 +28,7 @@ async def user_post(
     context: dict[str, Any] = {}
     try:
         update_user(db, user, email, name)
-    except EmailTaken as e:
+    except NameTaken as e:
         context["error"] = e
     return "user.jinja", context
 
