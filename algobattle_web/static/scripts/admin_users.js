@@ -40,8 +40,8 @@ function TableRow(user) {
         toggle_editing() {
             this.editing = !this.editing
             if (this.editing) {
+                this.curr_row.editing = false
                 this.curr_row = this
-                // make all other rows not editing
             }
         }
     }
