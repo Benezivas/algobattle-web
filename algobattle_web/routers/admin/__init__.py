@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from algobattle_web.models.user import User, curr_user
 from algobattle_web.routers.admin.users import router as users
+from algobattle_web.routers.admin.teams import router as teams
 
 def check_if_admin(user: User = Depends(curr_user)):
     if not user.is_admin:
@@ -11,3 +12,4 @@ def check_if_admin(user: User = Depends(curr_user)):
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(check_if_admin)])
 
 router.include_router(users)
+router.include_router(teams)

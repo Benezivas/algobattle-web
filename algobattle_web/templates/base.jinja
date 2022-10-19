@@ -29,7 +29,12 @@
               <hr>
               <li class="nav-item">
                 <a href="/admin/users" class="nav-link align-middle {{'active' if request.url.path == '/admin/users'}}">
-                  <i class="bi bi-people"></i></i> <span class="ms-1 d-none d-sm-inline">Users</span>
+                  <i class="bi bi-person"></i></i> <span class="ms-1 d-none d-sm-inline">Users</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="/admin/teams" class="nav-link align-middle {{'active' if request.url.path == '/admin/teams'}}">
+                  <i class="bi bi-people"></i></i> <span class="ms-1 d-none d-sm-inline">Teams</span>
                 </a>
               </li>
               {% endif %}
