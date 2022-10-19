@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class ContextNameTaken(Exception):
+class NameTaken(Exception):
     name: str
 
 
@@ -31,7 +31,7 @@ def get_context(db: Session, name: str) -> Context | None:
 
 def create_context(db: Session, name: str) -> Context:
     if get_context(db, name) is not None:
-        raise ContextNameTaken(name)
+        raise NameTaken(name)
     context = Context(name=name)
     db.add(context)
     db.commit()
@@ -58,7 +58,7 @@ team_members = Table(
 
 class Team(Base):
     __tablename__ = "teams"
-    id: UUID = Column(UUIDType, primary_key=True)   # type: ignore
+    id: UUID = Column(UUIDType, primary_key=True, default=uuid4)   # type: ignore
     name: str = Column(String)  # type: ignore
     context_id: UUID = Column(UUIDType, ForeignKey("contexts.id"))  # type: ignore
 
@@ -67,3 +67,39 @@ class Team(Base):
 
     def __str__(self) -> str:
         return self.name
+
+
+def get_team(db: Session, name: str, context: str) -> Context | None:
+    context = get_context(db, context)
+    if context is None:
+        raise ValueError
+    return db.query(Team).filter(Team.name == name and Team.context_id == context.id).first()
+
+def create_team(db: Session, name: str, context: str) -> Team:
+    if get_team(db, name, context) is not None:
+        raise NameTaken(name)
+    context = get_context(db, name)
+    if context is None:
+        raise ValueError
+    team = Team(name=name, context_id=context.id)
+    db.add(team)
+    db.commit()
+    db.refresh(team)
+    return team
+
+def update_team(db: Session, team: Team, name: str | None, context: str | Context | None) -> Team:
+    if name is not None:
+        team.name = name
+    if context is not None:
+        if isinstance(context, str):
+            context = get_context(db, context)
+            if context is None:
+                raise ValueError
+        team.context_id = context.id
+    db.commit()
+    return context
+
+def delete_team(db: Session, team: Team):
+    db.delete(team)
+    db.commit()
+
