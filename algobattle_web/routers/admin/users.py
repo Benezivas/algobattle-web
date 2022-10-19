@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 from algobattle_web.database import get_db, Session
-from algobattle_web.models.user import User, create_user, get_user, update_user, UserCreate
+from algobattle_web.models.user import User, create_user, delete_user, get_user, update_user, UserCreate
 from algobattle_web.templates import templated
 from algobattle_web.util import BaseSchema
 
@@ -40,3 +40,11 @@ async def users_create(*, db: Session = Depends(get_db), name: str = Form(), ema
     create = UserCreate(email=email, name=name, is_admin=is_admin )
     create_user(db, create)
     return RedirectResponse("/admin/users", status_code=status.HTTP_302_FOUND)
+
+
+class DeleteUser(BaseSchema):
+    id: UUID
+
+@router.post("/delete", response_model=bool)
+async def users_delete(*, db: Session = Depends(get_db), user: DeleteUser):
+    return delete_user(db, user.id)

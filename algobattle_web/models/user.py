@@ -85,6 +85,16 @@ def update_user(db: Session, user: User, email: str | None = None, name: str | N
     return user
 
 
+def delete_user(db: Session, id: UUID) -> bool:
+    user = get_user(db, id)
+    if user is None:
+        return False
+    else:
+        db.delete(user)
+        db.commit()
+        return True
+
+
 def user_cookie(user: User) -> dict[str, Any]:
     payload = {
         "type": "user",
