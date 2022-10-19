@@ -9,7 +9,7 @@
       <input class="form-control" name="name" type="text" :placeholder="user.name">
       <div class="input-group-append">
         <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" :checked="user.is_admin ? 'checked' : null">
-        <label class="btn btn-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
+        <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
       </div>
     </div>
     <div v-else>
@@ -59,7 +59,7 @@
       <input class="form-control" name="name" type="text" required="required">
       <div class="input-group-append">
         <input type="checkbox" class="btn-check" id="set-admin" name="is_admin">
-        <label class="btn btn-success" for="set-admin"><i class="bi bi-patch-check"></i></label><br>
+        <label class="btn btn-outline-success" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label><br>
       </div>
     </div>
     <label for="email" class="form-label">email</label>
