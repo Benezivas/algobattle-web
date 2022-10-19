@@ -16,7 +16,8 @@ router = APIRouter(prefix="/users", tags=["users"])
 @templated
 async def user_get(db: Session = Depends(get_db)):
     users = db.query(User).order_by(User.is_admin).all()
-    return "admin_users.jinja", {"users": reversed(jsonable_encoder(users))}
+    users = jsonable_encoder(users)[::-1]
+    return "admin_users.jinja", {"users": users}
 
 
 class EditUser(BaseSchema):

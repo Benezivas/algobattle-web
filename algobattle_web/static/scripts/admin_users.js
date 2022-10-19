@@ -39,7 +39,8 @@ async function delete_user(event) {
         id: user.id
     })
     if (response) {
-        
+        var index = this.users.indexOf(user)
+        this.$delete(this.users, index)
     }
 }
 
@@ -65,6 +66,7 @@ function TableRow(user) {
 createApp({
     $delimiters: ["${", "}"],
     curr_row: {},
+    users: [],
     send_form,
     delete_user,
     TableRow,

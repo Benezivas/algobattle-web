@@ -32,10 +32,13 @@
 </template>
 
 
-<div class="col-8" id="app">
+<div class="col-8">
   <h3>Users</h3>
   <form id="users-form" v-scope @submit.prevent="send_form">
     <table class="table" id="users">
+      <script>
+        this.users = {{users | tojson}}
+      </script>
       <thead>
         <tr>
           <th scope="col">Name</th>
@@ -45,9 +48,7 @@
         </tr>
       </thead>
       <tbody>
-      {% for usr in users %}
-        <tr v-scope='TableRow({{usr | tojson}})' {% if user == usr %} class="table-primary" {% endif %}></tr>
-      {% endfor %}
+        <tr v-for="usr in this.users" v-scope="TableRow(usr)"></tr>
       </tbody>
     </table>
   </form>
