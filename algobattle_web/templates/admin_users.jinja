@@ -51,17 +51,22 @@
       </tbody>
     </table>
   </form>
+
   <h3>Create new user</h3>
-  <form id="create-user" method="post" action="users/create">
+  <form id="create-user" method="post" action="users/create" class="col-6">
     <label for="name" class="form-label">name</label>
-    <input class="form-control" name="name" type="text" required="required">
+    <div class="input-group">
+      <input class="form-control" name="name" type="text" required="required">
+      <div class="input-group-append">
+        <input type="checkbox" class="btn-check" id="set-admin" name="is_admin">
+        <label class="btn btn-success" for="set-admin"><i class="bi bi-patch-check"></i></label><br>
+      </div>
+    </div>
     <label for="email" class="form-label">email</label>
-    <input class="form-control" name="email" type="email" required="required">
-    <label for="set-admin" class="form-label">is admin</label>
-    <input type="checkbox" class="btn-check" id="set-admin" name="is_admin">
-    <label class="btn btn-success btn-sm" for="set-admin"><i class="bi bi-patch-check"></i></label><br>
+    <input class="form-control mb-3" name="email" type="email" required="required">
     <button type="submit" class="btn btn-primary">Create</button>
   </form>
 </div>
+
 
 {% endblock %}
