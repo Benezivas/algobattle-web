@@ -42,6 +42,8 @@ function TableRow(user) {
             if (this.editing) {
                 this.curr_row.editing = false
                 this.curr_row = this
+            } else {
+                this.curr_row = {}
             }
         }
     }

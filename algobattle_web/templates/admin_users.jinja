@@ -5,10 +5,12 @@
 
 <template id="table_row">
   <td>
-    <div v-if="editing">
+    <div v-if="editing" class="input-group input-group-sm">
       <input class="form-control" name="name" type="text" :placeholder="user.name">
-      <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" :checked="user.is_admin ? 'checked' : null">
-      <label class="btn btn-success btn-sm" for="set-admin"><i class="bi bi-patch-check"></i></label>
+      <div class="input-group-append">
+        <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" :checked="user.is_admin ? 'checked' : null">
+        <label class="btn btn-success" for="set-admin"><i class="bi bi-patch-check"></i></label>
+      </div>
     </div>
     <div v-else>
       <span>${user.name} </span>
@@ -16,7 +18,7 @@
     </div>
   </td>
   <td>
-    <input v-if="editing" class="form-control" name="email" type="email" :placeholder="user.email">
+    <input v-if="editing" class="form-control form-control-sm" name="email" type="email" :placeholder="user.email">
     <span v-else>${user.email}</span>
   </td>
   <td><span>${user.teams?.join(", ")}</span></td>
