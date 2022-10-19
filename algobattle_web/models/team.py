@@ -69,11 +69,12 @@ class Team(Base):
         return self.name
 
 
-def get_team(db: Session, name: str, context: str) -> Context | None:
+def get_team(db: Session, team: str | UUID, context: str) -> Context | None:
     context = get_context(db, context)
     if context is None:
         raise ValueError
-    return db.query(Team).filter(Team.name == name and Team.context_id == context.id).first()
+    filter_type = Team.name if isinstance(team, str) else Team.id
+    return db.query(Team).filter(filter_type == team and Team.context_id == context.id).first()
 
 def create_team(db: Session, name: str, context: str) -> Team:
     if get_team(db, name, context) is not None:
