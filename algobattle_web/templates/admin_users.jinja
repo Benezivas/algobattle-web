@@ -9,12 +9,12 @@
       <input class="form-control" name="name" type="text" :placeholder="user.name">
       <div class="input-group-append">
         <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" :checked="user.is_admin ? 'checked' : null">
-        <label class="btn btn-success btn-sm" for="set-admin" @vue:mounted="new bootstrap.Tooltip($el)" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
+        <label class="btn btn-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
       </div>
     </div>
     <div v-else>
       <span>${user.name} </span>
-      <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success" @vue:mounted="new bootstrap.Tooltip($el)" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
+      <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
     </div>
   </td>
   <td>
@@ -24,9 +24,9 @@
   <td><span>${user.teams?.join(", ")}</span></td>
   <td class="text-end">
     <div class="btn-group btn-group-sm" role="group" v-if="user.id != '{{user.id}}'">
-      <button type="button" class="btn btn-danger" @vue:mounted="new bootstrap.Tooltip($el)" data-bs-toggle="tooltip" title="Delete user" v-if="editing" @click="delete_user"><i class="bi bi-person-x"></i></button>
+      <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete user" v-if="editing" @click="delete_user"><i class="bi bi-person-x"></i></button>
       <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit user" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
-      <button type="submit" class="btn btn-success" @vue:mounted="new bootstrap.Tooltip($el)" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
+      <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
     </div>
   </td>
 </template>
@@ -36,9 +36,6 @@
   <h3>Users</h3>
   <form id="users-form" v-scope @submit.prevent="send_form">
     <table class="table" id="users">
-      <script>
-        this.users = {{users | tojson}}
-      </script>
       <thead>
         <tr>
           <th scope="col">Name</th>
@@ -48,7 +45,9 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="usr in this.users" v-scope="TableRow(usr)"></tr>
+      {% for usr in users %}
+        <tr v-scope='TableRow({{usr | tojson}})' {% if user == usr %} class="table-primary" {% endif %}></tr>
+      {% endfor %}
       </tbody>
     </table>
   </form>
