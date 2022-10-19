@@ -74,7 +74,7 @@ def get_team(db: Session, team: str | UUID, context: str) -> Context | None:
 def create_team(db: Session, name: str, context: str) -> Team:
     if get_team(db, name, context) is not None:
         raise NameTaken(name)
-    context = get_context(db, name)
+    context = get_context(db, context)
     if context is None:
         raise ValueError
     team = Team(name=name, context_id=context.id)

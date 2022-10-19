@@ -5,27 +5,18 @@
 
 <template id="table_row">
   <td>
-    <div v-if="editing" class="input-group input-group-sm">
-      <input class="form-control" name="name" type="text" :placeholder="user.name">
-      <div class="input-group-append">
-        <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" :checked="user.is_admin ? 'checked' : null">
-        <label class="btn btn-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
-      </div>
-    </div>
-    <div v-else>
-      <span>${user.name} </span>
-      <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
-    </div>
+    <input v-if="editing" class="form-control" name="name" type="text" :placeholder="team.name">
+    <span v-else>${team.name}</span>
   </td>
   <td>
-    <input v-if="editing" class="form-control form-control-sm" name="email" type="email" :placeholder="user.email">
-    <span v-else>${user.email}</span>
+    <input v-if="editing" class="form-control form-control-sm" name="context" type="text" :placeholder="team.context">
+    <span v-else>${team.context.name}</span>
   </td>
-  <td><span>${user.teams?.join(", ")}</span></td>
+  <td><span>${team.members?.join(", ")}</span></td>
   <td class="text-end">
-    <div class="btn-group btn-group-sm" role="group" v-if="user.id != '{{user.id}}'">
-      <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete user" v-if="editing" @click="delete_user"><i class="bi bi-person-x"></i></button>
-      <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit user" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
+    <div class="btn-group btn-group-sm" role="group">
+      <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete team" v-if="editing" @click="delete_team"><i class="bi bi-x-lg"></i></button>
+      <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit team" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
       <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
     </div>
   </td>
@@ -63,7 +54,7 @@
       </div>
       <div class="col-md">
         <div class="form-floating mb-3">
-          <select class="form-select" id="context-select">
+          <select class="form-select" id="context-select" name="context">
             {% for context in contexts %}
               <option value="{{context.name}}">{{context.name}}</option>
             {% endfor %}
