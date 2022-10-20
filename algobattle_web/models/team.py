@@ -98,11 +98,11 @@ class Team(Base):
         db.refresh(team)
         return team
 
-    def update(self, db: Session, name: str | None, context: str | Context | None) -> Team:
+    def update(self, db: Session, name: str | None, context: str | UUID | Context | None) -> Team:
         if name is not None:
             self.name = name
         if context is not None:
-            if isinstance(context, str):
+            if isinstance(context, (str, UUID)):
                 context = Context.get(db, context)
                 if context is None:
                     raise ValueError
