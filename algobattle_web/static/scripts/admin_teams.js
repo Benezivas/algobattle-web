@@ -30,10 +30,10 @@ async function edit_team(event) {
 
 
 async function delete_team(event) {
-    var user = this.curr_row.user
+    var team = this.curr_row.team
 
     var response = await send_request("delete", {
-        id: user.id
+        id: team.id,
     })
     if (response) {
         event.target.closest("tr").remove()

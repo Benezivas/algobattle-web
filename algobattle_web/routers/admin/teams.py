@@ -52,6 +52,19 @@ async def edit_team(*, db: Session = Depends(get_db), edit: EditTeam):
     return team
 
 
+class DeleteTeam(BaseSchema):
+    id: UUID
+
+@router.post("/delete")
+async def delete_team(*, db: Session = Depends(get_db), team: DeleteTeam):
+    team = Team.get(db, team.id)
+    if team is None:
+        return False
+    else:
+        team.delete(db)
+        return True
+
+
 @router.post("/create_context", response_class=RedirectResponse)
 async def context_create(*, db: Session = Depends(get_db), name: str = Form()):
     Context.create(db, name)
