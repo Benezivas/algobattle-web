@@ -25,58 +25,50 @@
 </template>
 
 
-<div class="col-8">
-  <h3>Teams</h3>
-  <form id="team-table" v-scope @submit.prevent="edit_team" class="mb-5">
-    <table class="table" id="teams">
-      <thead>
-        <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Context</th>
-          <th scope="col">Members</th>
-          <th scope="col"></th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for team in teams %}
-        <tr v-scope='TableRow({{team | tojson}})'></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </form>
+<h3>Teams</h3>
+<form id="team-table" v-scope @submit.prevent="edit_team" class="mb-5">
+  <table class="table" id="teams">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Context</th>
+        <th scope="col">Members</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for team in teams %}
+      <tr v-scope='TableRow({{team | tojson}})'></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</form>
 
-  <h3>Create new team</h3>
-  <form id="create-team" method="post" action="teams/create" class="col-8 mb-5">
-    <div class="row g-2">
-      <div class="col-md">
-        <div class="form-floating mb-3">
-          <input class="form-control form-control-sm" name="name" type="text" required="required" placeholder="blep">
-          <label for="name">Name</label>
-        </div>
-      </div>
-      <div class="col-md">
-        <div class="form-floating mb-3">
-          <select class="form-select" id="context-select" name="context">
-            {% for context in contexts %}
-              <option value="{{context.name}}">{{context.name}}</option>
-            {% endfor %}
-          </select>
-          <label for="context-select">Context</label>
-        </div>
-      </div>
+<h3>Create new team</h3>
+<form id="create-team" method="post" action="teams/create" class="mb-5">
+  <div class="row g-2">
+    <div class="col-md w-md">
+      <label for="name" class="form-label">Name</label>
+      <input class="form-control form-control-sm" name="name" type="text" required="required">
     </div>
-    <button type="submit" class="btn btn-primary">Create</button>
-  </form>
+    <div class="col-md w-md">
+      <label for="context-select" class="form-label">Context</label>
+      <select class="form-select form-select-sm" id="context-select" name="context">
+        {% for context in contexts %}
+          <option value="{{context.name}}">{{context.name}}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <button type="submit" class="btn btn-primary mt-3">Create</button>
+</form>
 
-  <h3>Create new context</h3>
-  <form id="create-context" method="post" action="teams/create_context" class="col-8 mb-5">
-    <div class="form-floating mb-3">
-      <input class="form-control form-control-sm" name="name" type="text" required="required" placeholder="blep">
-      <label for="name">Name</label>
-    </div>
-    <button type="submit" class="btn btn-primary">Create</button>
-  </form>
-</div>
+<h3>Create new context</h3>
+<form id="create-context" method="post" action="teams/create_context" class="mb-5">
+  <label for="name" class="form-label">Name</label>
+  <input class="form-control form-control-sm w-md mb-3" name="name" type="text" required="required">
+  <button type="submit" class="btn btn-primary">Create</button>
+</form>
 
 
 {% endblock %}
