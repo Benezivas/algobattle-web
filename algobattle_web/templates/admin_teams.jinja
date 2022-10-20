@@ -79,7 +79,7 @@
 </template>
 
 <div class="row gy-5">
-  <div class="col-md w-md">
+  <div class="col-md w-em">
     <h3>Contexts</h3>
     <form id="team-table" v-scope @submit.prevent="edit_context">
       <table class="table">
@@ -101,7 +101,7 @@
     <h3>Create new context</h3>
     <form id="create-context" method="post" action="teams/create_context">
       <label for="name" class="form-label">Name</label>
-      <input class="form-control form-control-sm w-md mb-3" name="name" type="text" required="required">
+      <input class="form-control form-control-sm w-em mb-3" name="name" type="text" required="required">
       <button type="submit" class="btn btn-primary">Create</button>
   </form>
   </div>
