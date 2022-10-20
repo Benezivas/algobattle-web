@@ -24,7 +24,7 @@
   <td><span>${user.teams?.join(", ")}</span></td>
   <td class="text-end">
     <div class="btn-group btn-group-sm" role="group" v-if="user.id != '{{user.id}}'">
-      <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete user" v-if="editing" @click="delete_user"><i class="bi bi-person-x"></i></button>
+      <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete user" v-if="editing" @click="delete_user"><i class="bi bi-trash"></i></button>
       <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit user" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
       <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
     </div>
