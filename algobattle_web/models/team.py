@@ -20,28 +20,29 @@ class Context(Base):
 
     teams: Rel[list[Team]] = relationship("Team", back_populates="context")
 
+    @classmethod
+    def get(cls, db: Session, name: str) -> Context | None:
+        return db.query(cls).filter(cls.name == name).first()
 
-def get_context(db: Session, name: str) -> Context | None:
-    return db.query(Context).filter(Context.name == name).first()
-
-def create_context(db: Session, name: str) -> Context:
-    if get_context(db, name) is not None:
-        raise NameTaken(name)
-    context = Context(name=name)
-    db.add(context)
-    db.commit()
-    db.refresh(context)
-    return context
-
-def update_context(db: Session, context: Context, name: str | None) -> Context:
-    if name is not None:
-        context.name = name
+    @classmethod
+    def create(cls, db: Session, name: str) -> Context:
+        if cls.get(db, name) is not None:
+            raise NameTaken(name)
+        context = Context(name=name)
+        db.add(context)
         db.commit()
-    return context
+        db.refresh(context)
+        return context
 
-def delete_context(db: Session, context: Context):
-    db.delete(context)
-    db.commit()
+    def update(self, db: Session, name: str | None) -> Context:
+        if name is not None:
+            self.name = name
+            db.commit()
+        return self
+
+    def delete(self, db: Session):
+        db.delete(self)
+        db.commit()
 
 
 team_members = Table(
@@ -63,39 +64,40 @@ class Team(Base):
     def __str__(self) -> str:
         return self.name
 
+    @classmethod
+    def get(cls, db: Session, team: str | UUID, context: str) -> Team | None:
+        context = Context.get(db, context)
+        if context is None:
+            raise ValueError
+        filter_type = cls.name if isinstance(team, str) else Team.id
+        return db.query(cls).filter(filter_type == team and cls.context_id == context.id).first()
 
-def get_team(db: Session, team: str | UUID, context: str) -> Context | None:
-    context = get_context(db, context)
-    if context is None:
-        raise ValueError
-    filter_type = Team.name if isinstance(team, str) else Team.id
-    return db.query(Team).filter(filter_type == team and Team.context_id == context.id).first()
+    @classmethod
+    def create(cls, db: Session, name: str, context: str) -> Team:
+        if cls.get(db, name, context) is not None:
+            raise NameTaken(name)
+        context = Context.get(db, context)
+        if context is None:
+            raise ValueError
+        team = cls(name=name, context_id=context.id)
+        db.add(team)
+        db.commit()
+        db.refresh(team)
+        return team
 
-def create_team(db: Session, name: str, context: str) -> Team:
-    if get_team(db, name, context) is not None:
-        raise NameTaken(name)
-    context = get_context(db, context)
-    if context is None:
-        raise ValueError
-    team = Team(name=name, context_id=context.id)
-    db.add(team)
-    db.commit()
-    db.refresh(team)
-    return team
+    def update(self, db: Session, name: str | None, context: str | Context | None) -> Team:
+        if name is not None:
+            self.name = name
+        if context is not None:
+            if isinstance(context, str):
+                context = Context.get(db, context)
+                if context is None:
+                    raise ValueError
+            self.context_id = context.id
+        db.commit()
+        return context
 
-def update_team(db: Session, team: Team, name: str | None, context: str | Context | None) -> Team:
-    if name is not None:
-        team.name = name
-    if context is not None:
-        if isinstance(context, str):
-            context = get_context(db, context)
-            if context is None:
-                raise ValueError
-        team.context_id = context.id
-    db.commit()
-    return context
-
-def delete_team(db: Session, team: Team):
-    db.delete(team)
-    db.commit()
+    def delete(self, db: Session):
+        db.delete(self)
+        db.commit()
 

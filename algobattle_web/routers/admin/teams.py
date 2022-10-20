@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 
 from algobattle_web.database import get_db, Session
-from algobattle_web.models.team import Team, create_context, Context, create_team
+from algobattle_web.models.team import Team, Context
 from algobattle_web.templates import templated
 
 router = APIRouter(prefix="/teams", tags=["teams"])
@@ -22,11 +22,11 @@ async def user_get(db: Session = Depends(get_db)):
 
 @router.post("/create_context", response_class=RedirectResponse)
 async def context_create(*, db: Session = Depends(get_db), name: str = Form()):
-    create_context(db, name)
+    Context.create(db, name)
     return RedirectResponse("/admin/teams", status_code=status.HTTP_302_FOUND)
 
 
 @router.post("/create", response_class=RedirectResponse)
 async def team_create(db: Session = Depends(get_db), name: str = Form(), context: str = Form()):
-    create_team(db, name, context)
+    Team.create(db, name, context)
     return RedirectResponse("/admin/teams", status_code=status.HTTP_302_FOUND)
