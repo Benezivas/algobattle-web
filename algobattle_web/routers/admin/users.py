@@ -1,13 +1,11 @@
 "Module specifying the admin user control page."
 from __future__ import annotations
-from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Form
+from fastapi import APIRouter, Depends, status, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 from algobattle_web.database import get_db, Session
 from algobattle_web.models.user import User
 from algobattle_web.templates import templated
-from algobattle_web.util import BaseSchema
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -20,36 +18,9 @@ async def user_get(db: Session = Depends(get_db)):
     return "admin_users.jinja", {"users": users}
 
 
-class EditUser(BaseSchema):
-    id: UUID
-    name: str | None = None
-    email: str | None = None
-    is_admin: bool | None = None
-
-
-@router.post("/edit", response_model=EditUser)
-async def edit_user(*, db: Session = Depends(get_db), edit: EditUser):
-    user = User.get(db, edit.id)
-    if user is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    user.update(db, edit.email, edit.name, edit.is_admin)
-    return user
-
-
 @router.post("/create", response_class=RedirectResponse)
 async def users_create(*, db: Session = Depends(get_db), name: str = Form(), email: str = Form(), is_admin: bool = Form(default=False)):
     User.create(db, email, name, is_admin)
     return RedirectResponse("/admin/users", status_code=status.HTTP_302_FOUND)
 
 
-class DeleteUser(BaseSchema):
-    id: UUID
-
-@router.post("/delete", response_model=bool)
-async def users_delete(*, db: Session = Depends(get_db), user: DeleteUser):
-    user = User.get(db, user.id)
-    if user is None:
-        return False
-    else:
-        user.delete(db)
-        return True

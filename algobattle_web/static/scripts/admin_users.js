@@ -2,7 +2,7 @@ import { createApp } from "https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.es
 
 
 async function send_request(action, content) {
-    var response = await fetch("/admin/users/" + action, {
+    var response = await fetch("/api/user/" + action, {
         "method": "POST",
         "headers": {"Content-type": "application/json"},
         "body": JSON.stringify(content),
