@@ -1,7 +1,6 @@
 "Module specifying the admin user control page."
 from __future__ import annotations
-from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Form
+from fastapi import APIRouter, Depends, status, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 

@@ -9,7 +9,7 @@
     <span v-else>${team.name}</span>
   </td>
   <td>
-    <input v-if="editing" class="form-control form-control-sm" name="context" type="text" :placeholder="team.context">
+    <input v-if="editing" class="form-control form-control-sm" name="context" type="text" :placeholder="team.context.name">
     <span v-else>${team.context.name}</span>
   </td>
   <td><span>${team.members?.join(", ")}</span></td>
