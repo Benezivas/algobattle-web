@@ -13,7 +13,7 @@ from sqlalchemy_utils import UUIDType
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import get_db, Base, Session
 from algobattle_web.models.team import team_members, Team
-from algobattle_web.util import BaseSchema, NameTaken
+from algobattle_web.util import NameTaken
 
 
 class User(Base):
@@ -37,86 +37,72 @@ class User(Base):
                     return str(self.id) == o["id"]
         return NotImplemented
 
-class UserBase(BaseSchema):
-    email: str
-    name: str
-    is_admin: bool = False
+    @classmethod
+    def get(cls, db: Session, user: UUID | str) -> User | None:
+        """Queries the user db by either the user id or their email."""
+        filter_type = cls.email if isinstance(user, str) else cls.id
+        return db.query(cls).filter(filter_type == user).first()
 
-class UserCreate(UserBase):
-    pass
-
-class UserSchema(UserBase):
-    id: UUID
-    token_id: UUID
-
-def get_user(db: Session, user: UUID | str) -> User | None:
-    """Queries the user db by either the user id or their email."""
-    filter_type = User.email if isinstance(user, str) else User.id
-    return db.query(User).filter(filter_type == user).first()
-
-def create_user(db: Session, user: UserCreate) -> User:
-    """Creates a new user, raises `EmailTaken` if the email is already in use."""
-    if get_user(db, user.email) is not None:
-        raise NameTaken(user.email)
-    new_user = User(**user.dict())
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
-
-
-def update_user(db: Session, user: User, email: str | None = None, name: str | None = None, is_admin: bool | None = None) -> User:
-    if email:
-        email_user = get_user(db, email)
-        if email_user is not None and email_user != user:
+    @classmethod
+    def create(cls, db: Session, email: str, name: str, is_admin: bool = False) -> User:
+        """Creates a new user, raises `EmailTaken` if the email is already in use."""
+        if cls.get(db, email) is not None:
             raise NameTaken(email)
-        else:
-            user.email = email
-    if name:
-        user.name = name
-    if is_admin is not None:
-        user.is_admin = is_admin
-    db.commit()
-    return user
+        new_user = cls(email=email, name=name, is_admin=is_admin)
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
 
 
-def delete_user(db: Session, id: UUID) -> bool:
-    user = get_user(db, id)
-    if user is None:
-        return False
-    else:
-        db.delete(user)
+    def update(self, db: Session, email: str | None = None, name: str | None = None, is_admin: bool | None = None) -> User:
+        if email:
+            email_user = self.get(db, email)
+            if email_user is not None and email_user != self:
+                raise NameTaken(email)
+            else:
+                self.email = email
+        if name:
+            self.name = name
+        if is_admin is not None:
+            self.is_admin = is_admin
+        db.commit()
+        return self
+
+
+    def delete(self, db: Session):
+        db.delete(self)
         db.commit()
         return True
 
+    def cookie(self) -> dict[str, Any]:
+        payload = {
+            "type": "user",
+            "user_id": self.id.hex,
+            "token_id": self.token_id.hex,
+            "exp": datetime.now() + timedelta(weeks=4)
+        }
+        return {"key": "user_token", "value": jwt.encode(payload, SECRET_KEY, ALGORITHM)}
 
-def user_cookie(user: User) -> dict[str, Any]:
-    payload = {
-        "type": "user",
-        "user_id": user.id.hex,
-        "token_id": user.token_id.hex,
-        "exp": datetime.now() + timedelta(weeks=4)
-    }
-    return {"key": "user_token", "value": jwt.encode(payload, SECRET_KEY, ALGORITHM)}
 
-
-def decode_user_token(db: Session, token: str | None) -> User | None:
-    if token is None:
-        return
-    try:
-        payload = jwt.decode(token, SECRET_KEY, ALGORITHM)
-        if payload["type"] == "user":
-            user_id = UUID(cast(str, payload["user_id"]))
-            token_id = UUID(cast(str, payload["token_id"]))
-            user = get_user(db, user_id)
-            if user is not None and user.token_id == token_id:
-                return user
-    except (JWTError, ExpiredSignatureError, NameError):
-        return
+    @classmethod
+    def decode_token(cls, db: Session, token: str | None) -> User | None:
+        if token is None:
+            return
+        try:
+            payload = jwt.decode(token, SECRET_KEY, ALGORITHM)
+            if payload["type"] == "user":
+                user_id = UUID(cast(str, payload["user_id"]))
+                token_id = UUID(cast(str, payload["token_id"]))
+                user = cls.get(db, user_id)
+                if user is not None and user.token_id == token_id:
+                    return user
+        except (JWTError, ExpiredSignatureError, NameError):
+            return
 
 
 def curr_user_maybe(db: Session = Depends(get_db), user_token: str | None = Cookie(default=None)) -> User | None:
-    return decode_user_token(db, user_token)
+    return User.decode_token(db, user_token)
 
 
 def curr_user(user: User | None = Depends(curr_user_maybe)) -> User:
