@@ -1,7 +1,7 @@
 "Team model."
 from __future__ import annotations
 from uuid import UUID, uuid4
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 from sqlalchemy import Column, String, ForeignKey, Table
 from sqlalchemy_utils import UUIDType
 from sqlalchemy.orm import relationship, RelationshipProperty as Rel
@@ -64,13 +64,26 @@ class Team(Base):
     def __str__(self) -> str:
         return self.name
 
+    @overload
     @classmethod
-    def get(cls, db: Session, team: str | UUID, context: str) -> Team | None:
-        context = Context.get(db, context)
-        if context is None:
-            raise ValueError
-        filter_type = cls.name if isinstance(team, str) else Team.id
-        return db.query(cls).filter(filter_type == team and cls.context_id == context.id).first()
+    def get(cls, db: Session, team: UUID) -> Team | None: ...
+
+    @overload
+    @classmethod
+    def get(cls, db: Session, team: str, context: str) -> Team | None: ...
+
+    @classmethod
+    def get(cls, db: Session, team: str | UUID, context: str | None = None) -> Team | None:
+        if isinstance(team, str):
+            if context is None:
+                raise ValueError("If the team is given by its name, you have to specify a context!")
+            context = Context.get(db, context)
+            if context is None:
+                raise ValueError("No such context!")
+            filter_expr = cls.name == team and cls.context_id == context.id
+        else:
+            filter_expr = cls.id == team
+        return db.query(cls).filter(filter_expr).first()
 
     @classmethod
     def create(cls, db: Session, name: str, context: str) -> Team:
