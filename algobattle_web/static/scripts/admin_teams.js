@@ -13,21 +13,19 @@ async function send_request(action, content) {
 
 
 async function edit_team(event) {
-    /*var fields = event.currentTarget.elements
-    var user = this.curr_row.user
+    var fields = event.currentTarget.elements
+    var team = this.curr_row.team
 
     var response = await send_request("edit", {
-        id: user.id,
+        id: team.id,
         name: fields.name.value ? fields.name.value : undefined,
-        email: fields.email.value ? fields.email.value : undefined,
-        is_admin: fields.is_admin.checked,
+        context: fields.context.value != team.context.name ? fields.context.value : undefined,
     })
     if (response) {
-        user.name = response.name
-        user.email = response.email
-        user.is_admin = response.is_admin
+        team.name = response.name
+        team.context = response.context
         this.curr_row.editing = false
-    }*/
+    }
 }
 
 
@@ -63,7 +61,7 @@ function TableRow(team) {
 createApp({
     $delimiters: ["${", "}"],
     curr_row: {},
-    send_form: edit_team,
+    edit_team,
     delete_team,
     TableRow,
 }).mount()

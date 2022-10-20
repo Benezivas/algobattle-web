@@ -5,11 +5,13 @@
 
 <template id="table_row">
   <td>
-    <input v-if="editing" class="form-control" name="name" type="text" :placeholder="team.name">
+    <input v-if="editing" class="form-control form-control-sm" name="name" type="text" :placeholder="team.name">
     <span v-else>${team.name}</span>
   </td>
   <td>
-    <input v-if="editing" class="form-control form-control-sm" name="context" type="text" :placeholder="team.context.name">
+    <select v-if="editing" class="form-select form-select-sm" name="context">
+      <option v-for="ctx in {{contexts}}" :value="ctx.name" :selected="ctx.name == team.context.name">${ctx.name}</option>
+    </select>
     <span v-else>${team.context.name}</span>
   </td>
   <td><span>${team.members?.join(", ")}</span></td>
