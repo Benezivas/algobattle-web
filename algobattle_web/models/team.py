@@ -58,7 +58,7 @@ class Team(Base):
     name: str = Column(String)  # type: ignore
     context_id: UUID = Column(UUIDType, ForeignKey("contexts.id"))  # type: ignore
 
-    context: Rel[Context] = relationship("Context", back_populates="teams", uselist=False)
+    context: Rel[Context] = relationship("Context", back_populates="teams", uselist=False, lazy="joined")
     members: Rel[list["User"]] = relationship("User", secondary=team_members, back_populates="teams")
 
     def __str__(self) -> str:
