@@ -63,12 +63,49 @@
   <button type="submit" class="btn btn-primary mt-3">Create</button>
 </form>
 
-<h3>Create new context</h3>
-<form id="create-context" method="post" action="teams/create_context" class="mb-5">
-  <label for="name" class="form-label">Name</label>
-  <input class="form-control form-control-sm w-md mb-3" name="name" type="text" required="required">
-  <button type="submit" class="btn btn-primary">Create</button>
-</form>
+
+<template id="context_row">
+  <td>
+    <input v-if="editing" class="form-control form-control-sm" name="name" type="text" :placeholder="context.name">
+    <span v-else>${context.name}</span>
+  </td>
+  <td class="text-end">
+    <div class="btn-group btn-group-sm" role="group">
+      <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete team" v-if="editing" @click="delete_context"><i class="bi bi-trash"></i></button>
+      <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit team" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
+      <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
+    </div>
+  </td>
+</template>
+
+<h3>Contexts</h3>
+<div class="row gy-5">
+  <div class="col-md w-md">
+    <form id="team-table" v-scope @submit.prevent="edit_context">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for context in contexts %}
+          <tr v-scope='ContextRow({{context | tojson}})'></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+  </form>
+  </div>
+  <div class="col-md">
+    <h3>Create new context</h3>
+    <form id="create-context" method="post" action="teams/create_context">
+      <label for="name" class="form-label">Name</label>
+      <input class="form-control form-control-sm w-md mb-3" name="name" type="text" required="required">
+      <button type="submit" class="btn btn-primary">Create</button>
+  </form>
+  </div>
+</div>
 
 
 {% endblock %}
