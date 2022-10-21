@@ -90,7 +90,7 @@ async def create_context(*, db: Session = Depends(get_db), context: CreateContex
 
 class EditContext(BaseSchema):
     id: UUID
-    name: str
+    name: str | None
 
 @admin.post("/context/edit", response_model=ContextSchema)
 async def edit_context(*, db: Session = Depends(get_db), edit: EditContext):

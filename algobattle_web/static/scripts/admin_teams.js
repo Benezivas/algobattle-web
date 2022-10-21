@@ -62,10 +62,6 @@ function TableRow(team) {
 async function edit_context(event) {
     var fields = event.currentTarget.elements
     var context = this.curr_row.context
-    if (!fields.name.value) {
-        this.curr_row.editing = false
-        this.curr_row = {}
-    }
 
     var response = await send_request("context/edit", {
         id: context.id,
