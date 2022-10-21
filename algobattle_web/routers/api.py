@@ -74,6 +74,43 @@ async def edit_self(*, db: Session = Depends(get_db), user = Depends(curr_user),
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     user.update(db, edit.email, edit.name)
     
+#*******************************************************************************
+#* Context
+#*******************************************************************************
+
+class ContextSchema(BaseSchema):
+    id: UUID
+    name: str
+
+class CreateContext(BaseSchema):
+    name: str
+
+@admin.post("/context/create", response_model=ContextSchema)
+async def create_context(*, db: Session = Depends(get_db), context: CreateContext):
+    return Context.create(db, context.name)
+
+class EditContext(BaseSchema):
+    id: UUID
+    name: str
+
+@admin.post("/context/edit", response_model=ContextSchema)
+async def edit_context(*, db: Session = Depends(get_db), edit: EditContext):
+    context = Context.get(db, edit.id)
+    if context is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    context.update(db, name=edit.name)
+    return context
+
+class DeleteContext(BaseSchema):
+    id: UUID
+
+@admin.post("/context/delete")
+async def delete_context(*, db: Session = Depends(get_db), context: DeleteContext):
+    context = Context.get(db, context.id)
+    if context is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    context.delete(db)
+    return True
 
 #*******************************************************************************
 #* Team
@@ -134,44 +171,3 @@ async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depend
         raise HTTPException(status.HTTP_401_UNAUTHORIZED)
     team.update(db, name=edit.name)
     return team
-
-#*******************************************************************************
-#* Context
-#*******************************************************************************
-
-class ContextSchema(BaseSchema):
-    id: UUID
-    name: str
-
-class CreateContext(BaseSchema):
-    name: str
-
-@admin.post("/context/create", response_model=ContextSchema)
-async def create_context(*, db: Session = Depends(get_db), context: CreateContext):
-    return Context.create(db, context.name)
-
-class EditContext(BaseSchema):
-    id: UUID
-    name: str
-
-@admin.post("/context/edit", response_model=ContextSchema)
-async def edit_context(*, db: Session = Depends(get_db), edit: EditContext):
-    context = Context.get(db, edit.id)
-    if context is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    context.update(db, name=edit.name)
-    return context
-
-class DeleteContext(BaseSchema):
-    id: UUID
-
-@admin.post("/context/delete")
-async def delete_context(*, db: Session = Depends(get_db), context: DeleteContext):
-    context = Context.get(db, context.id)
-    if context is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    context.delete(db)
-    return True
-
-
-
