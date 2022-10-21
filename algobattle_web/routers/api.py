@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException
 from algobattle_web.database import get_db, Session
+from algobattle_web.models.team import Team
 from algobattle_web.models.user import User, curr_user
 from algobattle_web.util import BaseSchema
 
@@ -61,6 +62,55 @@ async def delete_user(*, db: Session = Depends(get_db), curr: User = Depends(cur
         return True
 
 
+class TeamSchema(BaseSchema):
+    id: UUID
+    name: str
+    context: ContextSchema
+
+class CreateTeam(BaseSchema):
+    name: str
+    context: UUID | str | ContextSchema
+
+class EditTeam(BaseSchema):
+    id: UUID
+    name: str | None = None
+    context: UUID | str | ContextSchema
+
+class DeleteTeam(BaseSchema):
+    id: UUID
+
+@router.post("/team/create", response_model=TeamSchema)
+async def create_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), team: CreateTeam):
+    if not curr.is_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN)
+
+    if isinstance(team.context, ContextSchema):
+        team.context = team.context.id
+    return Team.create(db, team.name, team.context)
+
+@router.post("/team/edit", response_model=TeamSchema)
+async def edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), edit: EditTeam):
+    if not (curr.is_admin or any(edit.id == t.id for t in curr.teams)):
+        raise HTTPException(status.HTTP_403_FORBIDDEN)
+
+    team = Team.get(db, edit.id)
+    if team is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    if isinstance(edit.context, ContextSchema):
+        edit.context = edit.context.id
+    team.update(db, edit.name, edit.context)
+    return team
+
+
+class ContextSchema(BaseSchema):
+    id: UUID
+    name: str
+
+class CreateContext(BaseSchema):
+    name: str
+
+class DeleteContext(BaseSchema):
+    id: UUID
 
 
 

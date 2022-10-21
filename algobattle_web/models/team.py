@@ -21,8 +21,9 @@ class Context(Base):
     teams: Rel[list[Team]] = relationship("Team", back_populates="context")
 
     @classmethod
-    def get(cls, db: Session, name: str) -> Context | None:
-        return db.query(cls).filter(cls.name == name).first()
+    def get(cls, db: Session, context: str | UUID) -> Context | None:
+        row = cls.name if isinstance(context, str) else cls.id
+        return db.query(cls).filter(row == context).first()
 
     @classmethod
     def create(cls, db: Session, name: str) -> Context:
@@ -86,7 +87,7 @@ class Team(Base):
         return db.query(cls).filter(filter_expr).first()
 
     @classmethod
-    def create(cls, db: Session, name: str, context: str) -> Team:
+    def create(cls, db: Session, name: str, context: UUID | str | Context) -> Team:
         if cls.get(db, name, context) is not None:
             raise NameTaken(name)
         context = Context.get(db, context)
