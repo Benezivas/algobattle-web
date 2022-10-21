@@ -8,8 +8,17 @@ from algobattle_web.models.user import User, curr_user
 from algobattle_web.util import BaseSchema
 
 
-router = APIRouter(prefix="/api", tags=["api"])
+def check_if_admin(user: User = Depends(curr_user)):
+    if not user.is_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN)
 
+router = APIRouter(prefix="/api", tags=["api"])
+admin = APIRouter(tags=["admin"], dependencies=Depends(check_if_admin))
+router.include_router(admin)
+
+#*******************************************************************************
+#* User
+#*******************************************************************************
 
 class UserSchema(BaseSchema):
     id: UUID
@@ -22,38 +31,31 @@ class CreateUser(BaseSchema):
     email: str
     is_admin: bool = False
 
+
+@admin.post("/user/create", response_model=UserSchema)
+async def create_user(*, db: Session = Depends(get_db), user: CreateUser):
+    return User.create(db, user.email, user.name, user.is_admin)
+
+
 class EditUser(BaseSchema):
     id: UUID
     name: str | None = None
     email: str | None = None
     is_admin: bool | None = None
 
-class DeleteUser(BaseSchema):
-    id: UUID
-
-@router.post("/user/create", response_model=UserSchema)
-async def create_user(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), user: CreateUser):
-    if not curr.is_admin:
-        raise HTTPException(status.HTTP_403_FORBIDDEN)
-
-    return User.create(db, user.email, user.name, user.is_admin)
-
-@router.post("/user/edit", response_model=UserSchema)
-async def edit_user(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), edit: EditUser):
-    if not (curr.is_admin or edit.id == curr.id):
-        raise HTTPException(status.HTTP_403_FORBIDDEN)
-
+@admin.post("/user/edit", response_model=UserSchema)
+async def edit_user(*, db: Session = Depends(get_db), edit: EditUser):
     user = User.get(db, edit.id)
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     user.update(db, edit.email, edit.name, edit.is_admin)
     return user
 
-@router.post("/user/delete")
-async def delete_user(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), user: DeleteUser):
-    if not curr.is_admin:
-        raise HTTPException(status.HTTP_403_FORBIDDEN)
+class DeleteUser(BaseSchema):
+    id: UUID
 
+@admin.post("/user/delete")
+async def delete_user(*, db: Session = Depends(get_db), user: DeleteUser):
     user = User.get(db, user.id)
     if user is None:
         return False
@@ -61,6 +63,21 @@ async def delete_user(*, db: Session = Depends(get_db), curr: User = Depends(cur
         user.delete(db)
         return True
 
+class EditSelf(BaseSchema):
+    name: str | None = None
+    email: str | None = None
+
+@router.post("/user/edit_self")
+async def edit_self(*, db: Session = Depends(get_db), user = Depends(curr_user), edit: EditSelf):
+    user = User.get(db, user.id)
+    if user is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    user.update(db, edit.email, edit.name)
+    
+
+#*******************************************************************************
+#* Team
+#*******************************************************************************
 
 class TeamSchema(BaseSchema):
     id: UUID
@@ -101,6 +118,10 @@ async def edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_
     team.update(db, edit.name, edit.context)
     return team
 
+
+#*******************************************************************************
+#* Context
+#*******************************************************************************
 
 class ContextSchema(BaseSchema):
     id: UUID
