@@ -10,8 +10,7 @@ from sqlalchemy import Column, String, Boolean, Table, ForeignKey
 from sqlalchemy.orm import relationship, RelationshipProperty as Rel
 from sqlalchemy_utils import UUIDType
 
-from algobattle_web.util import config
-from algobattle_web.database import Base, Session
+from algobattle_web.util import config, Base, Session
 
 
 @dataclass

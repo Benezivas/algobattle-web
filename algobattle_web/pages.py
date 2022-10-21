@@ -5,10 +5,9 @@ from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 
-from algobattle_web.database import get_db, Session
 from algobattle_web.models import Context, Team, User, NameTaken
 from algobattle_web.templates import templated, templates
-from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError
+from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError, Session, get_db
 
 router = APIRouter()
 

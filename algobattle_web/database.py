@@ -9,14 +9,3 @@ from algobattle_web.util import config
 
 
 
-engine = create_engine(config.database_url, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base: Any = declarative_base()
-
-def get_db() -> Iterator[Session]:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-

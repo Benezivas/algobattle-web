@@ -3,17 +3,18 @@ from __future__ import annotations
 from datetime import timedelta, datetime
 from enum import Enum
 from pathlib import Path
-from typing import cast
+from typing import Any, Iterator, cast
 from dataclasses import dataclass
 from pydantic import BaseModel
-from algobattle_web.database import Session
 from fastapi import Depends, Cookie, HTTPException, status
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.ext.declarative import declarative_base
 import tomli
 from base64 import b64decode
 
-from algobattle_web.database import get_db
 from algobattle_web.models import User
 
 
@@ -33,13 +34,16 @@ except (KeyError, OSError, TypeError):
     raise SystemExit("Badly formatted or missing config.toml!")
 
 
-def send_email(email: str, content: str):
-    print(f"sending email to {email}: {content}")
+engine = create_engine(config.database_url, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base: Any = declarative_base()
 
-
-class BaseSchema(BaseModel):
-    class Config:
-        orm_mode = True
+def get_db() -> Iterator[Session]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 def curr_user_maybe(db: Session = Depends(get_db), user_token: str | None = Cookie(default=None)) -> User | None:
@@ -85,3 +89,12 @@ def decode_login_token(db: Session, token: str | None) -> User | LoginError:
     except (JWTError, NameError):
         pass
     return LoginError.InvalidToken
+
+
+def send_email(email: str, content: str):
+    print(f"sending email to {email}: {content}")
+
+
+class BaseSchema(BaseModel):
+    class Config:
+        orm_mode = True
