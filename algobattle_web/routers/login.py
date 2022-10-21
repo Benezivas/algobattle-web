@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from algobattle_web.database import get_db, Session
-from algobattle_web.models.user import User, curr_user_maybe
+from algobattle_web.models import User, curr_user_maybe
 from algobattle_web.templates import templates as t
 from algobattle_web.util import send_email
 from algobattle_web.config import SECRET_KEY, ALGORITHM
