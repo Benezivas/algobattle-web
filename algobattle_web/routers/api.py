@@ -14,7 +14,6 @@ def check_if_admin(user: User = Depends(curr_user)):
 
 router = APIRouter(prefix="/api", tags=["api"])
 admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)])
-router.include_router(admin)
 
 #*******************************************************************************
 #* User
@@ -171,3 +170,6 @@ async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depend
         raise HTTPException(status.HTTP_401_UNAUTHORIZED)
     team.update(db, name=edit.name)
     return team
+
+#* has to be executed after all route defns
+router.include_router(admin)
