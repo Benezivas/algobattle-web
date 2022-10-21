@@ -13,7 +13,7 @@ def check_if_admin(user: User = Depends(curr_user)):
         raise HTTPException(status.HTTP_403_FORBIDDEN)
 
 router = APIRouter(prefix="/api", tags=["api"])
-admin = APIRouter(tags=["admin"], dependencies=Depends(check_if_admin))
+admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)])
 router.include_router(admin)
 
 #*******************************************************************************
