@@ -1,7 +1,7 @@
 import { createApp } from "https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.es.js?module"
 
 async function send_request(action, content) {
-    var response = await fetch("/admin/" + action, {
+    var response = await fetch("/api/" + action, {
         "method": "POST",
         "headers": {"Content-type": "application/json"},
         "body": JSON.stringify(content),
@@ -62,14 +62,19 @@ function TableRow(team) {
 async function edit_context(event) {
     var fields = event.currentTarget.elements
     var context = this.curr_row.context
+    if (!fields.name.value) {
+        this.curr_row.editing = false
+        this.curr_row = {}
+    }
 
-    var response = await send_request("teams/edit", {
+    var response = await send_request("context/edit", {
         id: context.id,
-        name: fields.name.value ? fields.name.value : undefined,
+        name: fields.name.value,
     })
     if (response) {
         context.name = response.name
         this.curr_row.editing = false
+        this.curr_row = {}
     }
 }
 
@@ -77,10 +82,11 @@ async function edit_context(event) {
 async function delete_context(event) {
     var context = this.curr_row.context
 
-    var response = await send_request("teams/delete", {
+    var response = await send_request("context/delete", {
         id: context.id,
     })
     if (response) {
+        this.curr_row = {}
         event.target.closest("tr").remove()
     }
 }
