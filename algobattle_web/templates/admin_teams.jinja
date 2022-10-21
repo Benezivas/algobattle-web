@@ -47,11 +47,11 @@
 <h3>Create new team</h3>
 <form id="create-team" method="post" action="teams/create" class="mb-5">
   <div class="row g-2">
-    <div class="col-md w-md">
+    <div class="col-md w-em">
       <label for="name" class="form-label">Name</label>
       <input class="form-control form-control-sm" name="name" type="text" required="required">
     </div>
-    <div class="col-md w-md">
+    <div class="col-md w-em">
       <label for="context-select" class="form-label">Context</label>
       <select class="form-select form-select-sm" id="context-select" name="context">
         {% for context in contexts %}
