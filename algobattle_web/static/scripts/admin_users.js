@@ -53,6 +53,9 @@ async function create_user(event) {
     })
     if (response) {
         users.push(response)
+        fields.name.value = ""
+        fields.email.value = ""
+        fields.is_admin.checked = false
     }
 }
 
