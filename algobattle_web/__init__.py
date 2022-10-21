@@ -9,8 +9,7 @@ from algobattle_web.models.user import User
 from algobattle_web.config import ADMIN_EMAIL
 from algobattle_web.routers.api import router as api
 from algobattle_web.routers.login import router as login
-from algobattle_web.routers.home import router as home
-from algobattle_web.routers.user import router as user
+from algobattle_web.routers.user_pages import router as user_pages
 from algobattle_web.routers.admin import router as admin
 
 
@@ -24,8 +23,7 @@ with contextmanager(database.get_db)() as db:
 app = FastAPI()
 app.include_router(api)
 app.include_router(login)
-app.include_router(home)
-app.include_router(user)
+app.include_router(user_pages)
 app.include_router(admin)
 
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")

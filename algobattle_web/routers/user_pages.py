@@ -1,14 +1,21 @@
-"Module specifying the user page."
+"Module specifying the regular user pages."
 from __future__ import annotations
 from typing import Any
 from fastapi import APIRouter, Depends, Form, status
 from fastapi.responses import HTMLResponse, RedirectResponse
+
 from algobattle_web.database import get_db, Session
 from algobattle_web.models.user import User, curr_user
 from algobattle_web.templates import templated
 from algobattle_web.util import NameTaken
 
-router = APIRouter(prefix="/user", tags=["user"])
+router = APIRouter()
+
+
+@router.get("/")
+@templated
+async def home_get():
+    return "home.jinja"
 
 
 @router.get("", response_class=HTMLResponse)
