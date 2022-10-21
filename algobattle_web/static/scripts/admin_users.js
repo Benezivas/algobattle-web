@@ -43,6 +43,19 @@ async function delete_user(event) {
     }
 }
 
+async function create_user(event) {
+    var fields = event.currentTarget.elements
+
+    var response = await send_request("create", {
+        name: fields.name.value,
+        email: fields.email.value,
+        is_admin: fields.is_admin.checked,
+    })
+    if (response) {
+        users.push(response)
+    }
+}
+
 
 function TableRow(user) {
     return {
@@ -68,5 +81,6 @@ createApp({
     curr_row: {},
     send_form,
     delete_user,
+    create_user,
     TableRow,
 }).mount()

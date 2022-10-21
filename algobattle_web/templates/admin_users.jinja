@@ -2,6 +2,9 @@
 {% block content %}
 
 <script src="/static/scripts/admin_users.js" type="module"></script>
+<script>
+  var users = {{users | tojson}}
+</script>
 
 <template id="table_row">
   <td>
@@ -32,9 +35,9 @@
 </template>
 
 
-<div class="col-8">
+<div class="col-8" v-scope>
   <h3>Users</h3>
-  <form id="users-form" v-scope @submit.prevent="send_form">
+  <form id="users-form" @submit.prevent="send_form">
     <table class="table" id="users">
       <thead>
         <tr>
@@ -45,15 +48,13 @@
         </tr>
       </thead>
       <tbody>
-      {% for usr in users %}
-        <tr v-scope='TableRow({{usr | tojson}})' {% if user == usr %} class="table-primary" {% endif %}></tr>
-      {% endfor %}
+        <tr v-for="usr in users" v-scope='TableRow(usr)' :key="usr.id" :class="{'table-primary': usr.id == '{{user.id}}'}"></tr>
       </tbody>
     </table>
   </form>
 
   <h3>Create new user</h3>
-  <form id="create-user" method="post" action="users/create" class="col-6">
+  <form id="create-user" class="col-6" @submit.prevent="create_user">
     <label for="name" class="form-label">name</label>
     <div class="input-group">
       <input class="form-control" name="name" type="text" required="required">

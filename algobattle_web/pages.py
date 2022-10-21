@@ -89,10 +89,10 @@ async def users_get(db: Session = Depends(get_db)):
     return "admin_users.jinja", {"users": users}
 
 
-@admin.post("/users/create", response_class=RedirectResponse)
-async def users_create(*, db: Session = Depends(get_db), name: str = Form(), email: str = Form(), is_admin: bool = Form(default=False)):
-    User.create(db, email, name, is_admin)
-    return RedirectResponse("/admin/users", status_code=status.HTTP_302_FOUND)
+#@admin.post("/users/create", response_class=RedirectResponse)
+#async def users_create(*, db: Session = Depends(get_db), name: str = Form(), email: str = Form(), is_admin: bool = Form(default=False)):
+#    User.create(db, email, name, is_admin)
+#    return RedirectResponse("/admin/users", status_code=status.HTTP_302_FOUND)
 
 
 @admin.get("/teams", response_class=HTMLResponse)
