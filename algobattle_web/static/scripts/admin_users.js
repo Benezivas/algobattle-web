@@ -50,12 +50,13 @@ function TableRow(user) {
         user: user,
         editing: false,
         toggle_editing() {
-            this.editing = !this.editing
             if (this.editing) {
+                this.editing = false
+                this.curr_row = {}
+            } else {
                 this.curr_row.editing = false
                 this.curr_row = this
-            } else {
-                this.curr_row = {}
+                this.editing = true
             }
         }
     }

@@ -47,12 +47,13 @@ function TableRow(team) {
         team: team,
         editing: false,
         toggle_editing() {
-            this.editing = !this.editing
             if (this.editing) {
+                this.editing = false
+                this.curr_row = {}
+            } else {
                 this.curr_row.editing = false
                 this.curr_row = this
-            } else {
-                this.curr_row = {}
+                this.editing = true
             }
         },
     }
@@ -91,12 +92,13 @@ function ContextRow(context) {
         context: context,
         editing: false,
         toggle_editing() {
-            this.editing = !this.editing
             if (this.editing) {
+                this.editing = false
+                this.curr_row = {}
+            } else {
                 this.curr_row.editing = false
                 this.curr_row = this
-            } else {
-                this.curr_row = {}
+                this.editing = true
             }
         },
     }
