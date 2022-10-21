@@ -18,13 +18,13 @@ async def home_get():
     return "home.jinja"
 
 
-@router.get("", response_class=HTMLResponse)
+@router.get("/user", response_class=HTMLResponse)
 @templated
 async def user_get():
     return "user.jinja"
 
 
-@router.post("", response_class=HTMLResponse)
+@router.post("/user", response_class=HTMLResponse)
 @templated
 async def user_post(
     db: Session = Depends(get_db),
