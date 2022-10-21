@@ -6,7 +6,8 @@
   var users = {{users | tojson}}
 </script>
 
-<template id="table_row">
+<script type="text/x-template" id="table_row">
+<tr :class="{'table-primary': user.id == '{{user.id}}'}">
   <td>
     <div v-if="editing" class="input-group input-group-sm">
       <input class="form-control" name="name" type="text" :placeholder="user.name">
@@ -32,12 +33,13 @@
       <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
     </div>
   </td>
-</template>
+</tr>
+</script>
 
 
-<div class="col-8" v-scope>
+<div class="col-8" id="app">
   <h3>Users</h3>
-  <form id="users-form" @submit.prevent="send_form">
+  <form id="users-form" @submit.prevent="edit_user">
     <table class="table" id="users">
       <thead>
         <tr>
@@ -48,7 +50,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="usr in users" v-scope='TableRow(usr)' :key="usr.id" :class="{'table-primary': usr.id == '{{user.id}}'}"></tr>
+        <tr is="vue:table-row" v-for="user in users" :user="user" :key="user.id"></tr>
       </tbody>
     </table>
   </form>

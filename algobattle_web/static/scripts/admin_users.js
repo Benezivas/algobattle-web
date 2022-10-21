@@ -1,4 +1,4 @@
-import { createApp } from "https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.es.js?module"
+import { createApp } from "vue"
 
 
 async function send_request(action, content) {
@@ -13,7 +13,24 @@ async function send_request(action, content) {
 }
 
 
-async function send_form(event) {
+async function create_user(event) {
+    var fields = event.currentTarget.elements
+
+    var response = await send_request("create", {
+        name: fields.name.value,
+        email: fields.email.value,
+        is_admin: fields.is_admin.checked,
+    })
+    if (response) {
+        this.users.push(response)
+        fields.name.value = ""
+        fields.email.value = ""
+        fields.is_admin.checked = false
+    }
+}
+
+
+async function edit_user(event) {
     var fields = event.currentTarget.elements
     var user = this.curr_row.user
 
@@ -43,28 +60,32 @@ async function delete_user(event) {
     }
 }
 
-async function create_user(event) {
-    var fields = event.currentTarget.elements
 
-    var response = await send_request("create", {
-        name: fields.name.value,
-        email: fields.email.value,
-        is_admin: fields.is_admin.checked,
-    })
-    if (response) {
-        users.push(response)
-        fields.name.value = ""
-        fields.email.value = ""
-        fields.is_admin.checked = false
-    }
-}
+const app = createApp({
+    props: ["users"],
+    data() {
+        return {
+            curr_row: {},
+        }
+    },
+    methods: {
+        create_user,
+        edit_user,
+        delete_user,
+    },
+}, {
+    users: users,
+})
 
-
-function TableRow(user) {
-    return {
-        $template: "#table_row",
-        user: user,
-        editing: false,
+app.component("TableRow", {
+    template: "#table_row",
+    props: ["user"],
+    data() {
+        return {
+            editing: false,
+        }
+    },
+    methods: {
         toggle_editing() {
             if (this.editing) {
                 this.editing = false
@@ -74,16 +95,10 @@ function TableRow(user) {
                 this.curr_row = this
                 this.editing = true
             }
-        }
-    }
-}
+        },
+    },
+})
+app.config.compilerOptions.delimiters = ["${", "}"]
 
 
-createApp({
-    $delimiters: ["${", "}"],
-    curr_row: {},
-    send_form,
-    delete_user,
-    create_user,
-    TableRow,
-}).mount()
+app.mount("#app")
