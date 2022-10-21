@@ -99,7 +99,7 @@ class Team(Base):
         db.refresh(team)
         return team
 
-    def update(self, db: Session, name: str | None, context: str | UUID | Context | None) -> Team:
+    def update(self, db: Session, name: str | None = None, context: str | UUID | Context | None = None) -> Team:
         if name is not None:
             self.name = name
         if context is not None:

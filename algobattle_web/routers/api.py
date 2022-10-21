@@ -88,28 +88,19 @@ class CreateTeam(BaseSchema):
     name: str
     context: UUID | str | ContextSchema
 
+@admin.post("/team/create", response_model=TeamSchema)
+async def create_team(*, db: Session = Depends(get_db), team: CreateTeam):
+    if isinstance(team.context, ContextSchema):
+        team.context = team.context.id
+    return Team.create(db, team.name, team.context)
+
 class EditTeam(BaseSchema):
     id: UUID
     name: str | None = None
     context: UUID | str | ContextSchema
 
-class DeleteTeam(BaseSchema):
-    id: UUID
-
-@router.post("/team/create", response_model=TeamSchema)
-async def create_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), team: CreateTeam):
-    if not curr.is_admin:
-        raise HTTPException(status.HTTP_403_FORBIDDEN)
-
-    if isinstance(team.context, ContextSchema):
-        team.context = team.context.id
-    return Team.create(db, team.name, team.context)
-
-@router.post("/team/edit", response_model=TeamSchema)
-async def edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), edit: EditTeam):
-    if not (curr.is_admin or any(edit.id == t.id for t in curr.teams)):
-        raise HTTPException(status.HTTP_403_FORBIDDEN)
-
+@admin.post("/team/edit", response_model=TeamSchema)
+async def edit_team(*, db: Session = Depends(get_db), edit: EditTeam):
     team = Team.get(db, edit.id)
     if team is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -118,6 +109,31 @@ async def edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_
     team.update(db, edit.name, edit.context)
     return team
 
+class DeleteTeam(BaseSchema):
+    id: UUID
+
+@admin.post("/team/delete")
+async def delete_team(*, db: Session = Depends(get_db), team: DeleteTeam):
+    team = Team.get(db, team.id)
+    if team is None:
+        return False
+    else:
+        team.delete(db)
+        return True
+
+class MemberEditTeam(BaseSchema):
+    id: UUID
+    name: str
+
+@router.post("/team/member_edit_team", response_model=TeamSchema)
+async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), edit: MemberEditTeam):
+    team = Team.get(db, edit.id)
+    if team is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    if not any(team.id == t.id for t in curr.teams):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+    team.update(db, name=edit.name)
+    return team
 
 #*******************************************************************************
 #* Context
