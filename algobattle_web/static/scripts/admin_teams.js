@@ -16,7 +16,7 @@ async function edit_team(event) {
     var fields = event.currentTarget.elements
     var team = this.curr_row.team
 
-    var response = await send_request("teams/edit", {
+    var response = await send_request("team/edit", {
         id: team.id,
         name: fields.name.value ? fields.name.value : undefined,
         context: fields.context.value != team.context.name ? fields.context.value : undefined,
@@ -32,7 +32,7 @@ async function edit_team(event) {
 async function delete_team(event) {
     var team = this.curr_row.team
 
-    var response = await send_request("teams/delete", {
+    var response = await send_request("team/delete", {
         id: team.id,
     })
     if (response) {
