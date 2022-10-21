@@ -2,6 +2,7 @@
 from __future__ import annotations
 from datetime import timedelta, datetime
 from enum import Enum
+from pathlib import Path
 from typing import cast
 from dataclasses import dataclass
 from pydantic import BaseModel
@@ -9,11 +10,27 @@ from algobattle_web.database import Session
 from fastapi import Depends, Cookie, HTTPException, status
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
+import tomli
+from base64 import b64decode
 
 from algobattle_web.database import get_db
 from algobattle_web.models import User
-from algobattle_web.config import SECRET_KEY, ALGORITHM
 
+
+@dataclass
+class ServerConfig:
+    secret_key: bytes
+    database_url: str
+    admin_email: str
+    algorithm: str = "HS256"
+
+try:
+    with open(Path(__file__).parent / "config.toml", "rb") as f:
+        toml_dict = tomli.load(f)["algobattle_web"]
+    toml_dict["secret_key"] = b64decode(toml_dict["secret_key"])
+    config = ServerConfig(**toml_dict)
+except (KeyError, OSError, TypeError):
+    raise SystemExit("Badly formatted or missing config.toml!")
 
 
 def send_email(email: str, content: str):
@@ -51,14 +68,14 @@ def login_token(email: str, lifetime: timedelta = timedelta(hours=1)) -> str:
         "email": email,
         "exp": datetime.now() + lifetime,
     }
-    return jwt.encode(payload, SECRET_KEY, ALGORITHM)
+    return jwt.encode(payload, config.secret_key, config.algorithm)
 
 
 def decode_login_token(db: Session, token: str | None) -> User | LoginError:
     if token is None:
         return LoginError.NoToken
     try:
-        payload = jwt.decode(token, SECRET_KEY, ALGORITHM)
+        payload = jwt.decode(token, config.secret_key, config.algorithm)
         if payload["type"] == "login":
             user = User.get(db, cast(str, payload["email"]))
             if user is not None:

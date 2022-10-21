@@ -6,16 +6,16 @@ from fastapi.staticfiles import StaticFiles
 
 import algobattle_web.database as database
 from algobattle_web.models import User
-from algobattle_web.config import ADMIN_EMAIL
 from algobattle_web.api import router as api
 from algobattle_web.pages import router as pages
+from algobattle_web.util import config
 
 
 
 database.Base.metadata.create_all(bind=database.engine)
 with contextmanager(database.get_db)() as db:
-    if User.get(db, ADMIN_EMAIL) is None:
-        User.create(db, email=ADMIN_EMAIL, name="Admin", is_admin=True)
+    if User.get(db, config.admin_email) is None:
+        User.create(db, email=config.admin_email, name="Admin", is_admin=True)
 
 
 app = FastAPI()

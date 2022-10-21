@@ -10,7 +10,7 @@ from sqlalchemy import Column, String, Boolean, Table, ForeignKey
 from sqlalchemy.orm import relationship, RelationshipProperty as Rel
 from sqlalchemy_utils import UUIDType
 
-from algobattle_web.config import SECRET_KEY, ALGORITHM
+from algobattle_web.util import config
 from algobattle_web.database import Base, Session
 
 
@@ -91,7 +91,7 @@ class User(Base):
             "token_id": self.token_id.hex,
             "exp": datetime.now() + timedelta(weeks=4)
         }
-        return {"key": "user_token", "value": jwt.encode(payload, SECRET_KEY, ALGORITHM)}
+        return {"key": "user_token", "value": jwt.encode(payload, config.secret_key, config.algorithm)}
 
 
     @classmethod
@@ -99,7 +99,7 @@ class User(Base):
         if token is None:
             return
         try:
-            payload = jwt.decode(token, SECRET_KEY, ALGORITHM)
+            payload = jwt.decode(token, config.secret_key, config.algorithm)
             if payload["type"] == "user":
                 user_id = UUID(cast(str, payload["user_id"]))
                 token_id = UUID(cast(str, payload["token_id"]))
