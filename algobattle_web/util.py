@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import timedelta, datetime
 from enum import Enum
 from typing import cast
-from dataclasses import dataclass
 from pydantic import BaseModel
 from algobattle_web.database import Session
 from fastapi import Depends, Cookie, HTTPException, status
