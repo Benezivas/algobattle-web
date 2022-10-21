@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import timedelta, datetime
 from typing import Any, Mapping, cast, overload
 from uuid import UUID, uuid4
-from fastapi import Cookie, HTTPException, Depends, status
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Column, String, Boolean, Table, ForeignKey
@@ -11,7 +10,7 @@ from sqlalchemy.orm import relationship, RelationshipProperty as Rel
 from sqlalchemy_utils import UUIDType
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import get_db, Base, Session
+from algobattle_web.database import Base, Session
 from algobattle_web.util import NameTaken
 
 team_members = Table(
@@ -104,20 +103,6 @@ class User(Base):
                     return user
         except (JWTError, ExpiredSignatureError, NameError):
             return
-
-
-def curr_user_maybe(db: Session = Depends(get_db), user_token: str | None = Cookie(default=None)) -> User | None:
-    return User.decode_token(db, user_token)
-
-
-def curr_user(user: User | None = Depends(curr_user_maybe)) -> User:
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
-            headers={"Location": "/login"},
-        )
-    else:
-        return user
 
 
 class Context(Base):

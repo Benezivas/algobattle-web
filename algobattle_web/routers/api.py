@@ -3,8 +3,8 @@ from __future__ import annotations
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException
 from algobattle_web.database import get_db, Session
-from algobattle_web.models import Context, Team, User, curr_user
-from algobattle_web.util import BaseSchema
+from algobattle_web.models import Context, Team, User
+from algobattle_web.util import BaseSchema, curr_user
 
 
 def check_if_admin(user: User = Depends(curr_user)):
