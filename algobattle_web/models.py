@@ -1,5 +1,6 @@
 "Database models"
 from __future__ import annotations
+from dataclasses import dataclass
 from datetime import timedelta, datetime
 from typing import Any, Mapping, cast, overload
 from uuid import UUID, uuid4
@@ -11,7 +12,11 @@ from sqlalchemy_utils import UUIDType
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import Base, Session
-from algobattle_web.util import NameTaken
+
+
+@dataclass
+class NameTaken(Exception):
+    name: str
 
 team_members = Table(
     "team_members",

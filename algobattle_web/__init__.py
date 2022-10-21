@@ -5,12 +5,10 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 import algobattle_web.database as database
-from algobattle_web.models.user import User
+from algobattle_web.models import User
 from algobattle_web.config import ADMIN_EMAIL
-from algobattle_web.routers.api import router as api
-from algobattle_web.routers.login import router as login
-from algobattle_web.routers.user_pages import router as user_pages
-from algobattle_web.routers.admin import router as admin
+from algobattle_web.api import router as api
+from algobattle_web.pages import router as pages
 
 
 
@@ -22,8 +20,6 @@ with contextmanager(database.get_db)() as db:
 
 app = FastAPI()
 app.include_router(api)
-app.include_router(login)
-app.include_router(user_pages)
-app.include_router(admin)
+app.include_router(pages)
 
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
