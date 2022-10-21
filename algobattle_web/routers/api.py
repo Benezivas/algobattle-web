@@ -3,7 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException
 from algobattle_web.database import get_db, Session
-from algobattle_web.models.team import Team
+from algobattle_web.models.team import Context, Team
 from algobattle_web.models.user import User, curr_user
 from algobattle_web.util import BaseSchema
 
@@ -125,7 +125,7 @@ class MemberEditTeam(BaseSchema):
     id: UUID
     name: str
 
-@router.post("/team/member_edit_team", response_model=TeamSchema)
+@router.post("/team/member_edit", response_model=TeamSchema)
 async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), edit: MemberEditTeam):
     team = Team.get(db, edit.id)
     if team is None:
@@ -146,9 +146,32 @@ class ContextSchema(BaseSchema):
 class CreateContext(BaseSchema):
     name: str
 
+@admin.post("/context/create", response_model=ContextSchema)
+async def create_context(*, db: Session = Depends(get_db), context: CreateContext):
+    return Context.create(db, context.name)
+
+class EditContext(BaseSchema):
+    id: UUID
+    name: str
+
+@admin.post("/context/edit", response_model=ContextSchema)
+async def edit_context(*, db: Session = Depends(get_db), edit: EditContext):
+    context = Context.get(db, edit.id)
+    if context is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    context.update(db, name=edit.name)
+    return context
+
 class DeleteContext(BaseSchema):
     id: UUID
 
+@admin.post("/context/delete")
+async def delete_context(*, db: Session = Depends(get_db), context: DeleteContext):
+    context = Context.get(db, context.id)
+    if context is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    context.delete(db)
+    return True
 
 
 
