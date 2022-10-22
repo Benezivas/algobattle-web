@@ -5,6 +5,7 @@
 <script>
   var teams_input = {{teams | tojson}}
   var contexts_input = {{contexts | tojson}}
+  var users_input = {{users | tojson}}
 </script>
 
 
@@ -81,6 +82,25 @@
       </div>
     </div>
     <button type="submit" class="btn btn-primary mt-3">Create</button>
+  </form>
+
+  <h3>Add team member</h3>
+  <form id="add-member" @submit.prevent="add_member" class="mb-5">
+    <div class="row g-2">
+      <div class="col-md w-em">
+        <label for="team" class="form-label">Team</label>
+        <select class="form-select form-select-sm" name="team" type="text" required="required">
+          <option v-for="team in teams" :value="team.id">${team.name}</option>
+        </select>
+      </div>
+      <div class="col-md w-em">
+        <label for="user-select" class="form-label">User</label>
+        <select class="form-select form-select-sm" id="user-select" name="user">
+          <option v-for="user in users" :value="user.name">${user.name}</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Add Member</button>
   </form>
 
   <div class="row gy-5">

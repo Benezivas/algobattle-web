@@ -94,7 +94,9 @@ async def users_get(db: Session = Depends(get_db)):
 async def teams_get(db: Session = Depends(get_db)):
     teams = jsonable_encoder(db.query(Team).all())
     contexts = jsonable_encoder(db.query(Context).all()) 
-    return "admin_teams.jinja", {"teams": teams, "contexts": contexts}
+    users = db.query(User).order_by(User.is_admin).all()
+    users = jsonable_encoder(users)[::-1]
+    return "admin_teams.jinja", {"teams": teams, "contexts": contexts, "users": users}
 
 
 #* has to be executed after all route defns

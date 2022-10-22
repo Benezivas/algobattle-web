@@ -106,8 +106,8 @@ async function delete_context(event) {
     }
 }
 
-function del_context_event() {
-    var i = this.contexts.indexOf(user)
+function del_context_event(context) {
+    var i = this.contexts.indexOf(context)
     this.contexts.splice(i, 1)
     this.$forceUpdate()
 }
@@ -125,7 +125,7 @@ function toggle_editing() {
 
 
 const app = createApp({
-    props: ["teams", "contexts"],
+    props: ["teams", "contexts", "users"],
     methods: {
         create_team,
         edit_team,
@@ -137,6 +137,7 @@ const app = createApp({
 }, {
     teams: teams_input,
     contexts: contexts_input,
+    users: users_input
 })
 app.config.compilerOptions.delimiters = ["${", "}"]
 
