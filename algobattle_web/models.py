@@ -195,7 +195,7 @@ class Team(Base):
         db.refresh(team)
         return team
 
-    def update(self, db: Session, name: str | None = None, context: str | UUID | Context | None = None) -> Team:
+    def update(self, db: Session, name: str | None = None, context: str | UUID | Context | None = None):
         if name is not None:
             self.name = name
         if context is not None:
@@ -205,7 +205,6 @@ class Team(Base):
                     raise ValueError
             self.context_id = context.id
         db.commit()
-        return context
 
     def delete(self, db: Session):
         db.delete(self)
