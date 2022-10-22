@@ -97,16 +97,5 @@ async def teams_get(db: Session = Depends(get_db)):
     return "admin_teams.jinja", {"teams": teams, "contexts": contexts}
 
 
-@admin.post("/teams/create", response_class=RedirectResponse)
-async def team_create(db: Session = Depends(get_db), name: str = Form(), context: str = Form()):
-    Team.create(db, name, context)
-    return RedirectResponse("/admin/teams", status_code=status.HTTP_302_FOUND)
-
-
-@admin.post("/teams/create_context", response_class=RedirectResponse)
-async def context_create(*, db: Session = Depends(get_db), name: str = Form()):
-    Context.create(db, name)
-    return RedirectResponse("/admin/teams", status_code=status.HTTP_302_FOUND)
-
 #* has to be executed after all route defns
 router.include_router(admin)

@@ -58,6 +58,7 @@ async function delete_user(event) {
         id: user.id
     })
     if (response) {
+        curr_row = {}
         this.$emit("deluser", user)
     }
 }

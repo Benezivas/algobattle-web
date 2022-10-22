@@ -1,4 +1,6 @@
-import { createApp } from "https://unpkg.com/petite-vue@0.4.1/dist/petite-vue.es.js?module"
+import { createApp } from "vue"
+
+var curr_row = {}
 
 async function send_request(action, content) {
     var response = await fetch("/api/" + action, {
@@ -11,10 +13,23 @@ async function send_request(action, content) {
     }
 }
 
+async function create_team(event) {
+    var fields = event.currentTarget.elements
+
+    var response = await send_request("team/create", {
+        name: fields.name.value,
+        context: fields.context.value,
+    })
+    if (response) {
+        this.teams.push(response)
+        this.$forceUpdate()
+        fields.name.value = ""
+    }
+}
 
 async function edit_team(event) {
     var fields = event.currentTarget.elements
-    var team = this.curr_row.team
+    var team = curr_row.team
 
     var response = await send_request("team/edit", {
         id: team.id,
@@ -24,44 +39,48 @@ async function edit_team(event) {
     if (response) {
         team.name = response.name
         team.context = response.context
-        this.curr_row.editing = false
+        curr_row.editing = false
     }
 }
 
 
 async function delete_team(event) {
-    var team = this.curr_row.team
+    var team = curr_row.team
 
     var response = await send_request("team/delete", {
         id: team.id,
     })
     if (response) {
-        event.target.closest("tr").remove()
+        curr_row = {}
+        this.$emit("delteam", team)
     }
 }
 
 
-function TableRow(team) {
-    return {
-        $template: "#table_row",
-        team: team,
-        editing: false,
-        toggle_editing() {
-            if (this.editing) {
-                this.editing = false
-                this.curr_row = {}
-            } else {
-                this.curr_row.editing = false
-                this.curr_row = this
-                this.editing = true
-            }
-        },
+function del_team_event(team) {
+    var i = this.teams.indexOf(team)
+    this.teams.splice(i, 1)
+    this.$forceUpdate()
+}
+
+
+async function create_context(event) {
+    var fields = event.currentTarget.elements
+
+    var response = await send_request("context/create", {
+        name: fields.name.value,
+    })
+    if (response) {
+        this.contexts.push(response)
+        this.$forceUpdate()
+        fields.name.value = ""
     }
+
 }
 
 async function edit_context(event) {
     var fields = event.currentTarget.elements
-    var context = this.curr_row.context
+    var context = curr_row.context
 
     var response = await send_request("context/edit", {
         id: context.id,
@@ -69,50 +88,86 @@ async function edit_context(event) {
     })
     if (response) {
         context.name = response.name
-        this.curr_row.editing = false
-        this.curr_row = {}
+        curr_row.editing = false
+        curr_row = {}
     }
 }
 
 
 async function delete_context(event) {
-    var context = this.curr_row.context
+    var context = curr_row.context
 
     var response = await send_request("context/delete", {
         id: context.id,
     })
     if (response) {
         this.curr_row = {}
-        event.target.closest("tr").remove()
+        this.$emit("delcontext", context)
+    }
+}
+
+function del_context_event() {
+    var i = this.contexts.indexOf(user)
+    this.contexts.splice(i, 1)
+    this.$forceUpdate()
+}
+
+function toggle_editing() {
+    if (this.editing) {
+        this.editing = false
+        curr_row = {}
+    } else {
+        curr_row.editing = false
+        curr_row = this
+        this.editing = true
     }
 }
 
 
-function ContextRow(context) {
-    return {
-        $template: "#context_row",
-        context: context,
-        editing: false,
-        toggle_editing() {
-            if (this.editing) {
-                this.editing = false
-                this.curr_row = {}
-            } else {
-                this.curr_row.editing = false
-                this.curr_row = this
-                this.editing = true
-            }
-        },
+const app = createApp({
+    props: ["teams", "contexts"],
+    methods: {
+        create_team,
+        edit_team,
+        del_team_event,
+        create_context,
+        edit_context,
+        del_context_event,
     }
-}
+}, {
+    teams: teams_input,
+    contexts: contexts_input,
+})
+app.config.compilerOptions.delimiters = ["${", "}"]
 
-createApp({
-    $delimiters: ["${", "}"],
-    curr_row: {},
-    edit_team,
-    delete_team,
-    TableRow,
-    edit_context,
-    delete_context,
-    ContextRow,
-}).mount()
+app.component("TeamRow", {
+    template: "#team_row",
+    props: ["team"],
+    data() {
+        return {
+            editing: false,
+        }
+    },
+    methods: {
+        toggle_editing,
+        delete_team,
+    }
+})
+
+app.component("ContextRow", {
+    template: "#context_row",
+    props: ["context"],
+    data() {
+        return {
+            editing: false,
+        }
+    },
+    methods: {
+        toggle_editing,
+        delete_context,
+    }
+})
+
+app.mount("#app")
+
+
