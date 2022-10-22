@@ -1,5 +1,6 @@
 import { createApp } from "vue"
 
+var curr_row = {}
 
 async function send_request(action, content) {
     var response = await fetch("/api/user/" + action, {
@@ -23,6 +24,7 @@ async function create_user(event) {
     })
     if (response) {
         this.users.push(response)
+        this.$forceUpdate()
         fields.name.value = ""
         fields.email.value = ""
         fields.is_admin.checked = false
@@ -32,7 +34,7 @@ async function create_user(event) {
 
 async function edit_user(event) {
     var fields = event.currentTarget.elements
-    var user = this.curr_row.user
+    var user = curr_row.user
 
     var response = await send_request("edit", {
         id: user.id,
@@ -44,38 +46,44 @@ async function edit_user(event) {
         user.name = response.name
         user.email = response.email
         user.is_admin = response.is_admin
-        this.curr_row.editing = false
+        curr_row.editing = false
     }
 }
 
 
 async function delete_user(event) {
-    var user = this.curr_row.user
+    var user = curr_row.user
 
     var response = await send_request("delete", {
         id: user.id
     })
     if (response) {
-        event.target.closest("tr").remove()
+        this.$emit("deluser", this)
     }
 }
+
+async function del_event(user)  {
+    var i = this.users.indexOf(user)
+    console.log(i)
+    console.log(user)
+    console.log(this.users[i])
+    this.users.splice(i, 1)
+    this.$forceUpdate()
+}
+
 
 
 const app = createApp({
     props: ["users"],
-    data() {
-        return {
-            curr_row: {},
-        }
-    },
     methods: {
         create_user,
         edit_user,
-        delete_user,
+        del_event,
     },
 }, {
-    users: users,
+    users: users_input,
 })
+app.config.compilerOptions.delimiters = ["${", "}"]
 
 app.component("TableRow", {
     template: "#table_row",
@@ -89,16 +97,16 @@ app.component("TableRow", {
         toggle_editing() {
             if (this.editing) {
                 this.editing = false
-                this.curr_row = {}
+                curr_row = {}
             } else {
-                this.curr_row.editing = false
-                this.curr_row = this
+                curr_row.editing = false
+                curr_row = this
                 this.editing = true
             }
         },
+        delete_user,
     },
 })
-app.config.compilerOptions.delimiters = ["${", "}"]
 
 
 app.mount("#app")
