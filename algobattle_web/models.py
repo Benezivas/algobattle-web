@@ -171,20 +171,20 @@ class Team(Base):
 
     @overload
     @classmethod
-    def get(cls, db: Session, team: str, context: str) -> Team | None: ...
+    def get(cls, db: Session, team: str, context: str | UUID) -> Team | None: ...
 
     @classmethod
-    def get(cls, db: Session, team: str | UUID, context: str | None = None) -> Team | None:
+    def get(cls, db: Session, team: str | UUID, context: str | UUID | None = None) -> Team | None:
         if isinstance(team, str):
             if context is None:
                 raise ValueError("If the team is given by its name, you have to specify a context!")
             context = Context.get(db, context)
             if context is None:
                 raise ValueError("No such context!")
-            filter_expr = cls.name == team and cls.context_id == context.id
+            filter_expr = (cls.name == team, cls.context_id == context.id)
         else:
-            filter_expr = cls.id == team
-        return db.query(cls).filter(filter_expr).first()
+            filter_expr = (cls.id == team,)
+        return db.query(cls).filter(*filter_expr).first()
 
     @classmethod
     def create(cls, db: Session, name: str, context: UUID | str | Context) -> Team:
