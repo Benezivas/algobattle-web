@@ -4,8 +4,9 @@ from typing import Any
 from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
-from algobattle_web.api import ContextSchema, TeamSchema, UserSchema
+from pydantic import parse_obj_as
 
+from algobattle_web.api import ContextSchema, TeamSchema, UserSchema
 from algobattle_web.database import get_db, Session
 from algobattle_web.models import Context, Team, User, ValueTaken
 from algobattle_web.templates import templated, templates
@@ -85,7 +86,7 @@ admin = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(check_i
 @admin.get("/users", response_class=HTMLResponse)
 @templated
 async def users_get(db: Session = Depends(get_db)):
-    users = db.query(User).order_by(User.is_admin).all()
+    users = parse_obj_as(list[UserSchema], db.query(User).order_by(User.is_admin).all())
     users = jsonable_encoder(users)[::-1]
     return "admin_users.jinja", {"users": users}
 
@@ -93,10 +94,9 @@ async def users_get(db: Session = Depends(get_db)):
 @admin.get("/teams", response_class=HTMLResponse)
 @templated
 async def teams_get(db: Session = Depends(get_db)):
-    teams = [TeamSchema.from_orm(t) for t in (db.query(Team).all())]
-    contexts = [ContextSchema.from_orm(c) for c in db.query(Context).all()]
-    users = db.query(User).order_by(User.is_admin).all()[::-1]
-    users = [UserSchema.from_orm(u) for u in users]
+    teams = parse_obj_as(list[TeamSchema], db.query(Team).all())
+    contexts = parse_obj_as(list[ContextSchema], db.query(Context).all())
+    users = parse_obj_as(list[UserSchema], db.query(User).order_by(User.is_admin).all())[::-1]
     return "admin_teams.jinja", {"teams": jsonable_encoder(teams), "contexts": jsonable_encoder(contexts), "users": jsonable_encoder(users)}
 
 
