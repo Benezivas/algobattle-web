@@ -72,7 +72,7 @@ async function add_member(event) {
         user: fields.user.value,
     })
     if (response) {
-        i = this.teams.find(t => t.id == response.id)
+        var i = this.teams.find(t => t.id == response.id)
         this.teams[i] = response
         this.$forceUpdate()
         fields.name.value = ""
