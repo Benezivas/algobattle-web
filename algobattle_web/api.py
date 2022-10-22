@@ -1,5 +1,6 @@
 "Module specifying the json api actions."
 from __future__ import annotations
+from typing import Tuple
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException
 from algobattle_web.database import get_db, Session
@@ -169,6 +170,21 @@ async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depend
         raise HTTPException(status.HTTP_401_UNAUTHORIZED)
     team.update(db, name=edit.name)
     return team
+
+class AddTeamMember(BaseSchema):
+    team: UUID
+    user: UUID
+
+@admin.post("/team/add_member", response_model=Tuple[TeamSchema, UserSchema])
+async def add_team_member(*, db: Session = Depends(get_db), info: AddTeamMember):
+    user = User.get(db, info.user)
+    team = Team.get(db, info.team)
+    if user is None or team is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+
+    team.add_member(db, user)
+    return team, user
+
 
 #* has to be executed after all route defns
 router.include_router(admin)

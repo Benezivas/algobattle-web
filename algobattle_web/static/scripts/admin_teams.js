@@ -148,6 +148,11 @@ app.component("TeamRow", {
             editing: false,
         }
     },
+    computed: {
+        members_str() {
+            return this.team.members.map(u => u.name).join(", ")
+        }
+    },
     methods: {
         toggle_editing,
         delete_team,

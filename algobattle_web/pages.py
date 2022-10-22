@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 
 from algobattle_web.database import get_db, Session
-from algobattle_web.models import Context, Team, User, NameTaken
+from algobattle_web.models import Context, Team, User, ValueTaken
 from algobattle_web.templates import templated, templates
 from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError
 
@@ -65,7 +65,7 @@ async def user_post(
     context: dict[str, Any] = {}
     try:
         user.update(db, email, name)
-    except NameTaken as e:
+    except ValueTaken as e:
         context["error"] = e
     return "user.jinja", context
 

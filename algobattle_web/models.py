@@ -14,13 +14,17 @@ from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import Base, Session
 
 
-@dataclass
-class NameTaken(Exception):
-    name: str
+class ModelError(Exception):
+    pass
 
 @dataclass
-class ResourceNeeded(Exception):
+class ValueTaken(ModelError):
+    value: str
+
+@dataclass
+class ResourceNeeded(ModelError):
     err: str | None = None
+
 
 team_members = Table(
     "team_members",
@@ -37,7 +41,7 @@ class User(Base):
     token_id: UUID = Column(UUIDType, default=uuid4)   # type: ignore
     is_admin: bool = Column(Boolean, default=False) # type: ignore
 
-    teams: Rel[list[Team]] = relationship("Team", secondary=team_members, back_populates="members")
+    teams: Rel[list[Team]] = relationship("Team", secondary=team_members, back_populates="members", lazy="joined")
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, User):
@@ -60,7 +64,7 @@ class User(Base):
     def create(cls, db: Session, email: str, name: str, is_admin: bool = False) -> User:
         """Creates a new user, raises `EmailTaken` if the email is already in use."""
         if cls.get(db, email) is not None:
-            raise NameTaken(email)
+            raise ValueTaken(email)
         new_user = cls(email=email, name=name, is_admin=is_admin)
         db.add(new_user)
         db.commit()
@@ -72,7 +76,7 @@ class User(Base):
         if email:
             email_user = self.get(db, email)
             if email_user is not None and email_user != self:
-                raise NameTaken(email)
+                raise ValueTaken(email)
             else:
                 self.email = email
         if name:
@@ -129,7 +133,7 @@ class Context(Base):
     @classmethod
     def create(cls, db: Session, name: str) -> Context:
         if cls.get(db, name) is not None:
-            raise NameTaken(name)
+            raise ValueTaken(name)
         context = Context(name=name)
         db.add(context)
         db.commit()
@@ -156,7 +160,7 @@ class Team(Base):
     context_id: UUID = Column(UUIDType, ForeignKey("contexts.id"))  # type: ignore
 
     context: Rel[Context] = relationship("Context", back_populates="teams", uselist=False, lazy="joined")
-    members: Rel[list["User"]] = relationship("User", secondary=team_members, back_populates="teams")
+    members: Rel[list["User"]] = relationship("User", secondary=team_members, back_populates="teams", lazy="joined")
 
     def __str__(self) -> str:
         return self.name
@@ -185,7 +189,7 @@ class Team(Base):
     @classmethod
     def create(cls, db: Session, name: str, context: UUID | str | Context) -> Team:
         if cls.get(db, name, context) is not None:
-            raise NameTaken(name)
+            raise ValueTaken(name)
         context = Context.get(db, context)
         if context is None:
             raise ValueError
@@ -208,4 +212,10 @@ class Team(Base):
 
     def delete(self, db: Session):
         db.delete(self)
+        db.commit()
+
+    def add_member(self, db: Session, user: User):
+        if user in self.members:
+            return
+        self.members.append(user)
         db.commit()
