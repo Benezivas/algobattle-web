@@ -74,10 +74,8 @@ async function add_member(event) {
     if (response) {
         console.log(response)
         var [team, user] = response
-        var i = this.teams.find(t => t.id == team.id)
-        this.teams[i] = team
-        i = this.users.find(u => u.id == user.id)
-        this.users[i] = user
+        this.teams.find(t => t.id == team.id).members = team.members
+        this.users.find(u => u.id == user.id).teams = user.teams
         this.$forceUpdate()
     }
 }
@@ -170,13 +168,16 @@ app.component("TeamRow", {
         }
     },
     computed: {
-        members_str() {
+        members_stra() {
             return this.team.members.map(u => u.name).join(", ")
-        }
+        },
     },
     methods: {
         toggle_editing,
         delete_team,
+        members_str() {
+            return this.team.members.map(u => u.name).join(", ")
+        },
     }
 })
 

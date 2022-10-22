@@ -21,7 +21,7 @@
       </select>
       <span v-else>${team.context.name}</span>
     </td>
-    <td><span>${members_str}</span></td>
+    <td><span>${members_str()}</span></td>
     <td class="text-end">
       <div class="btn-group btn-group-sm" role="group">
         <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete team" v-if="editing" @click="delete_team"><i class="bi bi-trash"></i></button>
