@@ -18,6 +18,10 @@ from algobattle_web.database import Base, Session
 class NameTaken(Exception):
     name: str
 
+@dataclass
+class ResourceNeeded(Exception):
+    err: str | None = None
+
 team_members = Table(
     "team_members",
     Base.metadata,
@@ -139,6 +143,8 @@ class Context(Base):
         return self
 
     def delete(self, db: Session):
+        if self.teams:
+            raise ResourceNeeded
         db.delete(self)
         db.commit()
 
