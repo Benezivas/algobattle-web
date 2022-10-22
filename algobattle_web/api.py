@@ -24,6 +24,12 @@ class UserSchema(BaseSchema):
     name: str
     email: str
     is_admin: bool
+    teams: list[UserSchema.Team]
+
+    class Team(BaseSchema):
+        id: UUID
+        name: str
+        context: ContextSchema
 
 class CreateUser(BaseSchema):
     name: str
@@ -119,6 +125,7 @@ class TeamSchema(BaseSchema):
     id: UUID
     name: str
     context: ContextSchema
+    members: list[UserSchema]
 
 class CreateTeam(BaseSchema):
     name: str
@@ -188,3 +195,5 @@ async def add_team_member(*, db: Session = Depends(get_db), info: AddTeamMember)
 
 #* has to be executed after all route defns
 router.include_router(admin)
+UserSchema.Team.update_forward_refs()
+UserSchema.update_forward_refs()

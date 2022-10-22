@@ -4,6 +4,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
+from algobattle_web.api import ContextSchema, TeamSchema, UserSchema
 
 from algobattle_web.database import get_db, Session
 from algobattle_web.models import Context, Team, User, ValueTaken
@@ -92,11 +93,11 @@ async def users_get(db: Session = Depends(get_db)):
 @admin.get("/teams", response_class=HTMLResponse)
 @templated
 async def teams_get(db: Session = Depends(get_db)):
-    teams = jsonable_encoder(db.query(Team).all())
-    contexts = jsonable_encoder(db.query(Context).all()) 
-    users = db.query(User).order_by(User.is_admin).all()
-    users = jsonable_encoder(users)[::-1]
-    return "admin_teams.jinja", {"teams": teams, "contexts": contexts, "users": users}
+    teams = [TeamSchema.from_orm(t) for t in (db.query(Team).all())]
+    contexts = [ContextSchema.from_orm(c) for c in db.query(Context).all()]
+    users = db.query(User).order_by(User.is_admin).all()[::-1]
+    users = [UserSchema.from_orm(u) for u in users]
+    return "admin_teams.jinja", {"teams": jsonable_encoder(teams), "contexts": jsonable_encoder(contexts), "users": jsonable_encoder(users)}
 
 
 #* has to be executed after all route defns
