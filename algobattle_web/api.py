@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import Tuple
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException
+
 from algobattle_web.database import get_db, Session
 from algobattle_web.models import Context, Team, User
-from algobattle_web.util import BaseSchema, curr_user
+from algobattle_web.util import BaseSchema, ObjID, curr_user
 
 
 def check_if_admin(user: User = Depends(curr_user)):
@@ -20,16 +21,11 @@ admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)])
 #*******************************************************************************
 
 class UserSchema(BaseSchema):
-    id: UUID
+    id: ObjID
     name: str
     email: str
     is_admin: bool
-    teams: list[UserSchema.Team]
-
-    class Team(BaseSchema):
-        id: UUID
-        name: str
-        context: ContextSchema
+    teams: list[ObjID]
 
 class CreateUser(BaseSchema):
     name: str
@@ -122,10 +118,12 @@ async def delete_context(*, db: Session = Depends(get_db), context: DeleteContex
 #*******************************************************************************
 
 class TeamSchema(BaseSchema):
-    id: UUID
+    id: ObjID
     name: str
-    context: ContextSchema
-    members: list[UserSchema]
+    context: ObjID
+    members: list[ObjID]
+
+TeamSchema.from_orm
 
 class CreateTeam(BaseSchema):
     name: str
@@ -195,5 +193,3 @@ async def add_team_member(*, db: Session = Depends(get_db), info: AddTeamMember)
 
 #* has to be executed after all route defns
 router.include_router(admin)
-UserSchema.Team.update_forward_refs()
-UserSchema.update_forward_refs()

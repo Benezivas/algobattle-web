@@ -2,14 +2,15 @@
 from __future__ import annotations
 from datetime import timedelta, datetime
 from enum import Enum
-from typing import cast
+from typing import Any, cast
+from uuid import UUID
 from pydantic import BaseModel
 from algobattle_web.database import Session
 from fastapi import Depends, Cookie, HTTPException, status
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 
-from algobattle_web.database import get_db
+from algobattle_web.database import get_db, Base
 from algobattle_web.models import User
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 
@@ -23,6 +24,26 @@ class BaseSchema(BaseModel):
     class Config:
         orm_mode = True
 
+
+class ObjID(UUID):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, obj: Any) -> UUID:
+        if isinstance(obj, UUID):
+            return obj
+        elif isinstance(obj, (BaseSchema, Base)) and hasattr(obj, "id"):
+            if isinstance(obj.id, UUID):
+                return obj.id
+            else:
+                raise ValueError
+        else:
+            raise TypeError
+
+    def __repr__(self) -> str:
+        return f"ObjID({super().__repr__()})"
 
 def curr_user_maybe(db: Session = Depends(get_db), user_token: str | None = Cookie(default=None)) -> User | None:
     return User.decode_token(db, user_token)
