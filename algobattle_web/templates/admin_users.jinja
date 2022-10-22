@@ -39,7 +39,7 @@
 
 <div class="col-8" id="app">
   <h3>Users</h3>
-  <form id="users-form" @submit.prevent="edit_user" v-on:deluser="del_event">
+  <form id="users-form" @submit.prevent="edit_user">
     <table class="table" id="users">
       <thead>
         <tr>
@@ -50,7 +50,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr is="vue:table-row" v-for="user in users" :user="user" :key="user.id"></tr>
+        <tr is="vue:table-row" v-for="user in users" :user="user" :key="user.id" @deluser="del_event"></tr>
       </tbody>
     </table>
   </form>

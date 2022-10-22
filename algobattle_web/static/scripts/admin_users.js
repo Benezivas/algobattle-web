@@ -58,15 +58,12 @@ async function delete_user(event) {
         id: user.id
     })
     if (response) {
-        this.$emit("deluser", this)
+        this.$emit("deluser", user)
     }
 }
 
 async function del_event(user)  {
     var i = this.users.indexOf(user)
-    console.log(i)
-    console.log(user)
-    console.log(this.users[i])
     this.users.splice(i, 1)
     this.$forceUpdate()
 }
