@@ -21,7 +21,7 @@ async function create_team(event) {
         context: fields.context.value,
     })
     if (response) {
-        this.teams.push(response)
+        this.teams[response.id] = response
         this.$forceUpdate()
         fields.name.value = ""
     }
@@ -34,7 +34,7 @@ async function edit_team(event) {
     var response = await send_request("team/edit", {
         id: team.id,
         name: fields.name.value ? fields.name.value : undefined,
-        context: fields.context.value != team.context.name ? fields.context.value : undefined,
+        context: fields.context.value != team.context ? fields.context.value : undefined,
     })
     if (response) {
         team.name = response.name
@@ -58,8 +58,7 @@ async function delete_team(event) {
 
 
 function del_team_event(team) {
-    var i = this.teams.indexOf(team)
-    this.teams.splice(i, 1)
+    this.teams[team.id] = undefined
     this.$forceUpdate()
 }
 
@@ -74,8 +73,8 @@ async function add_member(event) {
     if (response) {
         console.log(response)
         var [team, user] = response
-        this.teams.find(t => t.id == team.id).members = team.members
-        this.users.find(u => u.id == user.id).teams = user.teams
+        this.teams[team.id] = team
+        this.user[user.id] = user
         this.$forceUpdate()
     }
 }
@@ -88,7 +87,7 @@ async function create_context(event) {
         name: fields.name.value,
     })
     if (response) {
-        this.contexts.push(response)
+        this.contexts[response.id] = response
         this.$forceUpdate()
         fields.name.value = ""
     }
@@ -107,6 +106,7 @@ async function edit_context(event) {
         context.name = response.name
         curr_row.editing = false
         curr_row = {}
+        this.$forceUpdate()
     }
 }
 
@@ -124,8 +124,7 @@ async function delete_context(event) {
 }
 
 function del_context_event(context) {
-    var i = this.contexts.indexOf(context)
-    this.contexts.splice(i, 1)
+    this.contexts[context.id] = undefined
     this.$forceUpdate()
 }
 
@@ -176,7 +175,7 @@ app.component("TeamRow", {
         toggle_editing,
         delete_team,
         members_str() {
-            return this.team.members.map(u => u.name).join(", ")
+            return this.team.members.map(u => this.$parent.users[u].name).join(", ")
         },
     }
 })

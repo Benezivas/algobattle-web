@@ -95,8 +95,11 @@ async def users_get(db: Session = Depends(get_db)):
 @templated
 async def teams_get(db: Session = Depends(get_db)):
     teams = parse_obj_as(list[TeamSchema], db.query(Team).all())
+    teams = {t.id: t for t in teams}
     contexts = parse_obj_as(list[ContextSchema], db.query(Context).all())
-    users = parse_obj_as(list[UserSchema], db.query(User).order_by(User.is_admin).all())[::-1]
+    contexts = {c.id: c for c in contexts}
+    users = parse_obj_as(list[UserSchema], db.query(User).order_by(User.is_admin).all())
+    users = {u.id: u for u in users[::-1]}
     return "admin_teams.jinja", {"teams": jsonable_encoder(teams), "contexts": jsonable_encoder(contexts), "users": jsonable_encoder(users)}
 
 

@@ -17,9 +17,9 @@
     </td>
     <td>
       <select v-if="editing" class="form-select form-select-sm" name="context">
-        <option v-for="ctx in $parent.contexts" :value="ctx.name" :selected="ctx.name == team.context.name">${ctx.name}</option>
+        <option v-for="(ctx, id) in $parent.contexts" :value="id" :selected="id == team.context">${ctx.name}</option>
       </select>
-      <span v-else>${team.context.name}</span>
+      <span v-else>${$parent.contexts[team.context].name}</span>
     </td>
     <td><span>${members_str()}</span></td>
     <td class="text-end">
@@ -62,7 +62,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr is="vue:team-row" v-for="team in teams" :team="team" :key="team.id" @delteam="del_team_event"></tr>
+        <tr is="vue:team-row" v-for="(team, id) in teams" :team="team" :key="id" @delteam="del_team_event"></tr>
       </tbody>
     </table>
   </form>
@@ -77,7 +77,7 @@
       <div class="col-md w-em">
         <label for="context-select" class="form-label">Context</label>
         <select class="form-select form-select-sm" id="context-select" name="context">
-          <option v-for="context in contexts" :value="context.name">${context.name}</option>
+          <option v-for="(context, id) in contexts" :value="id">${context.name}</option>
         </select>
       </div>
     </div>
@@ -90,13 +90,13 @@
       <div class="col-md w-em">
         <label for="team" class="form-label">Team</label>
         <select class="form-select form-select-sm" name="team" required="required">
-          <option v-for="team in teams" :value="team.id">${team.name}</option>
+          <option v-for="(team, id) in teams" :value="id">${team.name}</option>
         </select>
       </div>
       <div class="col-md w-em">
         <label for="user-select" class="form-label">User</label>
         <select class="form-select form-select-sm" id="user-select" name="user">
-          <option v-for="user in users" :value="user.id">${user.name}</option>
+          <option v-for="(user, id) in users" :value="id">${user.name}</option>
         </select>
       </div>
     </div>
@@ -115,7 +115,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr is="vue:context-row" v-for="context in contexts" :context="context" @delcontext="del_context_event"></tr>
+            <tr is="vue:context-row" v-for="(context, id) in contexts" :context="context" :key="id" @delcontext="del_context_event"></tr>
           </tbody>
         </table>
     </form>
