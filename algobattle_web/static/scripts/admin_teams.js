@@ -64,6 +64,22 @@ function del_team_event(team) {
 }
 
 
+async function add_member(event) {
+    var fields = event.currentTarget.elements
+
+    var response = await send_request("team/add_member", {
+        team: fields.team.value,
+        user: fields.user.value,
+    })
+    if (response) {
+        i = this.teams.find(t => t.id == response.id)
+        this.teams[i] = response
+        this.$forceUpdate()
+        fields.name.value = ""
+    }
+}
+
+
 async function create_context(event) {
     var fields = event.currentTarget.elements
 
@@ -130,6 +146,7 @@ const app = createApp({
         create_team,
         edit_team,
         del_team_event,
+        add_member,
         create_context,
         edit_context,
         del_context_event,
