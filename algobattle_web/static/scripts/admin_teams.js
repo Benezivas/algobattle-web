@@ -59,13 +59,8 @@ async function delete_team(event) {
     })
     if (response) {
         store.curr_row = {}
-        this.$emit("delteam", team)
+        store.teams[team.id] = undefined
     }
-}
-
-
-function del_team_event(team) {
-    store.teams[team.id] = undefined
 }
 
 
@@ -132,13 +127,10 @@ async function delete_context(event) {
     })
     if (response) {
         store.curr_row = {}
-        this.$emit("delcontext", context)
+        store.contexts[context.id] = undefined
     }
 }
 
-function del_context_event(context) {
-    store.contexts[context.id] = undefined
-}
 
 function toggle_editing() {
     if (this.editing) {
@@ -156,12 +148,10 @@ const app = createApp({
     methods: {
         create_team,
         edit_team,
-        del_team_event,
         add_member,
         remove_member,
         create_context,
         edit_context,
-        del_context_event,
     },
     data() {
         return {

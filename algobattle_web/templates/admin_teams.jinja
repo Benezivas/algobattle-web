@@ -62,7 +62,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr is="vue:team-row" v-for="(team, id) in store.teams" :team="team" :key="id" @delteam="del_team_event"></tr>
+        <tr is="vue:team-row" v-for="(team, id) in store.teams" :team="team" :key="id"></tr>
       </tbody>
     </table>
   </form>
@@ -114,7 +114,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr is="vue:context-row" v-for="(context, id) in store.contexts" :context="context" :key="id" @delcontext="del_context_event"></tr>
+            <tr is="vue:context-row" v-for="(context, id) in store.contexts" :context="context" :key="id"></tr>
           </tbody>
         </table>
     </form>
