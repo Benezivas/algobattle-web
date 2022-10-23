@@ -11,7 +11,17 @@ from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile
 from algobattle_web.config import SQLALCHEMY_DATABASE_URL, STORAGE_PATH
 
 
-StoreManager.register("fs", functools.partial(FileSystemStore, STORAGE_PATH, ""), True)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base: Any = declarative_base()
+
+def get_db() -> Iterator[Session]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 class Json(TypeDecorator[Any]):
     impl = Unicode
@@ -25,20 +35,7 @@ class Json(TypeDecorator[Any]):
 
         return json.loads(value)
 
+
+StoreManager.register("fs", functools.partial(FileSystemStore, STORAGE_PATH, ""), True)
 DbFile: Type[SqlFile] = SqlFile.as_mutable(Json)
 File: Type[SqlFile] = SqlFile
-
-
-
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base: Any = declarative_base()
-
-def get_db() -> Iterator[Session]:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
