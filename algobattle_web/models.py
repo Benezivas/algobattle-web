@@ -35,8 +35,6 @@ team_members = Table(
 )
 
 class User(Base):
-    __tablename__ = "users"
-    id: UUID = Column(UUIDType, primary_key=True, default=uuid4)   # type: ignore
     email: str = Column(String, unique=True)    # type: ignore
     name: str = Column(String)  # type: ignore
     token_id: UUID = Column(UUIDType, default=uuid4)   # type: ignore
@@ -87,12 +85,6 @@ class User(Base):
         db.commit()
         return self
 
-
-    def delete(self, db: Session):
-        db.delete(self)
-        db.commit()
-        return True
-
     def cookie(self) -> dict[str, Any]:
         payload = {
             "type": "user",
@@ -120,8 +112,6 @@ class User(Base):
 
 
 class Context(Base):
-    __tablename__ = "contexts"
-    id: UUID = Column(UUIDType, primary_key=True, default=uuid4)   # type: ignore
     name: str = Column(String, unique=True) # type: ignore
 
     teams: Rel[list[Team]] = relationship("Team", back_populates="context")
@@ -155,8 +145,6 @@ class Context(Base):
 
 
 class Team(Base):
-    __tablename__ = "teams"
-    id: UUID = Column(UUIDType, primary_key=True, default=uuid4)   # type: ignore
     name: str = Column(String)  # type: ignore
     context_id: UUID = Column(UUIDType, ForeignKey("contexts.id"))  # type: ignore
 
@@ -172,28 +160,22 @@ class Team(Base):
 
     @overload
     @classmethod
-    def get(cls, db: Session, team: str, context: str | UUID) -> Team | None: ...
+    def get(cls, db: Session, team: str, context: Context) -> Team | None: ...
 
     @classmethod
-    def get(cls, db: Session, team: str | UUID, context: str | UUID | None = None) -> Team | None:
+    def get(cls, db: Session, team: str | UUID, context:  Context | None = None) -> Team | None:
         if isinstance(team, str):
             if context is None:
                 raise ValueError("If the team is given by its name, you have to specify a context!")
-            context = Context.get(db, context)
-            if context is None:
-                raise ValueError("No such context!")
             filter_expr = (cls.name == team, cls.context_id == context.id)
         else:
             filter_expr = (cls.id == team,)
         return db.query(cls).filter(*filter_expr).first()
 
     @classmethod
-    def create(cls, db: Session, name: str, context: UUID | str | Context) -> Team:
+    def create(cls, db: Session, name: str, context: Context) -> Team:
         if cls.get(db, name, context) is not None:
             raise ValueTaken(name)
-        context = Context.get(db, context)
-        if context is None:
-            raise ValueError
         team = cls(name=name, context_id=context.id)
         db.add(team)
         db.commit()
@@ -211,10 +193,6 @@ class Team(Base):
             self.context_id = context.id
         db.commit()
 
-    def delete(self, db: Session):
-        db.delete(self)
-        db.commit()
-
     def add_member(self, db: Session, user: User):
         if user in self.members:
             return
@@ -229,9 +207,6 @@ class Team(Base):
 
 
 class Config(Base):
-    __tablename__ = "configs"
-
-    id: UUID = Column(UUIDType, primary_key=True, default=uuid4)   # type: ignore
     name: str = Column(String)  # type: ignore
     file: Attachment = Column(DbFile)   # type: ignore
 

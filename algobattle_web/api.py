@@ -59,8 +59,8 @@ class DeleteUser(BaseSchema):
     id: UUID
 
 @admin.post("/user/delete")
-async def delete_user(*, db: Session = Depends(get_db), user: DeleteUser):
-    user = User.get(db, user.id)
+async def delete_user(*, db: Session = Depends(get_db), user_schema: DeleteUser):
+    user = User.get(db, user_schema.id)
     if user is None:
         return False
     else:
@@ -109,8 +109,8 @@ class DeleteContext(BaseSchema):
     id: UUID
 
 @admin.post("/context/delete")
-async def delete_context(*, db: Session = Depends(get_db), context: DeleteContext):
-    context = Context.get(db, context.id)
+async def delete_context(*, db: Session = Depends(get_db), context_schema: DeleteContext):
+    context = Context.get(db, context_schema.id)
     if context is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     context.delete(db)
@@ -130,13 +130,14 @@ TeamSchema.from_orm
 
 class CreateTeam(BaseSchema):
     name: str
-    context: UUID | str | ContextSchema
+    context: UUID
 
 @admin.post("/team/create", response_model=TeamSchema)
 async def create_team(*, db: Session = Depends(get_db), team: CreateTeam):
-    if isinstance(team.context, ContextSchema):
-        team.context = team.context.id
-    return Team.create(db, team.name, team.context)
+    context = Context.get(db, team.context)
+    if context is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    return Team.create(db, team.name, context)
 
 class EditTeam(BaseSchema):
     id: UUID
@@ -157,8 +158,8 @@ class DeleteTeam(BaseSchema):
     id: UUID
 
 @admin.post("/team/delete")
-async def delete_team(*, db: Session = Depends(get_db), team: DeleteTeam):
-    team = Team.get(db, team.id)
+async def delete_team(*, db: Session = Depends(get_db), team_schema: DeleteTeam):
+    team = Team.get(db, team_schema.id)
     if team is None:
         return False
     else:
