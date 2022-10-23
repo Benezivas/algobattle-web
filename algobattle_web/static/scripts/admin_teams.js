@@ -30,7 +30,6 @@ async function create_team(event) {
     })
     if (response) {
         store.teams[response.id] = response
-        this.$forceUpdate()
         fields.name.value = ""
     }
 }
@@ -67,7 +66,6 @@ async function delete_team(event) {
 
 function del_team_event(team) {
     store.teams[team.id] = undefined
-    this.$forceUpdate()
 }
 
 
@@ -80,7 +78,6 @@ async function add_member(event) {
         var [team, user] = response
         store.teams[team.id] = team
         store.users[user.id] = user
-        this.$forceUpdate()
     }
 }
 
@@ -94,7 +91,6 @@ async function remove_member(event) {
         var [team, user] = response
         store.teams[team.id] = team
         store.users[user.id] = user
-        this.$forceUpdate()
     }
 }
 
@@ -107,7 +103,6 @@ async function create_context(event) {
     })
     if (response) {
         store.contexts[response.id] = response
-        this.$forceUpdate()
         fields.name.value = ""
     }
 
@@ -125,7 +120,6 @@ async function edit_context(event) {
         context.name = response.name
         store.curr_row.editing = false
         store.curr_row = {}
-        this.$forceUpdate()
     }
 }
 
@@ -144,7 +138,6 @@ async function delete_context(event) {
 
 function del_context_event(context) {
     store.contexts[context.id] = undefined
-    this.$forceUpdate()
 }
 
 function toggle_editing() {
