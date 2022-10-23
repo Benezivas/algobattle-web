@@ -1,6 +1,10 @@
-import { createApp } from "vue"
+import { createApp, reactive } from "vue"
 
-var curr_row = {}
+const store = reactive({
+    curr_row: {},
+    users: users_input,
+    teams: teams_input,
+})
 
 async function send_request(action, content) {
     var response = await fetch("/api/user/" + action, {
@@ -23,8 +27,7 @@ async function create_user(event) {
         is_admin: fields.is_admin.checked,
     })
     if (response) {
-        this.users.push(response)
-        this.$forceUpdate()
+        store.users.push(response)
         fields.name.value = ""
         fields.email.value = ""
         fields.is_admin.checked = false
@@ -34,7 +37,7 @@ async function create_user(event) {
 
 async function edit_user(event) {
     var fields = event.currentTarget.elements
-    var user = curr_row.user
+    var user = store.curr_row.user
 
     var response = await send_request("edit", {
         id: user.id,
@@ -52,34 +55,28 @@ async function edit_user(event) {
 
 
 async function delete_user(event) {
-    var user = curr_row.user
+    var user = store.curr_row.user
 
     var response = await send_request("delete", {
         id: user.id
     })
     if (response) {
-        curr_row = {}
-        this.$emit("deluser", user)
+        store.curr_row = {}
+        delete store.users[user.id]
     }
 }
 
-async function del_event(user)  {
-    var i = this.users.indexOf(user)
-    this.users.splice(i, 1)
-    this.$forceUpdate()
-}
-
-
 
 const app = createApp({
-    props: ["users"],
+    data() {
+        return {
+            store: store,
+        }
+    },
     methods: {
         create_user,
         edit_user,
-        del_event,
     },
-}, {
-    users: users_input,
 })
 app.config.compilerOptions.delimiters = ["${", "}"]
 
@@ -89,21 +86,27 @@ app.component("TableRow", {
     data() {
         return {
             editing: false,
+            store: store,
         }
     },
     methods: {
         toggle_editing() {
             if (this.editing) {
                 this.editing = false
-                curr_row = {}
+                store.curr_row = {}
             } else {
-                curr_row.editing = false
-                curr_row = this
+                store.curr_row.editing = false
+                store.curr_row = this
                 this.editing = true
             }
         },
         delete_user,
     },
+    computed: {
+        teams_str() {
+            return this.user.teams.map(t => store.teams[t].name).join(", ")
+        }
+    }
 })
 
 

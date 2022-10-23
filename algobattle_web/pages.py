@@ -87,8 +87,10 @@ admin = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(check_i
 @templated
 async def users_get(db: Session = Depends(get_db)):
     users = parse_obj_as(list[UserSchema], db.query(User).order_by(User.is_admin).all())
-    users = jsonable_encoder(users)[::-1]
-    return "admin_users.jinja", {"users": users}
+    users = jsonable_encoder({u.id: u for u in users[::-1]})
+    teams = parse_obj_as(list[TeamSchema], db.query(Team).all())
+    teams = jsonable_encoder({t.id: t for t in teams})
+    return "admin_users.jinja", {"users": users, "teams": teams}
 
 
 @admin.get("/teams", response_class=HTMLResponse)
