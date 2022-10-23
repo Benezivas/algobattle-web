@@ -64,17 +64,28 @@ function del_team_event(team) {
 
 
 async function add_member(event) {
-    var fields = event.currentTarget.elements
-
     var response = await send_request("team/add_member", {
-        team: fields.team.value,
-        user: fields.user.value,
+        team: this.edit_team_member_team,
+        user: this.edit_team_member_user,
     })
     if (response) {
-        console.log(response)
         var [team, user] = response
         this.teams[team.id] = team
-        this.user[user.id] = user
+        this.users[user.id] = user
+        this.$forceUpdate()
+    }
+}
+
+
+async function remove_member(event) {
+    var response = await send_request("team/remove_member", {
+        team: this.edit_team_member_team,
+        user: this.edit_team_member_user,
+    })
+    if (response) {
+        var [team, user] = response
+        this.teams[team.id] = team
+        this.users[user.id] = user
         this.$forceUpdate()
     }
 }
@@ -147,10 +158,17 @@ const app = createApp({
         edit_team,
         del_team_event,
         add_member,
+        remove_member,
         create_context,
         edit_context,
         del_context_event,
-    }
+    },
+    data() {
+        return {
+            edit_team_member_team: "",
+            edit_team_member_user: "",
+        }
+    },
 }, {
     teams: teams_input,
     contexts: contexts_input,

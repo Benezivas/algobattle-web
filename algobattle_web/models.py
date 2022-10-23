@@ -219,3 +219,9 @@ class Team(Base):
             return
         self.members.append(user)
         db.commit()
+
+    def remove_member(self, db: Session, user: User):
+        if user not in self.members:
+            return
+        self.members.remove(user)
+        db.commit()

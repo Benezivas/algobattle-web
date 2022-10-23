@@ -84,24 +84,23 @@
     <button type="submit" class="btn btn-primary mt-3">Create</button>
   </form>
 
-  <h3>Add team member</h3>
-  <form id="add-member" @submit.prevent="add_member" class="mb-5">
-    <div class="row g-2">
-      <div class="col-md w-em">
-        <label for="team" class="form-label">Team</label>
-        <select class="form-select form-select-sm" name="team" required="required">
-          <option v-for="(team, id) in teams" :value="id">${team.name}</option>
-        </select>
-      </div>
-      <div class="col-md w-em">
-        <label for="user-select" class="form-label">User</label>
-        <select class="form-select form-select-sm" id="user-select" name="user">
-          <option v-for="(user, id) in users" :value="id">${user.name}</option>
-        </select>
-      </div>
+  <h3>Edit team membership</h3>
+  <div class="row g-2">
+    <div class="col-md w-em">
+      <label for="team" class="form-label">Team</label>
+      <select class="form-select form-select-sm" name="team" required="required" v-model="edit_team_member_team">
+        <option v-for="(team, id) in teams" :value="id">${team.name}</option>
+      </select>
     </div>
-    <button type="submit" class="btn btn-primary mt-3">Add Member</button>
-  </form>
+    <div class="col-md w-em">
+      <label for="user-select" class="form-label">User</label>
+      <select class="form-select form-select-sm" id="user-select" name="user" v-model="edit_team_member_user">
+        <option v-for="(user, id) in users" :value="id">${user.name}</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn btn-success mt-3 mb-3 me-2" @click="add_member">Add Member</button>
+  <button class="btn btn-danger mt-3 mb-3" @click="remove_member">Remove Member</button>
 
   <div class="row gy-5">
     <div class="col-md w-em">

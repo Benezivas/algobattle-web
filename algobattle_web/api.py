@@ -176,12 +176,12 @@ async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depend
     team.update(db, name=edit.name)
     return team
 
-class AddTeamMember(BaseSchema):
+class EditTeamMember(BaseSchema):
     team: UUID
     user: UUID
 
 @admin.post("/team/add_member", response_model=Tuple[TeamSchema, UserSchema])
-async def add_team_member(*, db: Session = Depends(get_db), info: AddTeamMember):
+async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember):
     user = User.get(db, info.user)
     team = Team.get(db, info.team)
     if user is None or team is None:
@@ -190,6 +190,15 @@ async def add_team_member(*, db: Session = Depends(get_db), info: AddTeamMember)
     team.add_member(db, user)
     return team, user
 
+@admin.post("/team/remove_member", response_model=Tuple[TeamSchema, UserSchema])
+async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMember):
+    user = User.get(db, info.user)
+    team = Team.get(db, info.team)
+    if user is None or team is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+
+    team.remove_member(db, user)
+    return team, user
 
 #* has to be executed after all route defns
 router.include_router(admin)
