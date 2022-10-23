@@ -58,8 +58,9 @@ async function delete_team(event) {
         id: team.id,
     })
     if (response) {
+        store.curr_row.editing = false
         store.curr_row = {}
-        store.teams[team.id] = undefined
+        delete store.teams[team.id]
     }
 }
 
@@ -127,7 +128,7 @@ async function delete_context(event) {
     })
     if (response) {
         store.curr_row = {}
-        store.contexts[context.id] = undefined
+        delete store.contexts[context.id]
     }
 }
 
@@ -173,16 +174,13 @@ app.component("TeamRow", {
         }
     },
     computed: {
-        members_stra() {
-            return this.team.members.map(u => u.name).join(", ")
+        members_str() {
+            return this.team.members.map(u => store.users[u].name).join(", ")
         },
     },
     methods: {
         toggle_editing,
         delete_team,
-        members_str() {
-            return this.team.members.map(u => store.users[u].name).join(", ")
-        },
     }
 })
 
