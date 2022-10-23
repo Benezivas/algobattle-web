@@ -35,8 +35,9 @@ class ObjID(UUID):
         if isinstance(obj, UUID):
             return obj
         elif isinstance(obj, (BaseSchema, Base)) and hasattr(obj, "id"):
-            if isinstance(obj.id, UUID):
-                return obj.id
+            assert(hasattr(obj, "id"))
+            if isinstance(obj.id, UUID):    # type: ignore
+                return obj.id               # type: ignore
             else:
                 raise ValueError
         else:
