@@ -1,9 +1,11 @@
 "Module specifying the json api actions."
 from __future__ import annotations
+from pathlib import Path
 from typing import Tuple
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form
-from sqlalchemy_media import StoreManager
+from fastapi.responses import FileResponse
+from algobattle_web.config import STORAGE_PATH
 
 from algobattle_web.database import get_db, Session
 from algobattle_web.models import Config, Context, Team, User
@@ -212,7 +214,15 @@ class ConfigFile(BaseSchema):
 
 @admin.post("/config/add", response_model=ConfigFile)
 async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile):
-    return Config.create(db, name, file.file)
+    return Config.create(db, name, file.file, file_name=file.filename)
+
+
+@router.get("/config/getfile/{id}")
+async def get_config(*, db: Session = Depends(get_db), id: UUID):
+    config = Config.get(db, id)
+    if config is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    return FileResponse(Path(STORAGE_PATH) / config.file.path, filename=config.file.original_filename)
 
 
 #* has to be executed after all route defns

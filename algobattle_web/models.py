@@ -236,11 +236,17 @@ class Config(Base):
     file: DbFile = Column(DbFile)   # type: ignore
 
     @classmethod
-    def create(cls, db: Session, name: str, file: BinaryIO):
+    def create(cls, db: Session, name: str, file: BinaryIO, file_name: str | None = None):
+        if file_name is None:
+            file_name = file.name
         with StoreManager(db):
-            db_file = File.create_from(file)
+            db_file = File.create_from(file, original_filename=file_name)
             config = cls(name=name, file=db_file)
             db.add(config)
             db.commit()
         db.refresh(config)
         return config
+
+    @classmethod
+    def get(cls, db: Session, id: UUID) -> Config | None:
+        return db.query(cls).filter(cls.id == id).first()
