@@ -12,5 +12,6 @@ try:
     SECRET_KEY = b64decode(config["secret_key"])
     SQLALCHEMY_DATABASE_URL = config["database_url"]
     ADMIN_EMAIL = config["admin_email"]
+    STORAGE_PATH = config["storage_path"]
 except (KeyError, OSError):
     raise SystemExit("Badly formatted or missing config.toml!")

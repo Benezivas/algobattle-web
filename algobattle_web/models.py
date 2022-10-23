@@ -2,16 +2,17 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta, datetime
-from typing import Any, Mapping, cast, overload
+from typing import Any, BinaryIO, Mapping, cast, overload
 from uuid import UUID, uuid4
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Column, String, Boolean, Table, ForeignKey
 from sqlalchemy.orm import relationship, RelationshipProperty as Rel
 from sqlalchemy_utils import UUIDType
+from sqlalchemy_media import StoreManager
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session
+from algobattle_web.database import Base, Session, DbFile, File
 
 
 class ModelError(Exception):
@@ -225,3 +226,21 @@ class Team(Base):
             return
         self.members.remove(user)
         db.commit()
+
+
+class Config(Base):
+    __tablename__ = "configs"
+
+    id: UUID = Column(UUIDType, primary_key=True, default=uuid4)   # type: ignore
+    name: str = Column(String)  # type: ignore
+    file: DbFile = Column(DbFile)   # type: ignore
+
+    @classmethod
+    def create(cls, db: Session, name: str, file: BinaryIO):
+        with StoreManager(db):
+            db_file = File.create_from(file)
+            config = cls(name=name, file=db_file)
+            db.add(config)
+            db.commit()
+        db.refresh(config)
+        return config

@@ -20,6 +20,8 @@ dependencies = [
     "sqlalchemy",
     "sqlalchemy_utils",
     "tomli",
+    "sqlalchemy-media",
+    "python-multipart",
 ]
 
 [tool.pyright]

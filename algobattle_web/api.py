@@ -2,10 +2,11 @@
 from __future__ import annotations
 from typing import Tuple
 from uuid import UUID
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form
+from sqlalchemy_media import StoreManager
 
 from algobattle_web.database import get_db, Session
-from algobattle_web.models import Context, Team, User
+from algobattle_web.models import Config, Context, Team, User
 from algobattle_web.util import BaseSchema, ObjID, curr_user
 
 
@@ -199,6 +200,20 @@ async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMem
 
     team.remove_member(db, user)
     return team, user
+
+#*******************************************************************************
+#* Config
+#*******************************************************************************
+
+class ConfigFile(BaseSchema):
+    id: UUID
+    name: str
+
+
+@admin.post("/config/add", response_model=ConfigFile)
+async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile):
+    return Config.create(db, name, file.file)
+
 
 #* has to be executed after all route defns
 router.include_router(admin)

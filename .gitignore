@@ -2,6 +2,7 @@
 **/__pycache__
 database.db
 **/config.toml
+db_files
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
