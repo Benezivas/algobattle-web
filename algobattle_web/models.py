@@ -9,7 +9,7 @@ from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Column, String, Boolean, Table, ForeignKey
 from sqlalchemy.orm import relationship, RelationshipProperty as Rel
 from sqlalchemy_utils import UUIDType
-from sqlalchemy_media import StoreManager
+from sqlalchemy_media import StoreManager, Attachment
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import Base, Session, DbFile, File
@@ -233,7 +233,7 @@ class Config(Base):
 
     id: UUID = Column(UUIDType, primary_key=True, default=uuid4)   # type: ignore
     name: str = Column(String)  # type: ignore
-    file: DbFile = Column(DbFile)   # type: ignore
+    file: Attachment = Column(DbFile)   # type: ignore
 
     @classmethod
     def create(cls, db: Session, name: str, file: BinaryIO, file_name: str | None = None):
@@ -250,3 +250,15 @@ class Config(Base):
     @classmethod
     def get(cls, db: Session, id: UUID) -> Config | None:
         return db.query(cls).filter(cls.id == id).first()
+
+    def update(self, db: Session, name: str | None = None, file: BinaryIO | None = None, file_name: str | None = None):
+        if name is not None:
+            self.name = name
+        if file is not None:
+            with StoreManager(db):
+                if file_name is None:
+                    file_name = file.name
+                db_file = File.create_from(file, original_filename=file_name)
+                self.file = db_file
+
+        db.commit()
