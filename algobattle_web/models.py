@@ -6,13 +6,13 @@ from typing import Any, BinaryIO, Mapping, cast, overload
 from uuid import UUID, uuid4
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Column, String, Boolean, Table, ForeignKey
+from sqlalchemy import String, Boolean, Table, ForeignKey
 from sqlalchemy.orm import relationship, RelationshipProperty as Rel
 from sqlalchemy_utils import UUIDType
 from sqlalchemy_media import StoreManager, Attachment
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, DbFile, File
+from algobattle_web.database import Base, Session, DbFile, File, Column
 
 
 class ModelError(Exception):
@@ -35,10 +35,10 @@ team_members = Table(
 )
 
 class User(Base):
-    email: str = Column(String, unique=True)    # type: ignore
-    name: str = Column(String)  # type: ignore
-    token_id: UUID = Column(UUIDType, default=uuid4)   # type: ignore
-    is_admin: bool = Column(Boolean, default=False) # type: ignore
+    email: str = Column(String, unique=True)
+    name: str = Column(String)
+    token_id: UUID = Column(UUIDType, default=uuid4)
+    is_admin: bool = Column(Boolean, default=False)
 
     teams: Rel[list[Team]] = relationship("Team", secondary=team_members, back_populates="members", lazy="joined")
 
@@ -112,7 +112,7 @@ class User(Base):
 
 
 class Context(Base):
-    name: str = Column(String, unique=True) # type: ignore
+    name: str = Column(String, unique=True)
 
     teams: Rel[list[Team]] = relationship("Team", back_populates="context")
 
@@ -145,8 +145,8 @@ class Context(Base):
 
 
 class Team(Base):
-    name: str = Column(String)  # type: ignore
-    context_id: UUID = Column(UUIDType, ForeignKey("contexts.id"))  # type: ignore
+    name: str = Column(String)
+    context_id: UUID = Column(UUIDType, ForeignKey("contexts.id"))
 
     context: Rel[Context] = relationship("Context", back_populates="teams", uselist=False, lazy="joined")
     members: Rel[list["User"]] = relationship("User", secondary=team_members, back_populates="teams", lazy="joined")
@@ -207,8 +207,8 @@ class Team(Base):
 
 
 class Config(Base):
-    name: str = Column(String)  # type: ignore
-    file: Attachment = Column(DbFile)   # type: ignore
+    name: str = Column(String)
+    file: Attachment = Column(DbFile)
 
     @classmethod
     def create(cls, db: Session, name: str, file: BinaryIO, file_name: str | None = None):

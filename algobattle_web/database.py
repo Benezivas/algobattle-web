@@ -4,7 +4,7 @@ import functools
 import json
 from typing import Any, Iterator, Type
 from uuid import UUID, uuid4
-from sqlalchemy import create_engine, TypeDecorator, Unicode, Column
+from sqlalchemy import create_engine, TypeDecorator, Unicode, Column as SqlColumn
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy_utils import UUIDType
@@ -13,8 +13,11 @@ from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile
 from algobattle_web.config import SQLALCHEMY_DATABASE_URL, STORAGE_PATH
 
 
+def Column(*args, **kwargs) -> Any:
+    return SqlColumn(*args, **kwargs)
+
 class Common:
-    id: UUID = Column(UUIDType, primary_key=True, default=uuid4)    # type: ignore
+    id: UUID = Column(UUIDType, primary_key=True, default=uuid4)
 
     def __init__(self, *args, **kwargs): ...    # type: ignore
 
