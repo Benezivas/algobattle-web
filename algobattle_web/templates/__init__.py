@@ -9,7 +9,12 @@ from algobattle_web.models import User
 from algobattle_web.util import curr_user
 
 templates = Jinja2Templates(directory=Path(__file__).parent)
-
+templates.env.policies |= {
+    "json.dumps_kwargs": {
+        "ensure_ascii": False,
+        "sort_keys": False,
+    },
+}
 
 P = ParamSpec("P")
 R = ParamSpec("R")

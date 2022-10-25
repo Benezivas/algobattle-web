@@ -88,7 +88,7 @@ admin = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(check_i
 @admin.get("/users", response_class=HTMLResponse)
 @templated
 async def users_get(db: Session = Depends(get_db)):
-    users = db.query(User).order_by(User.is_admin).all()
+    users = db.query(User).order_by(User.is_admin).all()[::-1]
     teams = db.query(Team).all()
     return "admin_users.jinja", {"users": encode(users), "teams": encode(teams)}
 

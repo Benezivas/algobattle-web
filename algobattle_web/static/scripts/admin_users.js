@@ -27,7 +27,7 @@ async function create_user(event) {
         is_admin: fields.is_admin.checked,
     })
     if (response) {
-        store.users.push(response)
+        store.users[response.id] = response
         fields.name.value = ""
         fields.email.value = ""
         fields.is_admin.checked = false
