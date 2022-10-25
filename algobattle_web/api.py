@@ -222,7 +222,8 @@ async def delete_config(*, db: Session = Depends(get_db), id: UUID):
     config = Config.get(db, id)
     if config is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    config.delete(db)    
+    config.delete(db)
+    return True
 
 #* has to be executed after all route defns
 router.include_router(admin)
