@@ -4,10 +4,10 @@ from typing import Any
 from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from algobattle_web.database import encode, get_db, Session
+from algobattle_web.database import get_db, Session
 from algobattle_web.models import Config, Context, Team, User, ValueTaken
 from algobattle_web.templates import templated, templates
-from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError
+from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError, encode
 
 router = APIRouter()
 
@@ -68,6 +68,11 @@ async def user_post(
         context["error"] = e
     return "user.jinja", context
 
+
+@router.get("/team")
+@templated
+async def team_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
+    return "team.jinja"
 
 #*******************************************************************************
 #* Admin

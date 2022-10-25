@@ -60,16 +60,16 @@
               <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
                 {% if user.teams %}
                 <li>
-                  <a class="dropdown-item" href="/teams">Teams</a>
+                  <a class="dropdown-item" href="/team">Team</a>
                 </li>
                 {% endif %}
-                <li><a class="dropdown-item" href="/user">Profile</a></li>
+                <li><a class="dropdown-item" href="/user">User</a></li>
                 <li>
                   <hr class="dropdown-divider">
                 </li>
                 <li>
                   <form action="/user/logout" method="post">
-                    <button class="dropdown-item" type="submit" name="LogoutButton" value="test">Sign out</button>
+                    <button class="dropdown-item" type="submit" name="LogoutButton" value="test">Log out</button>
                   </form>
                 </li>
               </ul>
