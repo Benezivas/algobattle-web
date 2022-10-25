@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Tuple
 from uuid import UUID
-from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form
+from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File
 from fastapi.responses import FileResponse
 from algobattle_web.config import STORAGE_PATH
 
@@ -191,7 +191,7 @@ async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMem
 #*******************************************************************************
 
 @admin.post("/config/add", response_model=Config.Schema)
-async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile):
+async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File()):
     return Config.create(db, name, file.file, file_name=file.filename)
 
 
