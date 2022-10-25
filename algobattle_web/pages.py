@@ -97,7 +97,7 @@ async def teams_get(db: Session = Depends(get_db)):
     return "admin_teams.jinja", {"teams": encode(teams), "contexts": encode(contexts), "users": encode(users)}
 
 
-@admin.get("/config")
+@admin.get("/configs")
 @templated
 async def config_get(db: Session = Depends(get_db)):
     configs = db.query(Config).all()
