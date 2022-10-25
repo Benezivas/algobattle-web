@@ -15,7 +15,7 @@
     </td>
     <td> 
       <input v-if="editing" class="e-em form-control form-control-sm" name="file" type="file">
-      <button v-else type="button" class="btn btn-primary btn-sm"  data-bs-toggle="tooltip" title="Download config file" @click="download_config"><i class="bi bi-file-earmark-arrow-down"></i></button>
+      <a v-else role="button" class="btn btn-primary btn-sm" :href="'/api/config/getfile/'+config.id" data-bs-toggle="tooltip" title="Download config file"><i class="bi bi-file-earmark-arrow-down"></i></a>
     </td>
     <td class="text-end">
       <div class="btn-group btn-group-sm" role="group">

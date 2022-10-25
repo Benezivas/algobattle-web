@@ -66,10 +66,6 @@ async function delete_config(event) {
     }
 }
 
-async function download_config(event) {
-
-}
-
 
 function toggle_editing() {
     if (this.editing) {
@@ -108,7 +104,6 @@ app.component("ConfigRow", {
     methods: {
         toggle_editing,
         delete_config,
-        download_config,
     }
 })
 
