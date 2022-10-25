@@ -33,8 +33,6 @@ async function create_config(event) {
     var fields = event.currentTarget.elements
 
     const payload = new FormData(event.currentTarget)
-
-    console.log([[...payload]])
     var response = await send_form("config/add", payload)
     if (response) {
         response = await response.json()
@@ -65,7 +63,6 @@ async function delete_config(event) {
 
     var response = await send_request("config/delete/" + config.id)
     if (response) {
-        console.log(store.configs)
         store.curr_row.editing = false
         store.curr_row = {}
         delete store.configs[config.id]
