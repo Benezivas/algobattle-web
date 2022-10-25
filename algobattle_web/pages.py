@@ -3,8 +3,6 @@ from __future__ import annotations
 from typing import Any
 from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.encoders import jsonable_encoder
-from pydantic import parse_obj_as
 
 from algobattle_web.database import encode, get_db, Session
 from algobattle_web.models import Config, Context, Team, User, ValueTaken
