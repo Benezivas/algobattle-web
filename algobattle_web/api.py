@@ -225,6 +225,20 @@ async def get_config(*, db: Session = Depends(get_db), id: UUID):
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     return FileResponse(Path(STORAGE_PATH) / config.file.path, filename=config.file.original_filename)
 
+class ConfigEdit(BaseSchema):
+    id: UUID
+    name: str | None
+
+@admin.post("/config/edit", response_model=ConfigFile)
+async def edit_config(*, db: Session = Depends(get_db), id: UUID = Form(), name: str | None = Form(default=None), file: UploadFile | None):
+    config = Config.get(db, id)
+    if config is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    if file is None:
+        config.update(db, name)
+    else:
+        config.update(db, name, file.file, file.filename)
+    return config
 
 #* has to be executed after all route defns
 router.include_router(admin)
