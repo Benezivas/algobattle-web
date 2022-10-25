@@ -1,5 +1,6 @@
 "Module specifying the json api actions."
 from __future__ import annotations
+from logging import config
 from pathlib import Path
 from typing import Tuple
 from uuid import UUID
@@ -239,6 +240,13 @@ async def edit_config(*, db: Session = Depends(get_db), id: UUID = Form(), name:
     else:
         config.update(db, name, file.file, file.filename)
     return config
+
+@admin.post("/config/delete/{id}")
+async def delete_config(*, db: Session = Depends(get_db), id: UUID):
+    config = Config.get(db, id)
+    if config is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    config.delete(db)    
 
 #* has to be executed after all route defns
 router.include_router(admin)
