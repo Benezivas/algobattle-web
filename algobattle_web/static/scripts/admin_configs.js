@@ -33,7 +33,6 @@ async function create_config(event) {
     var fields = event.currentTarget.elements
 
     const payload = new FormData(event.currentTarget)
-    console.log([...payload])
     var response = await send_form("config/add", payload)
     if (response) {
         response = await response.json()
@@ -45,7 +44,6 @@ async function create_config(event) {
 async function edit_config(event) {
     const payload = new FormData(event.currentTarget)
     payload.append("id", store.curr_row.config.id)
-    console.log([...payload])
     var response = await send_form("config/edit", payload)
     if (response) {
         response = await response.json()
