@@ -10,16 +10,16 @@
 <script type="text/x-template" id="config_row">
   <tr>
     <td>
-      <input v-if="editing" class="form-control form-control-sm" name="name" type="text" :placeholder="config.name">
+      <input v-if="editing" class="form-control form-control-sm" name="name" type="text" v-model="config.name">
       <span v-else>${config.name}</span>
     </td>
-    <td>
-      <input v-if="editing" class="e-em form-control form-control-sm" id="configFile" type="file">
+    <td> 
+      <input v-if="editing" class="e-em form-control form-control-sm" name="file" type="file">
       <button v-else type="button" class="btn btn-primary btn-sm"  data-bs-toggle="tooltip" title="Download config file" @click="download_config"><i class="bi bi-file-earmark-arrow-down"></i></button>
     </td>
     <td class="text-end">
       <div class="btn-group btn-group-sm" role="group">
-        <button type="button" class="btn btn-danger" v-if="editing" @click="delete_config"><i class="bi bi-trash"></i></button>
+        <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete" v-if="editing" @click="delete_config"><i class="bi bi-trash"></i></button>
         <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
         <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
       </div>

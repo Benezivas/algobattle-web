@@ -33,6 +33,7 @@ async function create_config(event) {
     var fields = event.currentTarget.elements
 
     const payload = new FormData(event.currentTarget)
+    console.log([...payload])
     var response = await send_form("config/add", payload)
     if (response) {
         response = await response.json()
@@ -42,18 +43,14 @@ async function create_config(event) {
 }
 
 async function edit_config(event) {
-    var fields = event.currentTarget.elements
-    var team = store.curr_row.team
-
-    var response = await send_request("team/edit", {
-        id: team.id,
-        name: fields.name.value ? fields.name.value : undefined,
-        context: fields.context.value != team.context ? fields.context.value : undefined,
-    })
+    const payload = new FormData(event.currentTarget)
+    payload.append("id", store.curr_row.config.id)
+    console.log([...payload])
+    var response = await send_form("config/edit", payload)
     if (response) {
-        team.name = response.name
-        team.context = response.context
-        store.curr_row.editing = false
+        response = await response.json()
+        store.configs[response.id] = response
+        store.curr_row.toggle_editing()
     }
 }
 

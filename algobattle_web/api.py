@@ -207,7 +207,7 @@ class ConfigEdit(BaseSchema):
     name: str | None
 
 @admin.post("/config/edit", response_model=Config.Schema)
-async def edit_config(*, db: Session = Depends(get_db), id: UUID = Form(), name: str | None = Form(default=None), file: UploadFile | None):
+async def edit_config(*, db: Session = Depends(get_db), id: UUID = Form(), name: str | None = Form(default=None), file: UploadFile | None = File(default=None)):
     config = Config.get(db, id)
     if config is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
