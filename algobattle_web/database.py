@@ -19,7 +19,8 @@ def Column(*args, **kwargs) -> Any:
 class Common:
     id: UUID = Column(UUIDType, primary_key=True, default=uuid4)
 
-    def __init__(self, *args, **kwargs): ...    # type: ignore
+    def __init__(self, *args, **kwargs):
+        return super().__init__(*args, **kwargs)
 
     @classmethod
     @declared_attr
