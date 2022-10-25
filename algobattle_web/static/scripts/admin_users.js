@@ -36,20 +36,19 @@ async function create_user(event) {
 
 
 async function edit_user(event) {
-    var fields = event.currentTarget.elements
     var user = store.curr_row.user
 
     var response = await send_request("edit", {
         id: user.id,
-        name: fields.name.value ? fields.name.value : undefined,
-        email: fields.email.value ? fields.email.value : undefined,
-        is_admin: fields.is_admin.checked,
+        name: user.name,
+        email: user.email,
+        is_admin: user.is_admin,
     })
     if (response) {
         user.name = response.name
         user.email = response.email
         user.is_admin = response.is_admin
-        curr_row.editing = false
+        store.curr_row.toggle_editing()
     }
 }
 

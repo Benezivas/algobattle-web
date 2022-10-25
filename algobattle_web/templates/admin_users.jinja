@@ -13,7 +13,7 @@
       <div v-if="editing" class="input-group input-group-sm">
         <input class="form-control" name="name" type="text" :placeholder="user.name">
         <div class="input-group-append">
-          <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" :checked="user.is_admin ? 'checked' : null">
+          <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="user.is_admin">
           <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
         </div>
       </div>
@@ -23,7 +23,7 @@
       </div>
     </td>
     <td>
-      <input v-if="editing" class="form-control form-control-sm" name="email" type="email" :placeholder="user.email">
+      <input v-if="editing" class="form-control form-control-sm" name="email" type="email" v-model="user.email">
       <span v-else>${user.email}</span>
     </td>
     <td><span>${teams_str}</span></td>
