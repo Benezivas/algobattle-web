@@ -1,6 +1,5 @@
 "Module specifying the json api actions."
 from __future__ import annotations
-from logging import config
 from pathlib import Path
 from typing import Tuple
 from uuid import UUID
@@ -10,7 +9,8 @@ from algobattle_web.config import STORAGE_PATH
 
 from algobattle_web.database import get_db, Session
 from algobattle_web.models import Config, Context, Team, User
-from algobattle_web.util import BaseSchema, ObjID, curr_user
+from algobattle_web.util import curr_user
+from algobattle_web.base_classes import BaseSchema
 
 
 def check_if_admin(user: User = Depends(curr_user)):
@@ -24,20 +24,13 @@ admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)])
 #* User
 #*******************************************************************************
 
-class UserSchema(BaseSchema):
-    id: ObjID
-    name: str
-    email: str
-    is_admin: bool
-    teams: list[ObjID]
-
 class CreateUser(BaseSchema):
     name: str
     email: str
     is_admin: bool = False
 
 
-@admin.post("/user/create", response_model=UserSchema)
+@admin.post("/user/create", response_model=User.Schema)
 async def create_user(*, db: Session = Depends(get_db), user: CreateUser):
     return User.create(db, user.email, user.name, user.is_admin)
 
@@ -48,7 +41,7 @@ class EditUser(BaseSchema):
     email: str | None = None
     is_admin: bool | None = None
 
-@admin.post("/user/edit", response_model=UserSchema)
+@admin.post("/user/edit", response_model=User.Schema)
 async def edit_user(*, db: Session = Depends(get_db), edit: EditUser):
     user = User.get(db, edit.id)
     if user is None:
@@ -83,14 +76,10 @@ async def edit_self(*, db: Session = Depends(get_db), user = Depends(curr_user),
 #* Context
 #*******************************************************************************
 
-class ContextSchema(BaseSchema):
-    id: UUID
-    name: str
-
 class CreateContext(BaseSchema):
     name: str
 
-@admin.post("/context/create", response_model=ContextSchema)
+@admin.post("/context/create", response_model=Context.Schema)
 async def create_context(*, db: Session = Depends(get_db), context: CreateContext):
     return Context.create(db, context.name)
 
@@ -98,7 +87,7 @@ class EditContext(BaseSchema):
     id: UUID
     name: str | None
 
-@admin.post("/context/edit", response_model=ContextSchema)
+@admin.post("/context/edit", response_model=Context.Schema)
 async def edit_context(*, db: Session = Depends(get_db), edit: EditContext):
     context = Context.get(db, edit.id)
     if context is None:
@@ -121,19 +110,11 @@ async def delete_context(*, db: Session = Depends(get_db), context_schema: Delet
 #* Team
 #*******************************************************************************
 
-class TeamSchema(BaseSchema):
-    id: ObjID
-    name: str
-    context: ObjID
-    members: list[ObjID]
-
-TeamSchema.from_orm
-
 class CreateTeam(BaseSchema):
     name: str
     context: UUID
 
-@admin.post("/team/create", response_model=TeamSchema)
+@admin.post("/team/create", response_model=Team.Schema)
 async def create_team(*, db: Session = Depends(get_db), team: CreateTeam):
     context = Context.get(db, team.context)
     if context is None:
@@ -143,14 +124,14 @@ async def create_team(*, db: Session = Depends(get_db), team: CreateTeam):
 class EditTeam(BaseSchema):
     id: UUID
     name: str | None = None
-    context: UUID | str | ContextSchema
+    context: UUID | str | Context.Schema
 
-@admin.post("/team/edit", response_model=TeamSchema)
+@admin.post("/team/edit", response_model=Team.Schema)
 async def edit_team(*, db: Session = Depends(get_db), edit: EditTeam):
     team = Team.get(db, edit.id)
     if team is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    if isinstance(edit.context, ContextSchema):
+    if isinstance(edit.context, Context.Schema):
         edit.context = edit.context.id
     team.update(db, edit.name, edit.context)
     return team
@@ -171,7 +152,7 @@ class MemberEditTeam(BaseSchema):
     id: UUID
     name: str
 
-@router.post("/team/member_edit", response_model=TeamSchema)
+@router.post("/team/member_edit", response_model=Team.Schema)
 async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), edit: MemberEditTeam):
     team = Team.get(db, edit.id)
     if team is None:
@@ -185,7 +166,7 @@ class EditTeamMember(BaseSchema):
     team: UUID
     user: UUID
 
-@admin.post("/team/add_member", response_model=Tuple[TeamSchema, UserSchema])
+@admin.post("/team/add_member", response_model=Tuple[Team.Schema, User.Schema])
 async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember):
     user = User.get(db, info.user)
     team = Team.get(db, info.team)
@@ -195,7 +176,7 @@ async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember
     team.add_member(db, user)
     return team, user
 
-@admin.post("/team/remove_member", response_model=Tuple[TeamSchema, UserSchema])
+@admin.post("/team/remove_member", response_model=Tuple[Team.Schema, User.Schema])
 async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMember):
     user = User.get(db, info.user)
     team = Team.get(db, info.team)
@@ -209,12 +190,7 @@ async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMem
 #* Config
 #*******************************************************************************
 
-class ConfigSchema(BaseSchema):
-    id: UUID
-    name: str
-
-
-@admin.post("/config/add", response_model=ConfigSchema)
+@admin.post("/config/add", response_model=Config.Schema)
 async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile):
     return Config.create(db, name, file.file, file_name=file.filename)
 
@@ -230,7 +206,7 @@ class ConfigEdit(BaseSchema):
     id: UUID
     name: str | None
 
-@admin.post("/config/edit", response_model=ConfigSchema)
+@admin.post("/config/edit", response_model=Config.Schema)
 async def edit_config(*, db: Session = Depends(get_db), id: UUID = Form(), name: str | None = Form(default=None), file: UploadFile | None):
     config = Config.get(db, id)
     if config is None:

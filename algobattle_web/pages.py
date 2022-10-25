@@ -6,8 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import parse_obj_as
 
-from algobattle_web.api import ConfigSchema, ContextSchema, TeamSchema, UserSchema
-from algobattle_web.database import get_db, Session
+from algobattle_web.database import encode, get_db, Session
 from algobattle_web.models import Config, Context, Team, User, ValueTaken
 from algobattle_web.templates import templated, templates
 from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError
@@ -86,31 +85,25 @@ admin = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(check_i
 @admin.get("/users", response_class=HTMLResponse)
 @templated
 async def users_get(db: Session = Depends(get_db)):
-    users = parse_obj_as(list[UserSchema], db.query(User).order_by(User.is_admin).all())
-    users = jsonable_encoder({u.id: u for u in users[::-1]})
-    teams = parse_obj_as(list[TeamSchema], db.query(Team).all())
-    teams = jsonable_encoder({t.id: t for t in teams})
-    return "admin_users.jinja", {"users": users, "teams": teams}
+    users = db.query(User).order_by(User.is_admin).all()
+    teams = db.query(Team).all()
+    return "admin_users.jinja", {"users": encode(users), "teams": encode(teams)}
 
 
 @admin.get("/teams", response_class=HTMLResponse)
 @templated
 async def teams_get(db: Session = Depends(get_db)):
-    teams = parse_obj_as(list[TeamSchema], db.query(Team).all())
-    teams = {t.id: t for t in teams}
-    contexts = parse_obj_as(list[ContextSchema], db.query(Context).all())
-    contexts = {c.id: c for c in contexts}
-    users = parse_obj_as(list[UserSchema], db.query(User).order_by(User.is_admin).all())
-    users = {u.id: u for u in users[::-1]}
-    return "admin_teams.jinja", {"teams": jsonable_encoder(teams), "contexts": jsonable_encoder(contexts), "users": jsonable_encoder(users)}
+    teams = db.query(Team).all()
+    contexts = db.query(Context).all()
+    users = db.query(User).order_by(User.is_admin).all()[::-1]
+    return "admin_teams.jinja", {"teams": encode(teams), "contexts": encode(contexts), "users": encode(users)}
 
 
 @admin.get("/config")
 @templated
 async def config_get(db: Session = Depends(get_db)):
-    configs = parse_obj_as(list[ConfigSchema], db.query(Config).all())
-    configs = {c.id: c for c in configs}
-    return "admin_configs.jinja", {"configs": jsonable_encoder(configs)}
+    configs = db.query(Config).all()
+    return "admin_configs.jinja", {"configs": encode(configs)}
 
 #* has to be executed after all route defns
 router.include_router(admin)

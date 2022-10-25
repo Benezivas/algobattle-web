@@ -12,7 +12,8 @@ from sqlalchemy_utils import UUIDType
 from sqlalchemy_media import StoreManager, Attachment
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, DbFile, File, Column
+from algobattle_web.database import Base, Session, DbFile, File
+from algobattle_web.base_classes import ObjID, Column
 
 
 class ModelError(Exception):
@@ -41,6 +42,12 @@ class User(Base):
     is_admin: bool = Column(Boolean, default=False)
 
     teams: Rel[list[Team]] = relationship("Team", secondary=team_members, back_populates="members", lazy="joined")
+
+    class Schema(Base.Schema):
+        name: str
+        email: str
+        is_admin: bool
+        teams: list[ObjID]
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, User):
@@ -116,6 +123,9 @@ class Context(Base):
 
     teams: Rel[list[Team]] = relationship("Team", back_populates="context")
 
+    class Schema(Base.Schema):
+        name: str
+
     @classmethod
     def get(cls, db: Session, context: str | UUID) -> Context | None:
         row = cls.name if isinstance(context, str) else cls.id
@@ -149,7 +159,12 @@ class Team(Base):
     context_id: UUID = Column(UUIDType, ForeignKey("contexts.id"))
 
     context: Rel[Context] = relationship("Context", back_populates="teams", uselist=False, lazy="joined")
-    members: Rel[list["User"]] = relationship("User", secondary=team_members, back_populates="teams", lazy="joined")
+    members: Rel[list[User]] = relationship("User", secondary=team_members, back_populates="teams", lazy="joined")
+
+    class Schema(Base.Schema):
+        name: str
+        context: ObjID
+        members: list[ObjID]
 
     def __str__(self) -> str:
         return self.name
@@ -209,6 +224,9 @@ class Team(Base):
 class Config(Base):
     name: str = Column(String, unique=True)
     file: Attachment = Column(DbFile)
+
+    class Schema(Base.Schema):
+        name: str
 
     @classmethod
     def create(cls, db: Session, name: str, file: BinaryIO, file_name: str | None = None):
