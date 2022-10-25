@@ -249,13 +249,16 @@ class Config(Base):
         return db.query(cls).filter(filter_type == context).first()
 
     def update(self, db: Session, name: str | None = None, file: BinaryIO | None = None, file_name: str | None = None):
-        if name is not None:
-            self.name = name
-        if file is not None:
-            with StoreManager(db):
+        with StoreManager(db):
+            if name is not None:
+                self.name = name
+            if file is not None:
                 if file_name is None:
                     file_name = file.name
-                db_file = File.create_from(file, original_filename=file_name)
-                self.file = db_file
+                self.file.attach(file, original_filename=file_name)
+            db.commit()
 
-        db.commit()
+    def delete(self, db: Session):
+        with StoreManager(db):
+            db.delete(self)
+            db.commit()
