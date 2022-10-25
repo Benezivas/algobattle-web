@@ -6,9 +6,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import parse_obj_as
 
-from algobattle_web.api import ContextSchema, TeamSchema, UserSchema
+from algobattle_web.api import ConfigSchema, ContextSchema, TeamSchema, UserSchema
 from algobattle_web.database import get_db, Session
-from algobattle_web.models import Context, Team, User, ValueTaken
+from algobattle_web.models import Config, Context, Team, User, ValueTaken
 from algobattle_web.templates import templated, templates
 from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError
 
@@ -104,6 +104,13 @@ async def teams_get(db: Session = Depends(get_db)):
     users = {u.id: u for u in users[::-1]}
     return "admin_teams.jinja", {"teams": jsonable_encoder(teams), "contexts": jsonable_encoder(contexts), "users": jsonable_encoder(users)}
 
+
+@admin.get("/config")
+@templated
+async def config_get(db: Session = Depends(get_db)):
+    configs = parse_obj_as(list[ConfigSchema], db.query(Config).all())
+    configs = {c.id: c for c in configs}
+    return "admin_configs.jinja", {"configs": jsonable_encoder(configs)}
 
 #* has to be executed after all route defns
 router.include_router(admin)

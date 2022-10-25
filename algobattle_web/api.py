@@ -209,12 +209,12 @@ async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMem
 #* Config
 #*******************************************************************************
 
-class ConfigFile(BaseSchema):
+class ConfigSchema(BaseSchema):
     id: UUID
     name: str
 
 
-@admin.post("/config/add", response_model=ConfigFile)
+@admin.post("/config/add", response_model=ConfigSchema)
 async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile):
     return Config.create(db, name, file.file, file_name=file.filename)
 
@@ -230,7 +230,7 @@ class ConfigEdit(BaseSchema):
     id: UUID
     name: str | None
 
-@admin.post("/config/edit", response_model=ConfigFile)
+@admin.post("/config/edit", response_model=ConfigSchema)
 async def edit_config(*, db: Session = Depends(get_db), id: UUID = Form(), name: str | None = Form(default=None), file: UploadFile | None):
     config = Config.get(db, id)
     if config is None:
