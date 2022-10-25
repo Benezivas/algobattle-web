@@ -207,11 +207,13 @@ class Team(Base):
 
 
 class Config(Base):
-    name: str = Column(String)
+    name: str = Column(String, unique=True)
     file: Attachment = Column(DbFile)
 
     @classmethod
     def create(cls, db: Session, name: str, file: BinaryIO, file_name: str | None = None):
+        if cls.get(db, name) is not None:
+            raise ValueTaken(name)
         if file_name is None:
             file_name = file.name
         with StoreManager(db):
