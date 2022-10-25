@@ -2,16 +2,22 @@
 from __future__ import annotations
 from datetime import timedelta, datetime
 from enum import Enum
-from typing import cast
-from algobattle_web.database import Session
+from typing import Any, Collection, cast
+from uuid import UUID
 from fastapi import Depends, Cookie, HTTPException, status
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 
-from algobattle_web.database import get_db
+from algobattle_web.base_classes import DbBase
+from algobattle_web.database import Session, get_db
 from algobattle_web.models import User
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 
+
+
+def encode(col: Collection[DbBase]) -> dict[UUID, dict[str, Any]]:
+    """Encodes a collection of database items into a jsonable container."""
+    return {el.id: el.encode() for el in col}
 
 
 def send_email(email: str, content: str):

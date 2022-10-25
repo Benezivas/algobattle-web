@@ -10,6 +10,7 @@ from sqlalchemy import Column as SqlColumn
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy_utils import UUIDType
+from fastapi.encoders import jsonable_encoder
 
 
 class BaseSchema(BaseModel):
@@ -38,6 +39,9 @@ class Common:
     def delete(self, db: Session):
         db.delete(self)
         db.commit()
+
+    def encode(self) -> dict[str, Any]:
+        return jsonable_encoder(self.Schema.from_orm(self))
 
 
 class DbBase(Common):
