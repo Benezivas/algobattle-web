@@ -223,8 +223,10 @@ class Config(Base):
         return config
 
     @classmethod
-    def get(cls, db: Session, id: UUID) -> Config | None:
-        return db.query(cls).filter(cls.id == id).first()
+    def get(cls, db: Session, context: UUID | str) -> Config | None:
+        """Queries the db by either its id or name."""
+        filter_type = cls.name if isinstance(context, str) else cls.id
+        return db.query(cls).filter(filter_type == context).first()
 
     def update(self, db: Session, name: str | None = None, file: BinaryIO | None = None, file_name: str | None = None):
         if name is not None:
