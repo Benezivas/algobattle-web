@@ -1,3 +1,11 @@
+{% macro sbitem(name, link, icon) %}
+  <li class="nav-item">
+    <a href="{{ link }}" class="nav-link align-middle {{'active' if request.url.path == link}}">
+      <i class="bi bi-{{ icon }}"></i></i> <span class="ms-1 d-none d-sm-inline">{{ name }}</span>
+    </a>
+  </li>
+{%- endmacro %}
+
 <!doctype html>
 <html lang="en">
   <head>
@@ -31,28 +39,12 @@
             {% if user %}
             <hr class="d-none d-sm-inline">
             <ul class="nav nav-pills flex-column mb-auto mx-auto mx-sm-0" id="menu">
-              <li class="nav-item">
-                <a href="/" class="nav-link align-middle {{'active' if request.url.path == '/'}}">
-                  <i class="bi bi-house"></i> <span class="ms-1 d-none d-sm-inline">Home</span>
-                </a>
-              </li>
+              {{ sbitem("Home", "/", "house") }}
               {% if user.is_admin %}
               <hr>
-              <li class="nav-item">
-                <a href="/admin/users" class="nav-link align-middle {{'active' if request.url.path == '/admin/users'}}">
-                  <i class="bi bi-person"></i></i> <span class="ms-1 d-none d-sm-inline">Users</span>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a href="/admin/teams" class="nav-link align-middle {{'active' if request.url.path == '/admin/teams'}}">
-                  <i class="bi bi-people"></i></i> <span class="ms-1 d-none d-sm-inline">Teams</span>
-                </a>
-              </li>
-              <li class="nav-item">
-                <a href="/admin/configs" class="nav-link align-middle {{'active' if request.url.path == '/admin/configs'}}">
-                  <i class="bi bi-sliders"></i></i> <span class="ms-1 d-none d-sm-inline">Configs</span>
-                </a>
-              </li>
+              {{ sbitem("Users", "/admin/users", "person") }}
+              {{ sbitem("Teams", "/admin/teams", "people") }}
+              {{ sbitem("Configs", "/admin/configs", "sliders") }}
               {% endif %}
             </ul>
             <hr class="d-none d-sm-inline">
