@@ -47,7 +47,7 @@ def _make_template(request: Request, user: User, ret: Tuple[str, dict[str, Any]]
     else:
         template_file, context = ret, {}
 
-    new_context: dict[str, Any] = {"request": request, "user": user}
+    new_context: dict[str, Any] = {"request": request, "user": user.encode()}
     return templates.TemplateResponse(template_file, new_context | context)
 
 def _fix_signature(inner: Callable[P, S], fn: Callable[R, Any]) -> Tuple[Callable[P, S], set[str]]:

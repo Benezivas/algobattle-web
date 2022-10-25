@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Any, Collection, cast
 from uuid import UUID
 from fastapi import Depends, Cookie, HTTPException, status
+from fastapi.encoders import jsonable_encoder
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 
@@ -17,7 +18,7 @@ from algobattle_web.config import SECRET_KEY, ALGORITHM
 
 def encode(col: Collection[DbBase]) -> dict[UUID, dict[str, Any]]:
     """Encodes a collection of database items into a jsonable container."""
-    return {el.id: el.encode() for el in col}
+    return jsonable_encoder({el.id: el.encode() for el in col})
 
 
 def send_email(email: str, content: str):
