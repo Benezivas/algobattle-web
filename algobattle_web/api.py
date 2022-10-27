@@ -192,7 +192,7 @@ async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMem
 
 @admin.post("/config/add", response_model=Config.Schema)
 async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File()):
-    return Config.create(db, name, file.file, file_name=file.filename)
+    return Config.create(db, name, file)
 
 
 @router.get("/config/getfile/{id}")
@@ -214,7 +214,7 @@ async def edit_config(*, db: Session = Depends(get_db), id: UUID = Form(), name:
     if file is None:
         config.update(db, name)
     else:
-        config.update(db, name, file.file, file.filename)
+        config.update(db, name, file)
     return config
 
 @admin.post("/config/delete/{id}")

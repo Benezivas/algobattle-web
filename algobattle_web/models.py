@@ -9,19 +9,22 @@ from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import String, Boolean, Table, ForeignKey
 from sqlalchemy.orm import relationship, RelationshipProperty as Rel
 from sqlalchemy_utils import UUIDType
-from sqlalchemy_media import StoreManager, Attachment
+from sqlalchemy_media import StoreManager
+from fastapi import UploadFile
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, DbFile, File
+from algobattle_web.database import Base, Session, Json, File
 from algobattle_web.base_classes import ObjID, Column
 
 
 class ModelError(Exception):
     pass
 
+
 @dataclass
 class ValueTaken(ModelError):
     value: str
+
 
 @dataclass
 class ResourceNeeded(ModelError):
@@ -34,6 +37,7 @@ team_members = Table(
     Column("team", ForeignKey("teams.id"), primary_key=True),
     Column("user", ForeignKey("users.id"), primary_key=True),
 )
+
 
 class User(Base):
     email: str = Column(String, unique=True)
@@ -77,7 +81,6 @@ class User(Base):
         db.refresh(new_user)
         return new_user
 
-
     def update(self, db: Session, email: str | None = None, name: str | None = None, is_admin: bool | None = None) -> User:
         if email:
             email_user = self.get(db, email)
@@ -97,10 +100,9 @@ class User(Base):
             "type": "user",
             "user_id": self.id.hex,
             "token_id": self.token_id.hex,
-            "exp": datetime.now() + timedelta(weeks=4)
+            "exp": datetime.now() + timedelta(weeks=4),
         }
         return {"key": "user_token", "value": jwt.encode(payload, SECRET_KEY, ALGORITHM)}
-
 
     @classmethod
     def decode_token(cls, db: Session, token: str | None) -> User | None:
@@ -171,14 +173,16 @@ class Team(Base):
 
     @overload
     @classmethod
-    def get(cls, db: Session, team: UUID) -> Team | None: ...
+    def get(cls, db: Session, team: UUID) -> Team | None:
+        ...
 
     @overload
     @classmethod
-    def get(cls, db: Session, team: str, context: Context) -> Team | None: ...
+    def get(cls, db: Session, team: str, context: Context) -> Team | None:
+        ...
 
     @classmethod
-    def get(cls, db: Session, team: str | UUID, context:  Context | None = None) -> Team | None:
+    def get(cls, db: Session, team: str | UUID, context: Context | None = None) -> Team | None:
         if isinstance(team, str):
             if context is None:
                 raise ValueError("If the team is given by its name, you have to specify a context!")
@@ -223,19 +227,18 @@ class Team(Base):
 
 class Config(Base):
     name: str = Column(String, unique=True)
-    file: Attachment = Column(DbFile)
+    file: File = Column(File.as_mutable(Json))
 
     class Schema(Base.Schema):
         name: str
 
     @classmethod
-    def create(cls, db: Session, name: str, file: BinaryIO, file_name: str | None = None):
+    def create(cls, db: Session, name: str, file: BinaryIO | UploadFile):
         if cls.get(db, name) is not None:
             raise ValueTaken(name)
-        if file_name is None:
-            file_name = file.name
         with StoreManager(db):
-            db_file = File.create_from(file, original_filename=file_name)
+            db_file = File()
+            db_file.attach(file)
             config = cls(name=name, file=db_file)
             db.add(config)
             db.commit()
@@ -248,14 +251,12 @@ class Config(Base):
         filter_type = cls.name if isinstance(context, str) else cls.id
         return db.query(cls).filter(filter_type == context).first()
 
-    def update(self, db: Session, name: str | None = None, file: BinaryIO | None = None, file_name: str | None = None):
+    def update(self, db: Session, name: str | None = None, file: BinaryIO | UploadFile | None = None):
         with StoreManager(db):
             if name is not None:
                 self.name = name
             if file is not None:
-                if file_name is None:
-                    file_name = file.name
-                self.file.attach(file, original_filename=file_name)
+                self.file.attach(file)
             db.commit()
 
     def delete(self, db: Session):
