@@ -6,7 +6,7 @@ from typing import Any, BinaryIO, Mapping, cast, overload
 from uuid import UUID, uuid4
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import String, Boolean, Table, ForeignKey
+from sqlalchemy import String, Boolean, Table, ForeignKey, DateTime
 from sqlalchemy.orm import relationship, RelationshipProperty as Rel
 from sqlalchemy_utils import UUIDType
 from sqlalchemy_media import StoreManager
@@ -257,6 +257,84 @@ class Config(Base):
                 self.name = name
             if file is not None:
                 self.file.attach(file)
+            db.commit()
+
+    def delete(self, db: Session):
+        with StoreManager(db):
+            db.delete(self)
+            db.commit()
+
+
+class Problem(Base):
+    name: str = Column(String, unique=True)
+    file: File = Column(Json)
+    config_id: UUID = Column(UUIDType, ForeignKey("configs.id"))
+    start: datetime | None = Column(DateTime, default=None)
+    end: datetime | None = Column(DateTime, default=None)
+    description: File = Column(Json, default=File)
+
+    config: Rel[Config] = relationship("Config", uselist=False, lazy="joined")
+
+    class Schema(Base.Schema):
+        name: str
+        start: datetime
+        end: datetime
+        config: ObjID
+
+    @classmethod
+    def create(
+        cls,
+        db: Session,
+        name: str,
+        file: BinaryIO | UploadFile,
+        config: Config,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        description: BinaryIO | UploadFile | None = None,
+    ):
+        if cls.get(db, name) is not None:
+            raise ValueTaken(name)
+        with StoreManager(db):
+            db_file = File.create_from(file)
+            if description is not None:
+                desc_file = File.create_from(description)
+            else:
+                desc_file = None
+            problem = cls(name=name, file=db_file, config=config, start=start, end=end, description=desc_file)
+            db.add(problem)
+            db.commit()
+        db.refresh(problem)
+        return problem
+
+    @classmethod
+    def get(cls, db: Session, problem: UUID | str) -> Problem | None:
+        """Queries the db by either its id or name."""
+        filter_type = cls.name if isinstance(problem, str) else cls.id
+        return db.query(cls).filter(filter_type == problem).first()
+
+    def update(
+        self,
+        db: Session,
+        name: str | None,
+        file: BinaryIO | UploadFile | None = None,
+        config: Config | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        desc: BinaryIO | UploadFile | None = None,
+    ):
+        with StoreManager(db):
+            if name:
+                self.name = name
+            if file is not None:
+                self.file.attach(file)
+            if config is not None:
+                self.config_id = config.id
+            if start is not None:
+                self.start = start
+            if end is not None:
+                self.end = end
+            if desc is not None:
+                self.description.attach(desc)
             db.commit()
 
     def delete(self, db: Session):
