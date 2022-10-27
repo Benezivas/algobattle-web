@@ -26,6 +26,7 @@ async def login_get(request: Request, db: Session = Depends(get_db), token: str 
         return response
     else:
         return templates.TemplateResponse("login.jinja", {
+            "user": None,
             "request": request,
             "error": res.value,
             "logged_in": user.name if user is not None else "",
@@ -37,9 +38,9 @@ async def login_post(request: Request, db: Session = Depends(get_db), email: str
     if User.get(db, email) is not None:
         token = login_token(email)
         send_email(email, f"{request.url_for('login_post')}?token={token}")
-        return templates.TemplateResponse("login.jinja", {"request": request, "email_sent": True})
+        return templates.TemplateResponse("login.jinja", {"request": request, "user": None, "email_sent": True})
     else:
-        return templates.TemplateResponse("login.jinja", {"request": request, "email": email, "error": LoginError.UnregisteredUser.value})
+        return templates.TemplateResponse("login.jinja", {"request": request, "user": None, "email": email, "error": LoginError.UnregisteredUser.value})
 
 @router.post("/logout")
 async def logout_post():
