@@ -2,10 +2,11 @@
 from __future__ import annotations
 from datetime import timedelta, datetime
 from enum import Enum
-from typing import Any, Collection, cast
+from typing import Any, BinaryIO, Collection, cast, overload
 from uuid import UUID
-from fastapi import Depends, Cookie, HTTPException, status
+from fastapi import Depends, Cookie, HTTPException, status, UploadFile
 from fastapi.encoders import jsonable_encoder
+from starlette.datastructures import Headers
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 
@@ -67,3 +68,22 @@ def decode_login_token(db: Session, token: str | None) -> User | LoginError:
     except (JWTError, NameError):
         pass
     return LoginError.InvalidToken
+
+
+class File(UploadFile):
+    """Common wrapper around different types of file objects to provide easy to use uniform functionality."""
+
+    @overload
+    def __init__(self, filename: BinaryIO) -> None:
+        """The `filename` is the actual file, not the name!"""
+        ...
+
+    @overload
+    def __init__(self, filename: str, file: BinaryIO | None = None, content_type: str = "", *, headers: Headers | None = None) -> None:
+        ...
+
+    def __init__(self, filename: str | BinaryIO, file: BinaryIO | None = None, content_type: str = "", *, headers: Headers | None = None) -> None:
+        if isinstance(filename, BinaryIO):
+            return super().__init__(filename.name, filename)
+        else:
+            return super().__init__(filename, file, content_type=content_type, headers=headers)
