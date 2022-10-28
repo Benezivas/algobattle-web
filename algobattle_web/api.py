@@ -1,11 +1,8 @@
 "Module specifying the json api actions."
 from __future__ import annotations
-from pathlib import Path
 from typing import Tuple
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File
-from fastapi.responses import FileResponse
-from algobattle_web.config import STORAGE_PATH
 
 from algobattle_web.database import get_db, Session
 from algobattle_web.models import Config, Context, Team, User
@@ -200,7 +197,7 @@ async def get_config(*, db: Session = Depends(get_db), id: UUID):
     config = Config.get(db, id)
     if config is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    return FileResponse(Path(STORAGE_PATH) / config.file.path, filename=config.file.original_filename)
+    return config.file.response()
 
 class ConfigEdit(BaseSchema):
     id: UUID

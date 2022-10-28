@@ -2,6 +2,7 @@
 from __future__ import annotations
 import functools
 import json
+from pathlib import Path
 from typing import Any, Iterator, Type
 from sqlalchemy import create_engine, TypeDecorator, Unicode
 from sqlalchemy.orm import sessionmaker, Session
@@ -9,6 +10,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable, Attachment
 from algobattle_web.base_classes import Common, DbBase
 from starlette.datastructures import UploadFile
+from fastapi.responses import FileResponse
 
 from algobattle_web.config import SQLALCHEMY_DATABASE_URL, STORAGE_PATH
 
@@ -42,7 +44,7 @@ class Json(TypeDecorator[Any]):
 StoreManager.register("fs", functools.partial(FileSystemStore, STORAGE_PATH, ""), True)
 
 
-class File(SqlFile):
+class DbFile(SqlFile):
     def attach(
         self,
         attachable: Attachable | UploadFile,
@@ -73,5 +75,9 @@ class File(SqlFile):
             suppress_validation,
             **kwargs,
         )
+    
+    def response(self) -> FileResponse:
+        """Creates a fastapi FileResponse that serves this file."""
+        return FileResponse(Path(STORAGE_PATH) / self.path, filename=self.original_filename)
 
-File.as_mutable(Json)
+DbFile.as_mutable(Json)

@@ -13,7 +13,7 @@ from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, Json, File
+from algobattle_web.database import Base, Session, Json, DbFile
 from algobattle_web.base_classes import ObjID, Column
 
 
@@ -227,7 +227,7 @@ class Team(Base):
 
 class Config(Base):
     name: str = Column(String, unique=True)
-    file: File = Column(File.as_mutable(Json))
+    file: DbFile = Column(DbFile.as_mutable(Json))
 
     class Schema(Base.Schema):
         name: str
@@ -237,7 +237,7 @@ class Config(Base):
         if cls.get(db, name) is not None:
             raise ValueTaken(name)
         with StoreManager(db):
-            db_file = File()
+            db_file = DbFile()
             db_file.attach(file)
             config = cls(name=name, file=db_file)
             db.add(config)
@@ -267,11 +267,11 @@ class Config(Base):
 
 class Problem(Base):
     name: str = Column(String, unique=True)
-    file: File = Column(Json)
+    file: DbFile = Column(Json)
     config_id: UUID = Column(UUIDType, ForeignKey("configs.id"))
     start: datetime | None = Column(DateTime, default=None)
     end: datetime | None = Column(DateTime, default=None)
-    description: File = Column(Json, default=File)
+    description: DbFile = Column(Json, default=DbFile)
 
     config: Rel[Config] = relationship("Config", uselist=False, lazy="joined")
 
@@ -295,9 +295,9 @@ class Problem(Base):
         if cls.get(db, name) is not None:
             raise ValueTaken(name)
         with StoreManager(db):
-            db_file = File.create_from(file)
+            db_file = DbFile.create_from(file)
             if description is not None:
-                desc_file = File.create_from(description)
+                desc_file = DbFile.create_from(description)
             else:
                 desc_file = None
             problem = cls(name=name, file=db_file, config=config, start=start, end=end, description=desc_file)
