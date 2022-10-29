@@ -1,11 +1,12 @@
 "Module specifying the json api actions."
 from __future__ import annotations
+from datetime import datetime
 from typing import Tuple
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File
 
 from algobattle_web.database import get_db, Session
-from algobattle_web.models import Config, Context, Team, User
+from algobattle_web.models import Config, Context, Problem, Team, User
 from algobattle_web.util import curr_user
 from algobattle_web.base_classes import BaseSchema
 
@@ -216,6 +217,54 @@ async def edit_config(*, db: Session = Depends(get_db), id: UUID = Form(), name:
 
 @admin.post("/config/delete/{id}")
 async def delete_config(*, db: Session = Depends(get_db), id: UUID):
+    config = Config.get(db, id)
+    if config is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    config.delete(db)
+    return True
+
+#*******************************************************************************
+#* Problem
+#*******************************************************************************
+
+@admin.post("/problem/add", response_model=Config.Schema)
+async def add_problem(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File(),
+    config: UUID = Form(), start: datetime | None = Form(default=None), end: datetime | None = Form(default=None),
+    description: UploadFile | None = File(default=None)):
+    config_obj = Config.get(db, config)
+    if config_obj is None:
+        raise HTTPException(400)
+    return Problem.create(db, name, file, config_obj, start, end, description)
+
+@router.get("/problem/getfile/{id}")
+async def get_problemfile(*, db: Session = Depends(get_db), id: UUID):
+    problem = Problem.get(db, id)
+    if problem is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    return problem.file.response()
+
+@router.get("/problem/getdesc/{id}")
+async def get_problem(*, db: Session = Depends(get_db), id: UUID):
+    problem = Problem.get(db, id)
+    if problem is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    return problem.file.response()
+
+@admin.post("/problem/edit", response_model=Config.Schema)
+async def edit_problem(*, db: Session = Depends(get_db), id: UUID = Form(), name: str | None = Form(default=None), file: UploadFile | None = File(default=None),
+    config: UUID | None = Form(default=None), start: datetime | None = Form(default=None), end: datetime | None = Form(default=None), desc: UploadFile | None = File(default=None)):
+
+    config = Config.get(db, id)
+    if config is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    if file is None:
+        config.update(db, name)
+    else:
+        config.update(db, name, file)
+    return config
+
+@admin.post("/problem/delete/{id}")
+async def delete_problem(*, db: Session = Depends(get_db), id: UUID):
     config = Config.get(db, id)
     if config is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)

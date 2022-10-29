@@ -1,6 +1,7 @@
 """Module for base classes that can be imported everywhere else."""
 from __future__ import annotations
 from abc import ABC
+from inspect import Parameter, Signature, signature
 from typing import Any
 from uuid import UUID
 from uuid import UUID, uuid4
@@ -10,12 +11,34 @@ from sqlalchemy import Column as SqlColumn
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy_utils import UUIDType
+from fastapi import UploadFile, File, Form
 from fastapi.encoders import jsonable_encoder
 
 
 class BaseSchema(BaseModel):
     class Config:
         orm_mode = True
+
+    @property
+    @classmethod
+    def from_form(cls):
+        """Constructs a a function that can be used as a dependency for parsing this schema from form data."""
+
+        def builder(**kwargs):
+            return cls(**kwargs)
+
+        new_sig = []
+        for param in signature(cls).parameters.values():
+            default = param.default if param.default is not Parameter.empty else None
+            getter = File if param.annotation == UploadFile else Form
+            new_sig.append(
+                Parameter(
+                    param.name, Parameter.POSITIONAL_OR_KEYWORD, annotation=param.annotation, default=getter(default=default)
+                )
+            )
+
+        builder.__signature__ = Signature(new_sig)
+        return builder
 
 
 def Column(*args, **kwargs) -> Any:
@@ -58,9 +81,9 @@ class ObjID(UUID):
         if isinstance(obj, UUID):
             return obj
         elif isinstance(obj, (BaseSchema, Common)) and hasattr(obj, "id"):
-            assert(hasattr(obj, "id"))
-            if isinstance(obj.id, UUID):    # type: ignore
-                return obj.id               # type: ignore
+            assert hasattr(obj, "id")
+            if isinstance(obj.id, UUID):  # type: ignore
+                return obj.id  # type: ignore
             else:
                 raise ValueError
         else:
