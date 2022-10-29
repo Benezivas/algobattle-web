@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form,
 from algobattle_web.database import get_db, Session
 from algobattle_web.models import Config, Context, Problem, Team, User
 from algobattle_web.util import curr_user
-from algobattle_web.base_classes import BaseSchema
+from algobattle_web.base_classes import BaseSchema, ObjID
 
 
 def check_if_admin(user: User = Depends(curr_user)):
@@ -227,7 +227,7 @@ async def delete_config(*, db: Session = Depends(get_db), id: UUID):
 #* Problem
 #*******************************************************************************
 
-@admin.post("/problem/add", response_model=Config.Schema)
+@admin.post("/problem/add", response_model=Problem.Schema)
 async def add_problem(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File(),
     config: UUID = Form(), start: datetime | None = Form(default=None), end: datetime | None = Form(default=None),
     description: UploadFile | None = File(default=None)):
@@ -250,18 +250,26 @@ async def get_problem(*, db: Session = Depends(get_db), id: UUID):
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     return problem.file.response()
 
-@admin.post("/problem/edit", response_model=Config.Schema)
-async def edit_problem(*, db: Session = Depends(get_db), id: UUID = Form(), name: str | None = Form(default=None), file: UploadFile | None = File(default=None),
-    config: UUID | None = Form(default=None), start: datetime | None = Form(default=None), end: datetime | None = Form(default=None), desc: UploadFile | None = File(default=None)):
+class ProblemEdit(BaseSchema):
+    id: UUID
+    name: str | None
+    file: UploadFile | None = None
+    config: UUID | None = None
+    start: datetime | None = None
+    end: datetime | None = None
+    desc: UploadFile | None = None
 
-    config = Config.get(db, id)
-    if config is None:
+@admin.post("/problem/edit", response_model=Problem.Schema)
+async def edit_problem(*, db: Session = Depends(get_db), edit: ProblemEdit = Depends(ProblemEdit.from_form())):
+
+    problem = Problem.get(db, edit.id)
+    if problem is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    if file is None:
-        config.update(db, name)
-    else:
-        config.update(db, name, file)
-    return config
+    args = edit.dict()
+    if edit.config is not None:
+        args["config"] = Config.get(db, edit.config)
+    problem.update(db, **args)
+    return problem
 
 @admin.post("/problem/delete/{id}")
 async def delete_problem(*, db: Session = Depends(get_db), id: UUID):
