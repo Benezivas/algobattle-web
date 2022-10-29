@@ -19,7 +19,6 @@ class BaseSchema(BaseModel):
     class Config:
         orm_mode = True
 
-    @property
     @classmethod
     def from_form(cls):
         """Constructs a a function that can be used as a dependency for parsing this schema from form data."""
