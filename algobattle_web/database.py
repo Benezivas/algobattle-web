@@ -1,5 +1,6 @@
 "Module specifying the login page."
 from __future__ import annotations
+from abc import ABC
 import functools
 import json
 from pathlib import Path
@@ -8,7 +9,7 @@ from sqlalchemy import create_engine, TypeDecorator, Unicode
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable, Attachment
-from algobattle_web.base_classes import Common, DbBase
+from algobattle_web.base_classes import BaseSchema, Common, DbBase
 from starlette.datastructures import UploadFile
 from fastapi.responses import FileResponse
 
@@ -60,7 +61,6 @@ class DbFile(SqlFile):
         if isinstance(attachable, UploadFile):
             file = attachable.file
             filename = attachable.filename
-            print(filename)
         else:
             file = attachable
             filename = None
@@ -79,5 +79,22 @@ class DbFile(SqlFile):
     def response(self) -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
         return FileResponse(Path(STORAGE_PATH) / self.path, filename=self.original_filename)
+    
+    class Schema(BaseSchema, ABC):
+        name: str
+
+        @classmethod
+        def __get_validators__(cls):
+            yield cls.validate
+
+        @classmethod
+        def validate(cls, value: Any) -> DbFile.Schema:
+            if isinstance(value, DbFile.Schema):
+                return value
+            elif isinstance(value, DbFile):
+                return cls(name=value.filename)
+            else:
+                raise TypeError
+
 
 DbFile.as_mutable(Json)

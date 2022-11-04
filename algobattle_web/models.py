@@ -277,9 +277,11 @@ class Problem(Base):
 
     class Schema(Base.Schema):
         name: str
-        start: datetime
-        end: datetime
         config: ObjID
+        start: datetime | None
+        end: datetime | None
+        file: DbFile.Schema
+        description: DbFile.Schema
 
     @classmethod
     def create(
