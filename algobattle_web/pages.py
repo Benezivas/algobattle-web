@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from algobattle_web.database import get_db, Session
-from algobattle_web.models import Config, Context, Team, User, ValueTaken
+from algobattle_web.models import Config, Context, Problem, Team, User, ValueTaken
 from algobattle_web.templates import templated, templates
 from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError, encode
 
@@ -74,6 +74,16 @@ async def user_post(
 @templated
 async def team_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     return "team.jinja"
+
+
+@router.get("/problems")
+@templated
+async def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
+    if user.is_admin:
+        problems = db.query(Problem).all()
+        return "admin_problems.jinja", {"problems": encode(problems)}
+    else:
+        raise RuntimeError
 
 #*******************************************************************************
 #* Admin

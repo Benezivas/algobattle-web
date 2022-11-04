@@ -1,7 +1,7 @@
 {% macro sbitem(name, link, icon) %}
   <li class="nav-item">
     <a href="{{ link }}" class="nav-link align-middle {{'active' if request.url.path == link}}">
-      <i class="bi bi-{{ icon }}"></i></i> <span class="ms-1 d-none d-sm-inline">{{ name }}</span>
+      <i class="bi bi-{{ icon }}"></i> <span class="ms-1 d-none d-sm-inline">{{ name }}</span>
     </a>
   </li>
 {%- endmacro %}
@@ -13,7 +13,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Algobattle</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css">
     <link rel="icon" href="/static/images/favicon.png" type="image/png"/>
     <link rel="stylesheet" href="/static/scripts/styles.css">
     <script type="importmap">
@@ -40,6 +40,7 @@
             <hr class="d-none d-sm-inline">
             <ul class="nav nav-pills flex-column mb-auto mx-auto mx-sm-0" id="menu">
               {{ sbitem("Home", "/", "house") }}
+              {{ sbitem("Problems", "/problems", "boxes") }}
               {% if user.is_admin %}
               <hr>
               {{ sbitem("Users", "/admin/users", "person") }}
