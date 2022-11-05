@@ -65,20 +65,23 @@ app.component("Problem", {
     },
     methods: {
         toggle_editing() {
-            if (this.editing) {
-                this.editing = false
-                store.curr_row = {}
-            } else {
-                store.curr_row.editing = false
-                store.curr_row = this
-                this.editing = true
+            this.editing = !this.editing
+        },
+        async delete_problem() {
+            var response = await send_request("problem/delete/" + this.problem.id)
+            if (response) {
+                delete store.problems[this.problem.id]
             }
         },
-        delete() {
-
-        },
-        edit() {
-            
+        async edit(event) {
+            const payload = new FormData(event.currentTarget)
+            payload.append("id", this.problem.id)
+            var response = await send_form("problem/edit", payload)
+            if (response) {
+                response = await response.json()
+                store.problems[response.id] = response
+                this.toggle_editing()
+            }
         },
         fmt_date(date) {
             if (!date) {
