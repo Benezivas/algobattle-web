@@ -32,20 +32,33 @@
             </tr>
             <tr>
               <td>Config</td>
-              <td>${store.configs[problem.config].name}</td>
+              <td>
+                <select v-if="editing" class="form-select form-select-sm" name="config">
+                  <option v-for="(config, id) in store.configs" :value="id" :selected="id == problem.config">${config.name}</option>
+                </select>
+                <div v-else>
+                  ${store.configs[problem.config].name}
+                </div>
+              </td>
             </tr>
             <tr v-if="editing || problem.start">
               <td>Start</td>
-              <td>${fmt_date(problem.start)}</td>
+              <td>
+                <input v-if="editing" class="form-control form-control-sm" name="start" type="datetime-local" :value="problem.start">
+                <div v-else>${fmt_date(problem.start)}</div>
+              </td>
             </tr>
             <tr v-if="editing || problem.end">
               <td>End</td>
-              <td>${fmt_date(problem.end)}</td>
+              <td>
+                <input v-if="editing" class="form-control form-control-sm" name="end" type="datetime-local" :value="problem.end">
+                <div v-else>${fmt_date(problem.end)}</div>
+              </td>
             </tr>
             <tr v-if="editing || problem.description">
               <td>Description</td>
               <td>
-                <input v-if="editing" class="e-em form-control form-control-sm" name="file" type="file">
+                <input v-if="editing" class="e-em form-control form-control-sm" name="description" type="file">
                 <a v-else role="button" class="btn btn-primary btn-sm" :href="'/api/problem/getdesc/'+problem.id" data-bs-toggle="tooltip" title="Download config file">
                   ${problem.description.name} <i class="bi bi-file-earmark-arrow-down"></i>
                 </a>
@@ -68,61 +81,61 @@
   <h3>Problems</h3>
   <div class="accordion" id="problems">
     <Problem v-for="(problem, id) in store.problems" :key="id" :problem="problem"></Problem>
-  <div class="accordion-item">
-    <h2 class="accordion-header" id="create">
-      <button class="accordion-button collapsed bg-success bg-opacity-25" type="button" data-bs-toggle="collapse" data-bs-target="#collapsecreate" aria-expanded="false" aria-controls="collapsecreate">
-        Create new problem
-      </button>
-    </h2>
-    <div id="collapsecreate" class="accordion-collapse collapse" aria-labelledby="headingcreate" data-bs-parent="#problems">
-      <form class="accordion-body" @submit.prevent="create_problem">
-        <table class="table">
-          <tbody>
-            <tr>
-              <td>Name</td>
-              <td>
-                <input class="form-control form-control-sm" name="name" type="text" required="required">
-              </td>
-            </tr>
-            <tr>
-              <td>File</td>
-              <td>
-                <input class="form-control form-control-sm" name="file" type="file" required="required">
-              </td>
-            </tr>
-            <tr>
-              <td>Config</td>
-              <td>
-                <select class="form-select form-select-sm" name="config">
-                  <option v-for="(config, id) in store.configs" :value="id">${config.name}</option>
-                </select>
-              </td>
-            </tr>
-            <tr>
-              <td>Start</td>
-              <td>
-                <input class="form-control form-control-sm" name="start" type="datetime-local">
-              </td>
-            </tr>
-            <tr>
-              <td>End</td>
-              <td>
-                <input class="form-control form-control-sm" name="end" type="datetime-local">
-              </td>
-            </tr>
-            <tr>
-              <td>Description</td>
-              <td>
-                <input class="form-control form-control-sm" name="description" type="file">
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <button type="submit" class="btn btn-primary mt-3">Create</button>
-      </form>
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="create">
+        <button class="accordion-button collapsed bg-success bg-opacity-25" type="button" data-bs-toggle="collapse" data-bs-target="#collapsecreate" aria-expanded="false" aria-controls="collapsecreate">
+          Create new problem
+        </button>
+      </h2>
+      <div id="collapsecreate" class="accordion-collapse collapse" aria-labelledby="headingcreate" data-bs-parent="#problems">
+        <form class="accordion-body" @submit.prevent="create_problem">
+          <table class="table">
+            <tbody>
+              <tr>
+                <td>Name</td>
+                <td>
+                  <input class="form-control form-control-sm" name="name" type="text" required="required">
+                </td>
+              </tr>
+              <tr>
+                <td>File</td>
+                <td>
+                  <input class="form-control form-control-sm" name="file" type="file" required="required">
+                </td>
+              </tr>
+              <tr>
+                <td>Config</td>
+                <td>
+                  <select class="form-select form-select-sm" name="config">
+                    <option v-for="(config, id) in store.configs" :value="id">${config.name}</option>
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td>Start</td>
+                <td>
+                  <input class="form-control form-control-sm" name="start" type="datetime-local">
+                </td>
+              </tr>
+              <tr>
+                <td>End</td>
+                <td>
+                  <input class="form-control form-control-sm" name="end" type="datetime-local">
+                </td>
+              </tr>
+              <tr>
+                <td>Description</td>
+                <td>
+                  <input class="form-control form-control-sm" name="description" type="file">
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <button type="submit" class="btn btn-primary mt-3">Create</button>
+        </form>
+      </div>
     </div>
   </div>
-  </div>
-
+</div>
 
 {% endblock %}
