@@ -188,6 +188,13 @@ app.component("Problem", {
         edit() {
             
         },
+        fmt_date(date) {
+            if (!date) {
+                return ""
+            }
+            date = new Date(date)
+            return date.toLocaleString()
+        }
     }
 })
 

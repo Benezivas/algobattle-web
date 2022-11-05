@@ -92,7 +92,7 @@ class DbFile(SqlFile):
             if isinstance(value, DbFile.Schema):
                 return value
             elif isinstance(value, DbFile):
-                return cls(name=value.filename)
+                return cls(name=value.original_filename)
             else:
                 raise TypeError
 

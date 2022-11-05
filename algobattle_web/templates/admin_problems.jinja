@@ -29,19 +29,19 @@
             </tr>
             <tr>
               <td>Config</td>
-              <td>${problem.config}</td>
+              <td>${store.configs[problem.config].name}</td>
             </tr>
             <tr>
               <td>Start</td>
-              <td>${problem.start}</td>
+              <td>${fmt_date(problem.start)}</td>
             </tr>
             <tr>
               <td>End</td>
-              <td>${problem.end}</td>
+              <td>${fmt_date(problem.end)}</td>
             </tr>
             <tr>
               <td>Description</td>
-              <td>${problem.description}</td>
+              <td>${problem.description?.name}</td>
             </tr>
           </tbody>
         </table>
