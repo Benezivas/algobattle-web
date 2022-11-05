@@ -280,10 +280,10 @@ async def edit_problem(*, db: Session = Depends(get_db), edit: ProblemEdit = Dep
 
 @admin.post("/problem/delete/{id}")
 async def delete_problem(*, db: Session = Depends(get_db), id: UUID):
-    config = Config.get(db, id)
-    if config is None:
+    problem = Problem.get(db, id)
+    if problem is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    config.delete(db)
+    problem.delete(db)
     return True
 
 #* has to be executed after all route defns
