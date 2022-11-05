@@ -131,12 +131,27 @@ async function delete_context(event) {
 }
 
 
+async function send_form(endpoint, content) {
+    var response = await fetch("/api/" + endpoint, {
+        "method": "POST",
+        "body": content,
+    })
+    if (response.ok) {
+        return response
+    }
+}
+
 
 
 const app = createApp({
     methods: {
-        create_problem() {
-
+        async create_problem(event) {
+            const payload = new FormData(event.currentTarget)
+            var response = await send_form("problem/create", payload)
+            if (response) {
+                response = await response.json()
+                store.problems[response.id] = response
+            }
         },
     },
     data() {
@@ -167,8 +182,11 @@ app.component("Problem", {
                 this.editing = true
             }
         },
-        delete_problem() {
+        delete() {
 
+        },
+        edit() {
+            
         },
     }
 })

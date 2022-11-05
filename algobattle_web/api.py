@@ -227,7 +227,7 @@ async def delete_config(*, db: Session = Depends(get_db), id: UUID):
 #* Problem
 #*******************************************************************************
 
-@admin.post("/problem/add", response_model=Problem.Schema)
+@admin.post("/problem/create", response_model=Problem.Schema)
 async def add_problem(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File(),
     config: UUID = Form(), start: datetime | None = Form(default=None), end: datetime | None = Form(default=None),
     description: UploadFile | None = File(default=None)):

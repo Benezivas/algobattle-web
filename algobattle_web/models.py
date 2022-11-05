@@ -267,11 +267,11 @@ class Config(Base):
 
 class Problem(Base):
     name: str = Column(String, unique=True)
-    file: DbFile = Column(Json)
+    file: DbFile = Column(DbFile.as_mutable(Json))
     config_id: UUID = Column(UUIDType, ForeignKey("configs.id"))
     start: datetime | None = Column(DateTime, default=None)
     end: datetime | None = Column(DateTime, default=None)
-    description: DbFile = Column(Json, default=DbFile)
+    description: DbFile | None = Column(DbFile.as_mutable(Json), default=None)
 
     config: Rel[Config] = relationship("Config", uselist=False, lazy="joined")
 
@@ -336,6 +336,8 @@ class Problem(Base):
             if end is not None:
                 self.end = end
             if desc is not None:
+                if self.description is None:
+                    self.description = DbFile()
                 self.description.attach(desc)
             db.commit()
 

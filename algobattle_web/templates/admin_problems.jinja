@@ -11,12 +11,12 @@
 <script type="text/x-template" id="problem">
   <div class="accordion-item">
     <h2 class="accordion-header" :id="'heading' + problem.name">
-      <button class="accordion-button" type="button" data-bs-toggle="collapse" :data-bs-target="'#collapse' + problem.name" aria-expanded="true" :aria-controls="'collapse' + problem.name">
+      <button class="accordion-button" type="button" data-bs-toggle="collapse" :data-bs-target="'#collapse' + problem.name" aria-expanded="false" :aria-controls="'collapse' + problem.name">
         ${problem.name}
       </button>
     </h2>
-    <div :id="'collapse' + problem.name" class="accordion-collapse collapse show" :aria-labelledby="'heading' + problem.name" data-bs-parent="#problems">
-      <form class="accordion-body" @submit.prevent="edit_problem">
+    <div :id="'collapse' + problem.name" class="accordion-collapse collapse" :aria-labelledby="'heading' + problem.name" data-bs-parent="#problems">
+      <form class="accordion-body" @submit.prevent="edit">
         <table class="table">
           <tbody>
             <tr>
@@ -57,11 +57,11 @@
     <Problem v-for="(problem, id) in store.problems" :key="id" :problem="problem"></Problem>
   <div class="accordion-item">
     <h2 class="accordion-header" id="create">
-      <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsecreate" aria-expanded="true" aria-controls="collapsecreate">
+      <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsecreate" aria-expanded="false" aria-controls="collapsecreate">
         Create new problem
       </button>
     </h2>
-    <div id="collapsecreate" class="accordion-collapse collapse show" aria-labelledby="headingcreate" data-bs-parent="#problems">
+    <div id="collapsecreate" class="accordion-collapse collapse" aria-labelledby="headingcreate" data-bs-parent="#problems">
       <form class="accordion-body" @submit.prevent="create_problem">
         <table class="table">
           <tbody>
@@ -100,7 +100,7 @@
             <tr>
               <td>Description</td>
               <td>
-                <input class="form-control form-control-sm" name="description" type="file" required="required">
+                <input class="form-control form-control-sm" name="description" type="file">
               </td>
             </tr>
           </tbody>
