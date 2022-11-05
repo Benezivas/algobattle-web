@@ -1,4 +1,5 @@
 import { createApp, reactive } from "vue"
+import { send_form, send_request } from "base"
 
 
 const store = reactive({

@@ -1,5 +1,5 @@
 
-async function send_request(action, content) {
+export async function send_request(action, content) {
     var response = await fetch("/api/" + action, {
         "method": "POST",
         "headers": {"Content-type": "application/json"},
@@ -10,7 +10,7 @@ async function send_request(action, content) {
     }
 }
 
-async function send_form(endpoint, content) {
+export async function send_form(endpoint, content) {
     var response = await fetch("/api/" + endpoint, {
         "method": "POST",
         "body": content,
