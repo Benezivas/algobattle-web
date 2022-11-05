@@ -268,11 +268,11 @@ class ProblemEdit(BaseSchema):
 
 @admin.post("/problem/edit", response_model=Problem.Schema)
 async def edit_problem(*, db: Session = Depends(get_db), edit: ProblemEdit = Depends(ProblemEdit.from_form())):
-
     problem = Problem.get(db, edit.id)
     if problem is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     args = edit.dict()
+    del args["id"]
     if edit.config is not None:
         args["config"] = Config.get(db, edit.config)
     problem.update(db, **args)
