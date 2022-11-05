@@ -227,14 +227,21 @@ async def delete_config(*, db: Session = Depends(get_db), id: UUID):
 #* Problem
 #*******************************************************************************
 
+class ProblemCreate(BaseSchema):
+    name: str
+    file: UploadFile
+    config: UUID
+    start: datetime | None = None
+    end: datetime | None = None
+    description: UploadFile | None = None
+
 @admin.post("/problem/create", response_model=Problem.Schema)
-async def add_problem(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File(),
-    config: UUID = Form(), start: datetime | None = Form(default=None), end: datetime | None = Form(default=None),
-    description: UploadFile | None = File(default=None)):
-    config_obj = Config.get(db, config)
-    if config_obj is None:
+async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate = Depends(ProblemCreate.from_form())):
+    config = Config.get(db, problem.config)
+    if config is None:
         raise HTTPException(400)
-    return Problem.create(db, name, file, config_obj, start, end, description)
+    args = problem.dict() | {"config": config}
+    return Problem.create(db, **args)
 
 @router.get("/problem/getfile/{id}")
 async def get_problemfile(*, db: Session = Depends(get_db), id: UUID):
