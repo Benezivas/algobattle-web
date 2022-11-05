@@ -253,9 +253,9 @@ async def get_problemfile(*, db: Session = Depends(get_db), id: UUID):
 @router.get("/problem/getdesc/{id}")
 async def get_problem(*, db: Session = Depends(get_db), id: UUID):
     problem = Problem.get(db, id)
-    if problem is None:
+    if problem is None or problem.description is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    return problem.file.response()
+    return problem.description.response()
 
 class ProblemEdit(BaseSchema):
     id: UUID
