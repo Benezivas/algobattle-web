@@ -76,6 +76,12 @@ app.component("Problem", {
         async edit(event) {
             const payload = new FormData(event.currentTarget)
             payload.append("id", this.problem.id)
+            if (payload.get("description").size == 0) {
+                payload.delete("description")
+            }
+            if (payload.get("file").size == 0) {
+                payload.delete("file")
+            }
             var response = await send_form("problem/edit", payload)
             if (response) {
                 response = await response.json()
