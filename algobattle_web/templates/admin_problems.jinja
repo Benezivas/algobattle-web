@@ -4,6 +4,7 @@
 <script src="/static/scripts/admin_problems.js" type="module"></script>
 <script>
   var problems = {{problems | tojson}}
+  var configs = {{configs | tojson}}
 </script>
 
 
@@ -53,26 +54,62 @@
 <div id="app">
   <h3>Problems</h3>
   <div class="accordion" id="problems">
-    <problem v-for="(problem, id) in store.problems" :key="id" :problem="problem"></problem>
-  </div>
-
-  <h3>Create new team</h3>
-  <form id="create-team" @submit.prevent="create_team" class="mb-5">
-    <div class="row g-2">
-      <div class="col-md w-em">
-        <label for="name" class="form-label">Name</label>
-        <input class="form-control form-control-sm" name="name" type="text" required="required">
-      </div>
-      <div class="col-md w-em">
-        <label for="context-select" class="form-label">Context</label>
-        <select class="form-select form-select-sm" id="context-select" name="context">
-          <option v-for="(context, id) in store.contexts" :value="id">${context.name}</option>
-        </select>
-      </div>
+    <Problem v-for="(problem, id) in store.problems" :key="id" :problem="problem"></Problem>
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="create">
+      <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsecreate" aria-expanded="true" aria-controls="collapsecreate">
+        Create new problem
+      </button>
+    </h2>
+    <div id="collapsecreate" class="accordion-collapse collapse show" aria-labelledby="headingcreate" data-bs-parent="#problems">
+      <form class="accordion-body" @submit.prevent="create_problem">
+        <table class="table">
+          <tbody>
+            <tr>
+              <td>Name</td>
+              <td>
+                <input class="form-control form-control-sm" name="name" type="text" required="required">
+              </td>
+            </tr>
+            <tr>
+              <td>File</td>
+              <td>
+                <input class="form-control form-control-sm" name="file" type="file" required="required">
+              </td>
+            </tr>
+            <tr>
+              <td>Config</td>
+              <td>
+                <select class="form-select form-select-sm" name="config">
+                  <option v-for="(config, id) in store.configs" :value="id">${config.name}</option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td>Start</td>
+              <td>
+                <input class="form-control form-control-sm" name="start" type="datetime-local">
+              </td>
+            </tr>
+            <tr>
+              <td>End</td>
+              <td>
+                <input class="form-control form-control-sm" name="end" type="datetime-local">
+              </td>
+            </tr>
+            <tr>
+              <td>Description</td>
+              <td>
+                <input class="form-control form-control-sm" name="description" type="file" required="required">
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <button type="submit" class="btn btn-primary mt-3">Create</button>
+      </form>
     </div>
-    <button type="submit" class="btn btn-primary mt-3">Create</button>
-  </form>
-</div>
+  </div>
+  </div>
 
 
 {% endblock %}

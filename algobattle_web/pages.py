@@ -81,7 +81,8 @@ async def team_get(db: Session = Depends(get_db), user: User = Depends(curr_user
 async def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     if user.is_admin:
         problems = db.query(Problem).all()
-        return "admin_problems.jinja", {"problems": encode(problems)}
+        configs = db.query(Config).all()
+        return "admin_problems.jinja", {"problems": encode(problems), "configs": encode(configs)}
     else:
         raise RuntimeError
 

@@ -2,10 +2,8 @@ import { createApp, reactive } from "vue"
 
 
 const store = reactive({
-    teams: teams_input,
-    contexts: contexts_input,
-    users: users_input,
-    curr_row: {},
+    problems: problems,
+    configs: configs,
 })
 
 
@@ -133,69 +131,45 @@ async function delete_context(event) {
 }
 
 
-function toggle_editing() {
-    if (this.editing) {
-        this.editing = false
-        store.curr_row = {}
-    } else {
-        store.curr_row.editing = false
-        store.curr_row = this
-        this.editing = true
-    }
-}
 
 
 const app = createApp({
     methods: {
-        create_team,
-        edit_team,
-        add_member,
-        remove_member,
-        create_context,
-        edit_context,
+        create_problem() {
+
+        },
     },
     data() {
         return {
-            edit_team_member_team: "",
-            edit_team_member_user: "",
             store: store,
         }
     },
 })
 app.config.compilerOptions.delimiters = ["${", "}"]
 
-app.component("TeamRow", {
-    template: "#team_row",
-    props: ["team"],
+app.component("Problem", {
+    template: "#problem",
+    props: ["problem"],
     data() {
         return {
             editing: false,
             store: store,
         }
     },
-    computed: {
-        members_str() {
-            return this.team.members.map(u => store.users[u].name).join(", ")
+    methods: {
+        toggle_editing() {
+            if (this.editing) {
+                this.editing = false
+                store.curr_row = {}
+            } else {
+                store.curr_row.editing = false
+                store.curr_row = this
+                this.editing = true
+            }
         },
-    },
-    methods: {
-        toggle_editing,
-        delete_team,
-    }
-})
+        delete_problem() {
 
-app.component("ContextRow", {
-    template: "#context_row",
-    props: ["context"],
-    data() {
-        return {
-            editing: false,
-            store: store,
-        }
-    },
-    methods: {
-        toggle_editing,
-        delete_context,
+        },
     }
 })
 
