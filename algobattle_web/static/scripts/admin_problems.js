@@ -35,6 +35,9 @@ const app = createApp({
     methods: {
         async create_problem(event) {
             const payload = new FormData(event.currentTarget)
+            if (payload.get("description").size == 0) {
+                payload.delete("description")
+            }
             var response = await send_form("problem/create", payload)
             if (response) {
                 response = await response.json()

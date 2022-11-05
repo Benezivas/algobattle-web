@@ -25,23 +25,31 @@
             </tr>
             <tr>
               <td>File</td>
-              <td>${problem.file.name}</td>
+              <td>
+                <input v-if="editing" class="e-em form-control form-control-sm" name="file" type="file">
+                <a v-else role="button" class="btn btn-primary btn-sm" :href="'/api/problem/getfile/'+problem.id" data-bs-toggle="tooltip" title="Download config file">${problem.file.name} <i class="bi bi-file-earmark-arrow-down"></i></a>
+              </td>
             </tr>
             <tr>
               <td>Config</td>
               <td>${store.configs[problem.config].name}</td>
             </tr>
-            <tr>
+            <tr v-if="editing || problem.start">
               <td>Start</td>
               <td>${fmt_date(problem.start)}</td>
             </tr>
-            <tr>
+            <tr v-if="editing || problem.end">
               <td>End</td>
               <td>${fmt_date(problem.end)}</td>
             </tr>
-            <tr>
+            <tr v-if="editing || problem.description">
               <td>Description</td>
-              <td>${problem.description?.name}</td>
+              <td>
+                <input v-if="editing" class="e-em form-control form-control-sm" name="file" type="file">
+                <a v-else role="button" class="btn btn-primary btn-sm" :href="'/api/problem/getdesc/'+problem.id" data-bs-toggle="tooltip" title="Download config file">
+                  ${problem.description.name} <i class="bi bi-file-earmark-arrow-down"></i>
+                </a>
+              </td>
             </tr>
           </tbody>
         </table>
