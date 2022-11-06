@@ -1,24 +1,29 @@
 "Module specifying the login page."
 from __future__ import annotations
 from abc import ABC
+from datetime import datetime
 import functools
 import json
 from pathlib import Path
-from typing import Any, Iterator, Type
-from sqlalchemy import create_engine, TypeDecorator, Unicode
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.ext.declarative import declarative_base
+from typing import Annotated, Any, Iterator
+from uuid import UUID, uuid4
+
+from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime
+from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase, registry, mapped_column, Mapped
+from sqlalchemy_utils import UUIDType
 from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable, Attachment
-from algobattle_web.base_classes import BaseSchema, Common, DbBase
 from starlette.datastructures import UploadFile
 from fastapi.responses import FileResponse
+from fastapi.encoders import jsonable_encoder
 
+from algobattle_web.base_classes import BaseSchema
 from algobattle_web.config import SQLALCHEMY_DATABASE_URL, STORAGE_PATH
 
+ID = Annotated[UUID, mapped_column(default=uuid4)]
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base: Type[DbBase] = declarative_base(cls=Common)
+StoreManager.register("fs", functools.partial(FileSystemStore, STORAGE_PATH, ""), True)
 
 
 def get_db() -> Iterator[Session]:
@@ -40,10 +45,6 @@ class Json(TypeDecorator[Any]):
             return None
 
         return json.loads(value)
-
-
-StoreManager.register("fs", functools.partial(FileSystemStore, STORAGE_PATH, ""), True)
-
 
 class DbFile(SqlFile):
     def attach(
@@ -96,5 +97,31 @@ class DbFile(SqlFile):
             else:
                 raise TypeError
 
+DbFile.associate_with(Json)
 
-DbFile.as_mutable(Json)
+
+class Base(DeclarativeBase):
+    registry = registry(
+        type_annotation_map={
+            UUID: UUIDType,
+            datetime: DateTime,
+            DbFile: Json,
+        }
+    )
+
+    id: Mapped[ID] = mapped_column(primary_key=True)
+
+    class Schema(BaseSchema, ABC):
+        id: ID
+
+    @classmethod
+    @property
+    def __tablename__(cls):
+        return cls.__name__.lower() + "s"
+
+    def delete(self, db: Session):
+        db.delete(self)
+        db.commit()
+
+    def encode(self) -> dict[str, Any]:
+        return jsonable_encoder(self.Schema.from_orm(self))

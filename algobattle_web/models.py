@@ -3,18 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta, datetime
 from typing import Any, BinaryIO, Mapping, cast, overload
-from uuid import UUID, uuid4
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import String, Boolean, Table, ForeignKey, DateTime
-from sqlalchemy.orm import relationship, RelationshipProperty as Rel
-from sqlalchemy_utils import UUIDType
+from sqlalchemy import Table, ForeignKey, Column
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
+from uuid import UUID
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, Json, DbFile
-from algobattle_web.base_classes import ObjID, Column
+from algobattle_web.database import Base, Session, DbFile, ID
+from algobattle_web.base_classes import ObjID
 
 
 class ModelError(Exception):
@@ -40,13 +39,13 @@ team_members = Table(
 
 
 class User(Base):
-    email: str = Column(String, unique=True)
-    name: str = Column(String)
-    token_id: UUID = Column(UUIDType, default=uuid4)
-    is_admin: bool = Column(Boolean, default=False)
+    email: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str]
+    token_id: Mapped[ID]
+    is_admin: Mapped[bool] = mapped_column(default=False)
 
-    teams: Rel[list[Team]] = relationship("Team", secondary=team_members, back_populates="members", lazy="joined")
-    settings: Rel[UserSettings] = relationship("UserSettings", uselist=False, back_populates="user", lazy="joined")
+    teams: Mapped[list[Team]] = relationship(secondary=team_members, back_populates="members", lazy="joined")
+    settings: Mapped[UserSettings] = relationship(uselist=False, back_populates="user", lazy="joined")
 
     class Schema(Base.Schema):
         name: str
@@ -59,14 +58,14 @@ class User(Base):
             return self.id == o.id
         elif isinstance(o, Mapping):
             if "id" in o:
-                if isinstance(o["id"], UUID):
+                if isinstance(o["id"], ID):
                     return self.id == o["id"]
                 elif isinstance(o["id"], str):
                     return str(self.id) == o["id"]
         return NotImplemented
 
     @classmethod
-    def get(cls, db: Session, user: UUID | str) -> User | None:
+    def get(cls, db: Session, user: ID | str) -> User | None:
         """Queries the user db by either the user id or their email."""
         filter_type = cls.email if isinstance(user, str) else cls.id
         return db.query(cls).filter(filter_type == user).first()
@@ -123,15 +122,15 @@ class User(Base):
 
 
 class Context(Base):
-    name: str = Column(String, unique=True)
+    name: Mapped[str] = mapped_column(unique=True)
 
-    teams: Rel[list[Team]] = relationship("Team", back_populates="context")
+    teams: Mapped[list[Team]] = relationship(back_populates="context")
 
     class Schema(Base.Schema):
         name: str
 
     @classmethod
-    def get(cls, db: Session, context: str | UUID) -> Context | None:
+    def get(cls, db: Session, context: str | ID) -> Context | None:
         row = cls.name if isinstance(context, str) else cls.id
         return db.query(cls).filter(row == context).first()
 
@@ -159,11 +158,11 @@ class Context(Base):
 
 
 class Team(Base):
-    name: str = Column(String)
-    context_id: UUID = Column(UUIDType, ForeignKey("contexts.id"))
+    name: Mapped[str]
+    context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"))
 
-    context: Rel[Context] = relationship("Context", back_populates="teams", uselist=False, lazy="joined")
-    members: Rel[list[User]] = relationship("User", secondary=team_members, back_populates="teams", lazy="joined")
+    context: Mapped[Context] = relationship(back_populates="teams", uselist=False, lazy="joined")
+    members: Mapped[list[User]] = relationship(secondary=team_members, back_populates="teams", lazy="joined")
 
     class Schema(Base.Schema):
         name: str
@@ -175,7 +174,7 @@ class Team(Base):
 
     @overload
     @classmethod
-    def get(cls, db: Session, team: UUID) -> Team | None:
+    def get(cls, db: Session, team: ID) -> Team | None:
         ...
 
     @overload
@@ -184,7 +183,7 @@ class Team(Base):
         ...
 
     @classmethod
-    def get(cls, db: Session, team: str | UUID, context: Context | None = None) -> Team | None:
+    def get(cls, db: Session, team: str | ID, context: Context | None = None) -> Team | None:
         if isinstance(team, str):
             if context is None:
                 raise ValueError("If the team is given by its name, you have to specify a context!")
@@ -203,11 +202,11 @@ class Team(Base):
         db.refresh(team)
         return team
 
-    def update(self, db: Session, name: str | None = None, context: str | UUID | Context | None = None):
+    def update(self, db: Session, name: str | None = None, context: str | ID | Context | None = None):
         if name is not None:
             self.name = name
         if context is not None:
-            if isinstance(context, (str, UUID)):
+            if isinstance(context, (str, ID)):
                 context = Context.get(db, context)
                 if context is None:
                     raise ValueError
@@ -228,8 +227,8 @@ class Team(Base):
 
 
 class Config(Base):
-    name: str = Column(String, unique=True)
-    file: DbFile = Column(DbFile.as_mutable(Json))
+    name: Mapped[str] = mapped_column(unique=True)
+    file: Mapped[DbFile]
 
     class Schema(Base.Schema):
         name: str
@@ -248,7 +247,7 @@ class Config(Base):
         return config
 
     @classmethod
-    def get(cls, db: Session, context: UUID | str) -> Config | None:
+    def get(cls, db: Session, context: ID | str) -> Config | None:
         """Queries the db by either its id or name."""
         filter_type = cls.name if isinstance(context, str) else cls.id
         return db.query(cls).filter(filter_type == context).first()
@@ -268,14 +267,14 @@ class Config(Base):
 
 
 class Problem(Base):
-    name: str = Column(String, unique=True)
-    file: DbFile = Column(DbFile.as_mutable(Json))
-    config_id: UUID = Column(UUIDType, ForeignKey("configs.id"))
-    start: datetime | None = Column(DateTime, default=None)
-    end: datetime | None = Column(DateTime, default=None)
-    description: DbFile | None = Column(DbFile.as_mutable(Json), default=None)
+    name: Mapped[str] = mapped_column(unique=True)
+    file: Mapped[DbFile]
+    config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
+    start: Mapped[datetime | None] = mapped_column(default=None)
+    end: Mapped[datetime | None] = mapped_column(default=None)
+    description: Mapped[DbFile | None] = mapped_column(default=None)
 
-    config: Rel[Config] = relationship("Config", uselist=False, lazy="joined")
+    config: Mapped[Config] = relationship(uselist=False, lazy="joined")
 
     class Schema(Base.Schema):
         name: str
@@ -311,7 +310,7 @@ class Problem(Base):
         return problem
 
     @classmethod
-    def get(cls, db: Session, problem: UUID | str) -> Problem | None:
+    def get(cls, db: Session, problem: ID | str) -> Problem | None:
         """Queries the db by either its id or name."""
         filter_type = cls.name if isinstance(problem, str) else cls.id
         return db.query(cls).filter(filter_type == problem).first()

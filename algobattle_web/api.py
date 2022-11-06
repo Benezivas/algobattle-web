@@ -2,13 +2,11 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Tuple
-from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File
-
-from algobattle_web.database import get_db, Session
+from algobattle_web.database import get_db, Session, ID
 from algobattle_web.models import Config, Context, Problem, Team, User, UserSettings
 from algobattle_web.util import curr_user
-from algobattle_web.base_classes import BaseSchema, ObjID
+from algobattle_web.base_classes import BaseSchema
 
 
 def check_if_admin(user: User = Depends(curr_user)):
@@ -34,7 +32,7 @@ async def create_user(*, db: Session = Depends(get_db), user: CreateUser):
 
 
 class EditUser(BaseSchema):
-    id: UUID
+    id: ID
     name: str | None = None
     email: str | None = None
     is_admin: bool | None = None
@@ -48,7 +46,7 @@ async def edit_user(*, db: Session = Depends(get_db), edit: EditUser):
     return user
 
 class DeleteUser(BaseSchema):
-    id: UUID
+    id: ID
 
 @admin.post("/user/delete")
 async def delete_user(*, db: Session = Depends(get_db), user_schema: DeleteUser):
@@ -70,7 +68,7 @@ async def edit_self(*, db: Session = Depends(get_db), user = Depends(curr_user),
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     user.update(db, edit.email, edit.name)
     return user
-
+    
 class EditSettings(BaseSchema):
     selected_team: UUID | None
 
@@ -96,7 +94,7 @@ async def create_context(*, db: Session = Depends(get_db), context: CreateContex
     return Context.create(db, context.name)
 
 class EditContext(BaseSchema):
-    id: UUID
+    id: ID
     name: str | None
 
 @admin.post("/context/edit", response_model=Context.Schema)
@@ -108,7 +106,7 @@ async def edit_context(*, db: Session = Depends(get_db), edit: EditContext):
     return context
 
 class DeleteContext(BaseSchema):
-    id: UUID
+    id: ID
 
 @admin.post("/context/delete")
 async def delete_context(*, db: Session = Depends(get_db), context_schema: DeleteContext):
@@ -124,7 +122,7 @@ async def delete_context(*, db: Session = Depends(get_db), context_schema: Delet
 
 class CreateTeam(BaseSchema):
     name: str
-    context: UUID
+    context: ID
 
 @admin.post("/team/create", response_model=Team.Schema)
 async def create_team(*, db: Session = Depends(get_db), team: CreateTeam):
@@ -134,9 +132,9 @@ async def create_team(*, db: Session = Depends(get_db), team: CreateTeam):
     return Team.create(db, team.name, context)
 
 class EditTeam(BaseSchema):
-    id: UUID
+    id: ID
     name: str | None = None
-    context: UUID | str | Context.Schema
+    context: ID | str | Context.Schema
 
 @admin.post("/team/edit", response_model=Team.Schema)
 async def edit_team(*, db: Session = Depends(get_db), edit: EditTeam):
@@ -149,7 +147,7 @@ async def edit_team(*, db: Session = Depends(get_db), edit: EditTeam):
     return team
 
 class DeleteTeam(BaseSchema):
-    id: UUID
+    id: ID
 
 @admin.post("/team/delete")
 async def delete_team(*, db: Session = Depends(get_db), team_schema: DeleteTeam):
@@ -161,7 +159,7 @@ async def delete_team(*, db: Session = Depends(get_db), team_schema: DeleteTeam)
         return True
 
 class MemberEditTeam(BaseSchema):
-    id: UUID
+    id: ID
     name: str
 
 @router.post("/team/member_edit", response_model=Team.Schema)
@@ -175,8 +173,8 @@ async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depend
     return team
 
 class EditTeamMember(BaseSchema):
-    team: UUID
-    user: UUID
+    team: ID
+    user: ID
 
 @admin.post("/team/add_member", response_model=Tuple[Team.Schema, User.Schema])
 async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember):
@@ -208,18 +206,18 @@ async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file:
 
 
 @router.get("/config/getfile/{id}")
-async def get_config(*, db: Session = Depends(get_db), id: UUID):
+async def get_config(*, db: Session = Depends(get_db), id: ID):
     config = Config.get(db, id)
     if config is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     return config.file.response()
 
 class ConfigEdit(BaseSchema):
-    id: UUID
+    id: ID
     name: str | None
 
 @admin.post("/config/edit", response_model=Config.Schema)
-async def edit_config(*, db: Session = Depends(get_db), id: UUID = Form(), name: str | None = Form(default=None), file: UploadFile | None = File(default=None)):
+async def edit_config(*, db: Session = Depends(get_db), id: ID = Form(), name: str | None = Form(default=None), file: UploadFile | None = File(default=None)):
     config = Config.get(db, id)
     if config is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -230,7 +228,7 @@ async def edit_config(*, db: Session = Depends(get_db), id: UUID = Form(), name:
     return config
 
 @admin.post("/config/delete/{id}")
-async def delete_config(*, db: Session = Depends(get_db), id: UUID):
+async def delete_config(*, db: Session = Depends(get_db), id: ID):
     config = Config.get(db, id)
     if config is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -244,7 +242,7 @@ async def delete_config(*, db: Session = Depends(get_db), id: UUID):
 class ProblemCreate(BaseSchema):
     name: str
     file: UploadFile
-    config: UUID
+    config: ID
     start: datetime | None = None
     end: datetime | None = None
     description: UploadFile | None = None
@@ -258,24 +256,24 @@ async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate =
     return Problem.create(db, **args)
 
 @router.get("/problem/getfile/{id}")
-async def get_problemfile(*, db: Session = Depends(get_db), id: UUID):
+async def get_problemfile(*, db: Session = Depends(get_db), id: ID):
     problem = Problem.get(db, id)
     if problem is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     return problem.file.response()
 
 @router.get("/problem/getdesc/{id}")
-async def get_problem(*, db: Session = Depends(get_db), id: UUID):
+async def get_problem(*, db: Session = Depends(get_db), id: ID):
     problem = Problem.get(db, id)
     if problem is None or problem.description is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     return problem.description.response()
 
 class ProblemEdit(BaseSchema):
-    id: UUID
+    id: ID
     name: str | None
     file: UploadFile | None = None
-    config: UUID | None = None
+    config: ID | None = None
     start: datetime | None = None
     end: datetime | None = None
     desc: UploadFile | None = None
@@ -293,7 +291,7 @@ async def edit_problem(*, db: Session = Depends(get_db), edit: ProblemEdit = Dep
     return problem
 
 @admin.post("/problem/delete/{id}")
-async def delete_problem(*, db: Session = Depends(get_db), id: UUID):
+async def delete_problem(*, db: Session = Depends(get_db), id: ID):
     problem = Problem.get(db, id)
     if problem is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
