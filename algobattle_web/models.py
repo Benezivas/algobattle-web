@@ -45,7 +45,7 @@ class User(Base):
     token_id: Mapped[UUID] = mapped_column(UUIDType, default=uuid4)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    teams: Rel[list[Team]] = relationship("Team", secondary=team_members, back_populates="members", lazy="joined")
+    teams: Mapped[list[Team]] = relationship("Team", secondary=team_members, back_populates="members", lazy="joined")
 
     class Schema(Base.Schema):
         name: str
@@ -123,7 +123,7 @@ class User(Base):
 class Context(Base):
     name: Mapped[str] = mapped_column(String, unique=True)
 
-    teams: Rel[list[Team]] = relationship("Team", back_populates="context")
+    teams: Mapped[list[Team]] = relationship("Team", back_populates="context")
 
     class Schema(Base.Schema):
         name: str
@@ -160,8 +160,8 @@ class Team(Base):
     name: Mapped[str] = mapped_column(String)
     context_id: Mapped[UUID] = mapped_column(UUIDType, ForeignKey("contexts.id"))
 
-    context: Rel[Context] = relationship("Context", back_populates="teams", uselist=False, lazy="joined")
-    members: Rel[list[User]] = relationship("User", secondary=team_members, back_populates="teams", lazy="joined")
+    context: Mapped[Context] = relationship("Context", back_populates="teams", uselist=False, lazy="joined")
+    members: Mapped[list[User]] = relationship("User", secondary=team_members, back_populates="teams", lazy="joined")
 
     class Schema(Base.Schema):
         name: str
@@ -273,7 +273,7 @@ class Problem(Base):
     end: Mapped[datetime | None] = mapped_column(DateTime, default=None)
     description: Mapped[DbFile | None] = mapped_column(DbFile.as_mutable(Json), default=None)
 
-    config: Rel[Config] = relationship("Config", uselist=False, lazy="joined")
+    config: Mapped[Config] = relationship("Config", uselist=False, lazy="joined")
 
     class Schema(Base.Schema):
         name: str
