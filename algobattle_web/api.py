@@ -63,12 +63,13 @@ class EditSelf(BaseSchema):
     name: str | None = None
     email: str | None = None
 
-@router.post("/user/edit_self")
+@router.post("/user/edit_self", response_model=User.Schema)
 async def edit_self(*, db: Session = Depends(get_db), user = Depends(curr_user), edit: EditSelf):
     user = User.get(db, user.id)
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     user.update(db, edit.email, edit.name)
+    return user
     
 #*******************************************************************************
 #* Context
