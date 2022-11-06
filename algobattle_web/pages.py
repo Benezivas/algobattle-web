@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy import or_
 
 from algobattle_web.database import get_db, Session
 from algobattle_web.models import Config, Context, Problem, Team, User, ValueTaken
@@ -84,7 +85,7 @@ async def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_
         problems = db.query(Problem).all()
         configs = db.query(Config).all()
     else:
-        problems = db.query(Problem).filter((Problem.start is None) | (Problem.start <= datetime.now())).all()
+        problems = db.query(Problem).filter(or_(Problem.start is None, Problem.start < datetime.now())).all()   # type: ignore
         configs = {p.config for p in problems}
     return "problems.jinja", {"problems": encode(problems), "configs": encode(configs)}
 
