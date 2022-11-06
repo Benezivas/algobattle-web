@@ -1,5 +1,6 @@
 "Module specifying the regular user pages."
 from __future__ import annotations
+from datetime import datetime
 from typing import Any
 from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -82,9 +83,10 @@ async def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_
     if user.is_admin:
         problems = db.query(Problem).all()
         configs = db.query(Config).all()
-        return "admin_problems.jinja", {"problems": encode(problems), "configs": encode(configs)}
     else:
-        raise RuntimeError
+        problems = db.query(Problem).filter((Problem.start is None) | (Problem.start <= datetime.now())).all()
+        configs = {p.config for p in problems}
+    return "problems.jinja", {"problems": encode(problems), "configs": encode(configs)}
 
 #*******************************************************************************
 #* Admin
