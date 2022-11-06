@@ -357,3 +357,6 @@ class UserSettings(Base):
     user: Rel[User] = relationship("User", uselist=False, back_populates="settings", lazy="joined")
     selected_team: Rel[Config | None] = relationship("Team", uselist=False, lazy="joined")
 
+    class Schema(Base.Schema):
+        selected_team: ObjID
+

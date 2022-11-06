@@ -2,6 +2,10 @@
 {% block content %}
 
 <script src="/static/scripts/user.js" type="module"></script>
+<script>
+  const teams = {{ teams | tojson }}
+  const settings = {{ settings | tojson }}
+</script>
 
 <div id="app">
   <div class="d-flex justify-content-between">
@@ -26,6 +30,13 @@
       </tr>
     </table>
     <button v-if="editing" type="submit" class="btn btn-primary">Submit</button>
+  </form>
+  <h3>Settings</h3>
+  <form @submit.prevent="submit_settings">
+    <label for="team" class="form-label">Primary team</label>
+    <select class="form-select form-select-sm" name="selected_team" required="required" v-model="settings.selected_team">
+      <option v-for="(team, id) in store.teams" :value="id">${team.name}</option>
+    </select>
   </form>
 </div>
 

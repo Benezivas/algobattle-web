@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File
 
 from algobattle_web.database import get_db, Session
-from algobattle_web.models import Config, Context, Problem, Team, User
+from algobattle_web.models import Config, Context, Problem, Team, User, UserSettings
 from algobattle_web.util import curr_user
 from algobattle_web.base_classes import BaseSchema, ObjID
 
@@ -70,7 +70,20 @@ async def edit_self(*, db: Session = Depends(get_db), user = Depends(curr_user),
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     user.update(db, edit.email, edit.name)
     return user
-    
+
+class EditSettings(BaseSchema):
+    selected_team: UUID | None
+
+@router.post("user/edit_settings", response_model=UserSettings.Schema)
+async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings):
+    if settings.selected_team is not None:
+        team = Team.get(db, settings.selected_team)
+        if team is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST)
+        user.settings.selected_team = team  # type: ignore
+    db.commit()
+    return user
+
 #*******************************************************************************
 #* Context
 #*******************************************************************************
