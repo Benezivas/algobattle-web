@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import String, Boolean, Table, ForeignKey, DateTime
-from sqlalchemy.orm import relationship, RelationshipProperty as Rel
+from sqlalchemy.orm import relationship, RelationshipProperty as Rel, Mapped, mapped_column
 from sqlalchemy_utils import UUIDType
 from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
@@ -40,10 +40,10 @@ team_members = Table(
 
 
 class User(Base):
-    email: str = Column(String, unique=True)
-    name: str = Column(String)
-    token_id: UUID = Column(UUIDType, default=uuid4)
-    is_admin: bool = Column(Boolean, default=False)
+    email: Mapped[str] = mapped_column(String, unique=True)
+    name: Mapped[str] = mapped_column(String)
+    token_id: Mapped[UUID] = mapped_column(UUIDType, default=uuid4)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
     teams: Rel[list[Team]] = relationship("Team", secondary=team_members, back_populates="members", lazy="joined")
 
@@ -121,7 +121,7 @@ class User(Base):
 
 
 class Context(Base):
-    name: str = Column(String, unique=True)
+    name: Mapped[str] = mapped_column(String, unique=True)
 
     teams: Rel[list[Team]] = relationship("Team", back_populates="context")
 
@@ -157,8 +157,8 @@ class Context(Base):
 
 
 class Team(Base):
-    name: str = Column(String)
-    context_id: UUID = Column(UUIDType, ForeignKey("contexts.id"))
+    name: Mapped[str] = mapped_column(String)
+    context_id: Mapped[UUID] = mapped_column(UUIDType, ForeignKey("contexts.id"))
 
     context: Rel[Context] = relationship("Context", back_populates="teams", uselist=False, lazy="joined")
     members: Rel[list[User]] = relationship("User", secondary=team_members, back_populates="teams", lazy="joined")
@@ -226,8 +226,8 @@ class Team(Base):
 
 
 class Config(Base):
-    name: str = Column(String, unique=True)
-    file: DbFile = Column(DbFile.as_mutable(Json))
+    name: Mapped[str] = mapped_column(String, unique=True)
+    file: Mapped[DbFile] = mapped_column(DbFile.as_mutable(Json))
 
     class Schema(Base.Schema):
         name: str
@@ -266,12 +266,12 @@ class Config(Base):
 
 
 class Problem(Base):
-    name: str = Column(String, unique=True)
-    file: DbFile = Column(DbFile.as_mutable(Json))
-    config_id: UUID = Column(UUIDType, ForeignKey("configs.id"))
-    start: datetime | None = Column(DateTime, default=None)
-    end: datetime | None = Column(DateTime, default=None)
-    description: DbFile | None = Column(DbFile.as_mutable(Json), default=None)
+    name: Mapped[str] = mapped_column(String, unique=True)
+    file: Mapped[DbFile] = mapped_column(DbFile.as_mutable(Json))
+    config_id: Mapped[UUID] = mapped_column(UUIDType, ForeignKey("configs.id"))
+    start: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+    end: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+    description: Mapped[DbFile | None] = mapped_column(DbFile.as_mutable(Json), default=None)
 
     config: Rel[Config] = relationship("Config", uselist=False, lazy="joined")
 

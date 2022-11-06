@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 from sqlalchemy import Column as SqlColumn
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, mapped_column, Mapped
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy_utils import UUIDType
 from fastapi import UploadFile, File, Form
@@ -45,7 +45,7 @@ def Column(*args, **kwargs) -> Any:
 
 
 class Common:
-    id: UUID = Column(UUIDType, primary_key=True, default=uuid4)
+    id: Mapped[UUID] = mapped_column(UUIDType, primary_key=True, default=uuid4)
 
     class Schema(BaseSchema, ABC):
         id: UUID
