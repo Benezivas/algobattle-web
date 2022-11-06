@@ -70,7 +70,7 @@ async def edit_self(*, db: Session = Depends(get_db), user = Depends(curr_user),
     return user
     
 class EditSettings(BaseSchema):
-    selected_team: UUID | None
+    selected_team: ID | None
 
 @router.post("user/edit_settings", response_model=UserSettings.Schema)
 async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings):
@@ -78,7 +78,7 @@ async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(c
         team = Team.get(db, settings.selected_team)
         if team is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST)
-        user.settings.selected_team = team  # type: ignore
+        user.settings.selected_team = team
     db.commit()
     return user
 

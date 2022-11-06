@@ -45,7 +45,7 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(default=False)
 
     teams: Mapped[list[Team]] = relationship(secondary=team_members, back_populates="members", lazy="joined")
-    settings: Mapped[UserSettings] = relationship(uselist=False, back_populates="user", lazy="joined")
+    settings: Mapped[UserSettings] = relationship(back_populates="user", lazy="joined")
 
     class Schema(Base.Schema):
         name: str
@@ -350,11 +350,11 @@ class Problem(Base):
 
 class UserSettings(Base):
     __tablename__ = "usersettings"  # type: ignore
-    user_id: UUID = Column(UUIDType, ForeignKey("users.id"))
-    selected_team_id: UUID | None = Column(UUIDType, ForeignKey("teams.id"), default=None)
+    user_id: Mapped[ID] = mapped_column(ForeignKey("users.id"))
+    selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), default=None)
 
-    user: Rel[User] = relationship("User", uselist=False, back_populates="settings", lazy="joined")
-    selected_team: Rel[Config | None] = relationship("Team", uselist=False, lazy="joined")
+    user: Mapped[User] = relationship(back_populates="settings", lazy="joined")
+    selected_team: Mapped[Team | None] = relationship(lazy="joined")
 
     class Schema(Base.Schema):
         selected_team: ObjID
