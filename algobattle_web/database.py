@@ -4,12 +4,11 @@ from abc import ABC
 import functools
 import json
 from pathlib import Path
-from typing import Any, Iterator, Type
+from typing import Any, Iterator
 from sqlalchemy import create_engine, TypeDecorator, Unicode
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase
 from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable, Attachment
-from algobattle_web.base_classes import BaseSchema, Common, DbBase
+from algobattle_web.base_classes import BaseSchema, Common
 from starlette.datastructures import UploadFile
 from fastapi.responses import FileResponse
 
@@ -18,7 +17,8 @@ from algobattle_web.config import SQLALCHEMY_DATABASE_URL, STORAGE_PATH
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base: Type[DbBase] = declarative_base(cls=Common)
+class Base(DeclarativeBase, Common):
+    pass
 
 
 def get_db() -> Iterator[Session]:
