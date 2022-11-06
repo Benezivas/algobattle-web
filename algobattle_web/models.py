@@ -12,7 +12,7 @@ from fastapi import UploadFile
 from uuid import UUID
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, Json, DbFile, ID
+from algobattle_web.database import Base, Session, DbFile, ID
 from algobattle_web.base_classes import ObjID
 
 
@@ -226,7 +226,7 @@ class Team(Base):
 
 class Config(Base):
     name: Mapped[str] = mapped_column(unique=True)
-    file: Mapped[DbFile] = mapped_column(DbFile.as_mutable(Json))
+    file: Mapped[DbFile]
 
     class Schema(Base.Schema):
         name: str
@@ -266,11 +266,11 @@ class Config(Base):
 
 class Problem(Base):
     name: Mapped[str] = mapped_column(unique=True)
-    file: Mapped[DbFile] = mapped_column(DbFile.as_mutable(Json))
+    file: Mapped[DbFile]
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
-    description: Mapped[DbFile | None] = mapped_column(DbFile.as_mutable(Json), default=None)
+    description: Mapped[DbFile | None] = mapped_column(default=None)
 
     config: Mapped[Config] = relationship(uselist=False, lazy="joined")
 

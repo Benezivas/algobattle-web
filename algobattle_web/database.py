@@ -23,35 +23,7 @@ ID = Annotated[UUID, mapped_column(default=uuid4)]
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-class Base(DeclarativeBase):
-    registry = registry(
-        type_annotation_map={
-            UUID: UUIDType,
-            datetime: DateTime,
-        }
-    )
-
-    id: Mapped[ID] = mapped_column(primary_key=True)
-
-    class Schema(BaseSchema, ABC):
-        id: ID
-
-    def __init__(self, *args, **kwargs):
-        return super().__init__(*args, **kwargs)
-
-    @classmethod
-    @property
-    def __tablename__(cls):
-        return cls.__name__.lower() + "s"
-
-    def delete(self, db: Session):
-        db.delete(self)
-        db.commit()
-
-    def encode(self) -> dict[str, Any]:
-        return jsonable_encoder(self.Schema.from_orm(self))
+StoreManager.register("fs", functools.partial(FileSystemStore, STORAGE_PATH, ""), True)
 
 
 def get_db() -> Iterator[Session]:
@@ -73,10 +45,6 @@ class Json(TypeDecorator[Any]):
             return None
 
         return json.loads(value)
-
-
-StoreManager.register("fs", functools.partial(FileSystemStore, STORAGE_PATH, ""), True)
-
 
 class DbFile(SqlFile):
     def attach(
@@ -129,5 +97,31 @@ class DbFile(SqlFile):
             else:
                 raise TypeError
 
+DbFile.associate_with(Json)
 
-DbFile.as_mutable(Json)
+
+class Base(DeclarativeBase):
+    registry = registry(
+        type_annotation_map={
+            UUID: UUIDType,
+            datetime: DateTime,
+            DbFile: Json,
+        }
+    )
+
+    id: Mapped[ID] = mapped_column(primary_key=True)
+
+    class Schema(BaseSchema, ABC):
+        id: ID
+
+    @classmethod
+    @property
+    def __tablename__(cls):
+        return cls.__name__.lower() + "s"
+
+    def delete(self, db: Session):
+        db.delete(self)
+        db.commit()
+
+    def encode(self) -> dict[str, Any]:
+        return jsonable_encoder(self.Schema.from_orm(self))
