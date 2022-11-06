@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta, datetime
 from typing import Any, BinaryIO, Mapping, cast, overload
+from enum import Enum
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Table, ForeignKey, Column
@@ -358,3 +359,52 @@ class Problem(Base):
         with StoreManager(db):
             db.delete(self)
             db.commit()
+
+
+class Program(Base):
+    name: Mapped[str] = mapped_column(unique=True)
+    team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"))
+    role: Mapped[Program.Role]
+    file: Mapped[DbFile]
+    creation_time: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+    problem_id: Mapped[UUID] = mapped_column(ForeignKey("problem.id"))
+
+    team: Mapped[Team] = relationship(lazy="joined")
+    problem: Mapped[Team] = relationship(lazy="joined")
+
+    class Role(Enum):
+        generator = 0
+        solver = 0
+
+    class Schema(Base.Schema):
+        name: str
+        team: ObjID
+        type: Program.Role
+        file: DbFile.Schema
+        creation_type: datetime
+        problem: ObjID
+
+    @classmethod
+    def create(cls, db: Session, name: str, team: Team, role: Program.Role, file: BinaryIO | UploadFile, problem: Problem) -> Program:
+        if cls.get(db, name) is not None:
+            raise ValueTaken(name)
+        with StoreManager(db):
+            db_file = DbFile.create_from(file)
+            program = cls(name=name, team=team, role=role, file=db_file, problem=problem)
+            db.add(program)
+            db.commit()
+        db.refresh(program)
+        return program
+
+    @classmethod
+    def get(cls, db: Session, prog: ID | str) -> Program | None:
+        """Queries the db by either its id or name."""
+        filter_type = cls.name if isinstance(prog, str) else cls.id
+        return db.query(cls).filter(filter_type == prog).first()
+
+
+    def delete(self, db: Session):
+        with StoreManager(db):
+            db.delete(self)
+            db.commit()
+
