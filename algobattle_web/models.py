@@ -46,6 +46,7 @@ class User(Base):
     is_admin: bool = Column(Boolean, default=False)
 
     teams: Rel[list[Team]] = relationship("Team", secondary=team_members, back_populates="members", lazy="joined")
+    settings: Rel[UserSetting] = relationship("UserSetting", uselist=False, back_populates="user", lazy="joined")
 
     class Schema(Base.Schema):
         name: str
@@ -77,6 +78,7 @@ class User(Base):
             raise ValueTaken(email)
         new_user = cls(email=email, name=name, is_admin=is_admin)
         db.add(new_user)
+        db.add(UserSetting(user_id=new_user.id))
         db.commit()
         db.refresh(new_user)
         return new_user
@@ -345,3 +347,12 @@ class Problem(Base):
         with StoreManager(db):
             db.delete(self)
             db.commit()
+
+
+class UserSetting(Base):
+    user_id: UUID = Column(UUIDType, ForeignKey("users.id"))
+    selected_team_id: UUID | None = Column(UUIDType, ForeignKey("teams.id"), default=None)
+
+    user: Rel[User] = relationship("User", uselist=False, back_populates="settings", lazy="joined")
+    selected_team: Rel[Config | None] = relationship("Team", uselist=False, lazy="joined")
+
