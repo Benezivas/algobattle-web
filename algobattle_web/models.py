@@ -121,6 +121,18 @@ class User(Base):
             return
 
 
+class UserSettings(Base):
+    __tablename__ = "usersettings"  # type: ignore
+    user_id: Mapped[ID] = mapped_column(ForeignKey("users.id"))
+    selected_team_id: Mapped[ID | None] = mapped_column(ForeignKey("teams.id"), default=None)
+
+    user: Mapped[User] = relationship(back_populates="settings", lazy="joined")
+    selected_team: Mapped[Team | None] = relationship(lazy="joined")
+
+    class Schema(Base.Schema):
+        selected_team: ObjID
+
+
 class Context(Base):
     name: Mapped[str] = mapped_column(unique=True)
 
@@ -346,16 +358,3 @@ class Problem(Base):
         with StoreManager(db):
             db.delete(self)
             db.commit()
-
-
-class UserSettings(Base):
-    __tablename__ = "usersettings"  # type: ignore
-    user_id: Mapped[ID] = mapped_column(ForeignKey("users.id"))
-    selected_team_id: Mapped[ID | None] = mapped_column(ForeignKey("teams.id"), default=None)
-
-    user: Mapped[User] = relationship(back_populates="settings", lazy="joined")
-    selected_team: Mapped[Team | None] = relationship(lazy="joined")
-
-    class Schema(Base.Schema):
-        selected_team: ObjID
-
