@@ -123,14 +123,14 @@ class User(Base):
 
 class UserSettings(Base):
     __tablename__ = "usersettings"  # type: ignore
-    user_id: Mapped[ID] = mapped_column(ForeignKey("users.id"))
-    selected_team_id: Mapped[ID | None] = mapped_column(ForeignKey("teams.id"), default=None)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
+    selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), default=None)
 
     user: Mapped[User] = relationship(back_populates="settings", lazy="joined")
     selected_team: Mapped[Team | None] = relationship(lazy="joined")
 
     class Schema(Base.Schema):
-        selected_team: ObjID
+        selected_team: ObjID | None
 
 
 class Context(Base):
