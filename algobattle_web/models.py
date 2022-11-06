@@ -3,13 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta, datetime
 from typing import Any, BinaryIO, Mapping, cast, overload
-from uuid import UUID
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Table, ForeignKey, Column
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
+from uuid import UUID
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import Base, Session, Json, DbFile, ID
@@ -57,14 +57,14 @@ class User(Base):
             return self.id == o.id
         elif isinstance(o, Mapping):
             if "id" in o:
-                if isinstance(o["id"], UUID):
+                if isinstance(o["id"], ID):
                     return self.id == o["id"]
                 elif isinstance(o["id"], str):
                     return str(self.id) == o["id"]
         return NotImplemented
 
     @classmethod
-    def get(cls, db: Session, user: UUID | str) -> User | None:
+    def get(cls, db: Session, user: ID | str) -> User | None:
         """Queries the user db by either the user id or their email."""
         filter_type = cls.email if isinstance(user, str) else cls.id
         return db.query(cls).filter(filter_type == user).first()
@@ -128,7 +128,7 @@ class Context(Base):
         name: str
 
     @classmethod
-    def get(cls, db: Session, context: str | UUID) -> Context | None:
+    def get(cls, db: Session, context: str | ID) -> Context | None:
         row = cls.name if isinstance(context, str) else cls.id
         return db.query(cls).filter(row == context).first()
 
@@ -172,7 +172,7 @@ class Team(Base):
 
     @overload
     @classmethod
-    def get(cls, db: Session, team: UUID) -> Team | None:
+    def get(cls, db: Session, team: ID) -> Team | None:
         ...
 
     @overload
@@ -181,7 +181,7 @@ class Team(Base):
         ...
 
     @classmethod
-    def get(cls, db: Session, team: str | UUID, context: Context | None = None) -> Team | None:
+    def get(cls, db: Session, team: str | ID, context: Context | None = None) -> Team | None:
         if isinstance(team, str):
             if context is None:
                 raise ValueError("If the team is given by its name, you have to specify a context!")
@@ -200,11 +200,11 @@ class Team(Base):
         db.refresh(team)
         return team
 
-    def update(self, db: Session, name: str | None = None, context: str | UUID | Context | None = None):
+    def update(self, db: Session, name: str | None = None, context: str | ID | Context | None = None):
         if name is not None:
             self.name = name
         if context is not None:
-            if isinstance(context, (str, UUID)):
+            if isinstance(context, (str, ID)):
                 context = Context.get(db, context)
                 if context is None:
                     raise ValueError
@@ -245,7 +245,7 @@ class Config(Base):
         return config
 
     @classmethod
-    def get(cls, db: Session, context: UUID | str) -> Config | None:
+    def get(cls, db: Session, context: ID | str) -> Config | None:
         """Queries the db by either its id or name."""
         filter_type = cls.name if isinstance(context, str) else cls.id
         return db.query(cls).filter(filter_type == context).first()
@@ -308,7 +308,7 @@ class Problem(Base):
         return problem
 
     @classmethod
-    def get(cls, db: Session, problem: UUID | str) -> Problem | None:
+    def get(cls, db: Session, problem: ID | str) -> Problem | None:
         """Queries the db by either its id or name."""
         filter_type = cls.name if isinstance(problem, str) else cls.id
         return db.query(cls).filter(filter_type == problem).first()

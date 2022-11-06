@@ -36,7 +36,7 @@ class Base(DeclarativeBase):
     id: Mapped[ID] = mapped_column(primary_key=True)
 
     class Schema(BaseSchema, ABC):
-        id: UUID
+        id: ID
 
     def __init__(self, *args, **kwargs):
         return super().__init__(*args, **kwargs)

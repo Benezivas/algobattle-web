@@ -3,19 +3,18 @@ from __future__ import annotations
 from datetime import timedelta, datetime
 from enum import Enum
 from typing import Any, Collection, cast
-from uuid import UUID
 from fastapi import Depends, Cookie, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 
-from algobattle_web.database import Session, get_db, Base
+from algobattle_web.database import Session, get_db, Base, ID
 from algobattle_web.models import User
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 
 
 
-def encode(col: Collection[Base]) -> dict[UUID, dict[str, Any]]:
+def encode(col: Collection[Base]) -> dict[ID, dict[str, Any]]:
     """Encodes a collection of database items into a jsonable container."""
     return jsonable_encoder({el.id: el.encode() for el in col})
 
