@@ -3,17 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta, datetime
 from typing import Any, BinaryIO, Mapping, cast, overload
-from uuid import UUID, uuid4
+from uuid import UUID
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import String, Boolean, Table, ForeignKey, DateTime
-from sqlalchemy.orm import relationship, RelationshipProperty as Rel, Mapped, mapped_column
-from sqlalchemy_utils import UUIDType
+from sqlalchemy import Table, ForeignKey
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, Json, DbFile
+from algobattle_web.database import Base, Session, Json, DbFile, UUIDType
 from algobattle_web.base_classes import ObjID, Column
 
 
@@ -40,12 +39,12 @@ team_members = Table(
 
 
 class User(Base):
-    email: Mapped[str] = mapped_column(String, unique=True)
-    name: Mapped[str] = mapped_column(String)
-    token_id: Mapped[UUID] = mapped_column(UUIDType, default=uuid4)
-    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    email: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str]
+    token_id: Mapped[UUIDType]
+    is_admin: Mapped[bool] = mapped_column(default=False)
 
-    teams: Mapped[list[Team]] = relationship("Team", secondary=team_members, back_populates="members", lazy="joined")
+    teams: Mapped[list[Team]] = relationship(secondary=team_members, back_populates="members", lazy="joined")
 
     class Schema(Base.Schema):
         name: str
@@ -121,9 +120,9 @@ class User(Base):
 
 
 class Context(Base):
-    name: Mapped[str] = mapped_column(String, unique=True)
+    name: Mapped[str] = mapped_column(unique=True)
 
-    teams: Mapped[list[Team]] = relationship("Team", back_populates="context")
+    teams: Mapped[list[Team]] = relationship(back_populates="context")
 
     class Schema(Base.Schema):
         name: str
@@ -157,11 +156,11 @@ class Context(Base):
 
 
 class Team(Base):
-    name: Mapped[str] = mapped_column(String)
-    context_id: Mapped[UUID] = mapped_column(UUIDType, ForeignKey("contexts.id"))
+    name: Mapped[str]
+    context_id: Mapped[UUIDType] = mapped_column(ForeignKey("contexts.id"))
 
-    context: Mapped[Context] = relationship("Context", back_populates="teams", uselist=False, lazy="joined")
-    members: Mapped[list[User]] = relationship("User", secondary=team_members, back_populates="teams", lazy="joined")
+    context: Mapped[Context] = relationship(back_populates="teams", uselist=False, lazy="joined")
+    members: Mapped[list[User]] = relationship(secondary=team_members, back_populates="teams", lazy="joined")
 
     class Schema(Base.Schema):
         name: str
@@ -226,7 +225,7 @@ class Team(Base):
 
 
 class Config(Base):
-    name: Mapped[str] = mapped_column(String, unique=True)
+    name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile] = mapped_column(DbFile.as_mutable(Json))
 
     class Schema(Base.Schema):
@@ -266,14 +265,14 @@ class Config(Base):
 
 
 class Problem(Base):
-    name: Mapped[str] = mapped_column(String, unique=True)
+    name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile] = mapped_column(DbFile.as_mutable(Json))
-    config_id: Mapped[UUID] = mapped_column(UUIDType, ForeignKey("configs.id"))
-    start: Mapped[datetime | None] = mapped_column(DateTime, default=None)
-    end: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+    config_id: Mapped[UUIDType] = mapped_column(ForeignKey("configs.id"))
+    start: Mapped[datetime | None] = mapped_column(default=None)
+    end: Mapped[datetime | None] = mapped_column(default=None)
     description: Mapped[DbFile | None] = mapped_column(DbFile.as_mutable(Json), default=None)
 
-    config: Mapped[Config] = relationship("Config", uselist=False, lazy="joined")
+    config: Mapped[Config] = relationship(uselist=False, lazy="joined")
 
     class Schema(Base.Schema):
         name: str

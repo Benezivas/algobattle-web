@@ -4,7 +4,6 @@ from abc import ABC
 from inspect import Parameter, Signature, signature
 from typing import Any
 from uuid import UUID
-from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 from sqlalchemy import Column as SqlColumn
@@ -45,7 +44,7 @@ def Column(*args, **kwargs) -> Any:
 
 
 class Common:
-    id: Mapped[UUID] = mapped_column(UUIDType, primary_key=True, default=uuid4)
+    id: Mapped[UUIDType] = mapped_column(primary_key=True)
 
     class Schema(BaseSchema, ABC):
         id: UUID

@@ -1,12 +1,15 @@
 "Module specifying the login page."
 from __future__ import annotations
 from abc import ABC
+from datetime import datetime
 import functools
 import json
 from pathlib import Path
-from typing import Any, Iterator
-from sqlalchemy import create_engine, TypeDecorator, Unicode
-from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase
+from typing import Annotated, Any, Iterator
+from uuid import UUID, uuid4
+from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime
+from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase, registry, mapped_column
+from sqlalchemy_utils import UUIDType
 from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable, Attachment
 from algobattle_web.base_classes import BaseSchema, Common
 from starlette.datastructures import UploadFile
@@ -14,10 +17,17 @@ from fastapi.responses import FileResponse
 
 from algobattle_web.config import SQLALCHEMY_DATABASE_URL, STORAGE_PATH
 
+IDType = Annotated[UUID, mapped_column(default=uuid4)]
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 class Base(DeclarativeBase, Common):
+    registry = registry(
+        type_annotation_map={
+            UUID: UUIDType,
+            datetime: DateTime,
+        }
+    )
     pass
 
 
