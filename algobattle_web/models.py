@@ -366,8 +366,8 @@ class Program(Base):
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"))
     role: Mapped[Program.Role]
     file: Mapped[DbFile]
-    creation_time: Mapped[datetime] = mapped_column(default_factory=datetime.now)
-    problem_id: Mapped[UUID] = mapped_column(ForeignKey("problem.id"))
+    creation_time: Mapped[datetime] = mapped_column(default=datetime.now)
+    problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"))
 
     team: Mapped[Team] = relationship(lazy="joined")
     problem: Mapped[Team] = relationship(lazy="joined")
