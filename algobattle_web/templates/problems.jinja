@@ -66,11 +66,13 @@
             </tr>
           </tbody>
         </table>
+        {% if user.is_admin %}
         <div class="btn-group btn-group-sm" role="group">
           <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete" v-if="editing" @click="delete_problem"><i class="bi bi-trash"></i></button>
           <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
           <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
         </div>
+        {% endif %}
       </form>
     </div>
   </div>
@@ -81,6 +83,7 @@
   <h3>Problems</h3>
   <div class="accordion" id="problems">
     <Problem v-for="(problem, id) in store.problems" :key="id" :problem="problem"></Problem>
+    {% if user.is_admin %}
     <div class="accordion-item">
       <h2 class="accordion-header" id="create">
         <button class="accordion-button collapsed bg-success bg-opacity-25" type="button" data-bs-toggle="collapse" data-bs-target="#collapsecreate" aria-expanded="false" aria-controls="collapsecreate">
@@ -135,6 +138,7 @@
         </form>
       </div>
     </div>
+    {% endif %}
   </div>
 </div>
 
