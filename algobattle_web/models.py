@@ -12,7 +12,7 @@ from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, Json, DbFile, UUIDType
+from algobattle_web.database import Base, Session, Json, DbFile, ID
 from algobattle_web.base_classes import ObjID
 
 
@@ -41,7 +41,7 @@ team_members = Table(
 class User(Base):
     email: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str]
-    token_id: Mapped[UUIDType]
+    token_id: Mapped[ID]
     is_admin: Mapped[bool] = mapped_column(default=False)
 
     teams: Mapped[list[Team]] = relationship(secondary=team_members, back_populates="members", lazy="joined")
@@ -157,7 +157,7 @@ class Context(Base):
 
 class Team(Base):
     name: Mapped[str]
-    context_id: Mapped[UUIDType] = mapped_column(ForeignKey("contexts.id"))
+    context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"))
 
     context: Mapped[Context] = relationship(back_populates="teams", uselist=False, lazy="joined")
     members: Mapped[list[User]] = relationship(secondary=team_members, back_populates="teams", lazy="joined")
@@ -267,7 +267,7 @@ class Config(Base):
 class Problem(Base):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile] = mapped_column(DbFile.as_mutable(Json))
-    config_id: Mapped[UUIDType] = mapped_column(ForeignKey("configs.id"))
+    config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
     description: Mapped[DbFile | None] = mapped_column(DbFile.as_mutable(Json), default=None)

@@ -19,10 +19,12 @@ from fastapi.encoders import jsonable_encoder
 from algobattle_web.base_classes import BaseSchema
 from algobattle_web.config import SQLALCHEMY_DATABASE_URL, STORAGE_PATH
 
-IDType = Annotated[UUID, mapped_column(default=uuid4)]
+ID = Annotated[UUID, mapped_column(default=uuid4)]
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
 class Base(DeclarativeBase):
     registry = registry(
         type_annotation_map={
@@ -31,7 +33,7 @@ class Base(DeclarativeBase):
         }
     )
 
-    id: Mapped[UUIDType] = mapped_column(primary_key=True)
+    id: Mapped[ID] = mapped_column(primary_key=True)
 
     class Schema(BaseSchema, ABC):
         id: UUID
