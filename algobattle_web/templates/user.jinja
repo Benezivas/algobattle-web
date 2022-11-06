@@ -7,7 +7,7 @@
   const settings = {{ settings | tojson }}
 </script>
 
-<div id="app">
+<div id="app" class="w-xs">
   <div class="d-flex justify-content-between">
     <h3>User data</h3>
     <button type="button" class="btn btn-sm btn-warning float-end" data-bs-toggle="tooltip" title="Edit" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
@@ -31,12 +31,13 @@
     </table>
     <button v-if="editing" type="submit" class="btn btn-primary">Submit</button>
   </form>
-  <h3>Settings</h3>
+  <h3 class="mt-5">Settings</h3>
   <form @submit.prevent="submit_settings">
-    <label for="team" class="form-label">Primary team</label>
-    <select class="form-select form-select-sm" name="selected_team" required="required" v-model="settings.selected_team">
+    <label for="team" class="form-label">Selected team</label>
+    <select class="form-select form-select-sm w-em" name="selected_team" required="required" v-model="store.settings.selected_team">
       <option v-for="(team, id) in store.teams" :value="id">${team.name}</option>
     </select>
+    <button type="submit" class="btn btn-primary my-3">Submit changes</button>
   </form>
 </div>
 

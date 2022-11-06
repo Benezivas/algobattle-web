@@ -53,9 +53,7 @@ async def logout_post():
 @router.get("/user", response_class=HTMLResponse)
 @templated
 async def user_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
-    print(user.settings)
-    teams = db.query(Team).all()
-    return "user.jinja", {"teams": encode(teams), "settings": user.settings.encode()}
+    return "user.jinja", {"teams": encode(user.teams), "settings": user.settings.encode()}
 
 
 @router.post("/user", response_class=HTMLResponse)

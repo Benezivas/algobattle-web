@@ -24,7 +24,7 @@ const app = createApp({
         },
         async submit_settings(event) {
             var response = await send_request("user/edit_settings", {
-                selected_team: this.selected_team,
+                selected_team: this.store.settings.selected_team,
             })
             if (response) {
                 store.settings = settings
