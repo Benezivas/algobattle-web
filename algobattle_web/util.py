@@ -9,14 +9,13 @@ from fastapi.encoders import jsonable_encoder
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 
-from algobattle_web.base_classes import DbBase
-from algobattle_web.database import Session, get_db
+from algobattle_web.database import Session, get_db, Base
 from algobattle_web.models import User
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 
 
 
-def encode(col: Collection[DbBase]) -> dict[UUID, dict[str, Any]]:
+def encode(col: Collection[Base]) -> dict[UUID, dict[str, Any]]:
     """Encodes a collection of database items into a jsonable container."""
     return jsonable_encoder({el.id: el.encode() for el in col})
 

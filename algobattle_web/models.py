@@ -6,14 +6,14 @@ from typing import Any, BinaryIO, Mapping, cast, overload
 from uuid import UUID
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey
+from sqlalchemy import Table, ForeignKey, Column
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import Base, Session, Json, DbFile, UUIDType
-from algobattle_web.base_classes import ObjID, Column
+from algobattle_web.base_classes import ObjID
 
 
 class ModelError(Exception):

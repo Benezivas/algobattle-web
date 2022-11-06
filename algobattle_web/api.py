@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form,
 from algobattle_web.database import get_db, Session
 from algobattle_web.models import Config, Context, Problem, Team, User
 from algobattle_web.util import curr_user
-from algobattle_web.base_classes import BaseSchema, ObjID
+from algobattle_web.base_classes import BaseSchema
 
 
 def check_if_admin(user: User = Depends(curr_user)):

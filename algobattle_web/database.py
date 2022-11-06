@@ -7,28 +7,49 @@ import json
 from pathlib import Path
 from typing import Annotated, Any, Iterator
 from uuid import UUID, uuid4
+
 from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime
-from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase, registry, mapped_column
+from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase, registry, mapped_column, Mapped
 from sqlalchemy_utils import UUIDType
 from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable, Attachment
-from algobattle_web.base_classes import BaseSchema, Common
 from starlette.datastructures import UploadFile
 from fastapi.responses import FileResponse
+from fastapi.encoders import jsonable_encoder
 
+from algobattle_web.base_classes import BaseSchema
 from algobattle_web.config import SQLALCHEMY_DATABASE_URL, STORAGE_PATH
 
 IDType = Annotated[UUID, mapped_column(default=uuid4)]
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-class Base(DeclarativeBase, Common):
+class Base(DeclarativeBase):
     registry = registry(
         type_annotation_map={
             UUID: UUIDType,
             datetime: DateTime,
         }
     )
-    pass
+
+    id: Mapped[UUIDType] = mapped_column(primary_key=True)
+
+    class Schema(BaseSchema, ABC):
+        id: UUID
+
+    def __init__(self, *args, **kwargs):
+        return super().__init__(*args, **kwargs)
+
+    @classmethod
+    @property
+    def __tablename__(cls):
+        return cls.__name__.lower() + "s"
+
+    def delete(self, db: Session):
+        db.delete(self)
+        db.commit()
+
+    def encode(self) -> dict[str, Any]:
+        return jsonable_encoder(self.Schema.from_orm(self))
 
 
 def get_db() -> Iterator[Session]:
