@@ -330,7 +330,7 @@ class ProgramEdit(BaseSchema):
 async def edit_own_program(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: ProgramEdit = Depends(ProgramEdit.from_form())):
     args = edit.dict()
     program = Program.get(db, edit.id)
-    if program is None or user.settings.selected_team != program.team:
+    if program is None or user.settings.selected_team != program.team or program.locked:
         raise HTTPException(400)
     if edit.problem is not None:
         args["problem"] = Problem.get(db, edit.problem)
@@ -353,7 +353,7 @@ async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEdit = Dep
             raise HTTPException(400)
     program.update(db, **args)
 
-@admin.post("/program/delete({id}")
+@admin.post("/program/delete/{id}")
 async def delete_program(*, db: Session = Depends(get_db), id: ID):
     program = Program.get(db, id)
     if program is None:
