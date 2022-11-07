@@ -5,9 +5,7 @@ Revises: 9ca7b9f247bc
 Create Date: 2022-11-06 12:25:39.057128
 
 """
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy import create_engine, TypeDecorator, Unicode
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from algobattle_web.config import SQLALCHEMY_DATABASE_URL
 
