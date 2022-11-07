@@ -21,7 +21,10 @@
           <tbody>
             <tr>
               <td>Name</td>
-              <td>${problem.name}</td>
+              <td>
+                <input v-if="editing" class="form-control form-control-sm" name="name" type="text" v-model="problem.name">
+                <span v-else>${problem.name}</span>
+              </td>
             </tr>
             <tr>
               <td>File</td>
