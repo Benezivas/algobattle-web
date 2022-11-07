@@ -46,31 +46,14 @@ async def login_post(request: Request, db: Session = Depends(get_db), email: str
 
 @router.post("/logout")
 async def logout_post():
-        response = RedirectResponse("/login", status_code=status.HTTP_302_FOUND)
-        response.delete_cookie("user_token")
-        return response
+    response = RedirectResponse("/login", status_code=status.HTTP_302_FOUND)
+    response.delete_cookie("user_token")
+    return response
 
 @router.get("/user", response_class=HTMLResponse)
 @templated
 async def user_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     return "user.jinja", {"teams": encode(user.teams), "settings": user.settings.encode()}
-
-
-@router.post("/user", response_class=HTMLResponse)
-@templated
-async def user_post(
-    db: Session = Depends(get_db),
-    user: User = Depends(curr_user),
-    email: str | None = Form(default=None),
-    name: str | None = Form(default=None),
-):
-    context: dict[str, Any] = {}
-    try:
-        user.update(db, email, name)
-    except ValueTaken as e:
-        context["error"] = e
-    return "user.jinja", context
-
 
 @router.get("/team")
 @templated
