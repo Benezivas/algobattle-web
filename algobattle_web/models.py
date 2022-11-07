@@ -240,6 +240,8 @@ class Config(Base):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
 
+    use_store_manager: bool = True
+
     class Schema(Base.Schema):
         name: str
 
@@ -269,11 +271,6 @@ class Config(Base):
                 self.file.attach(file)
             db.commit()
 
-    def delete(self, db: Session):
-        with StoreManager(db):
-            db.delete(self)
-            db.commit()
-
 
 class Problem(Base):
     name: Mapped[str] = mapped_column(unique=True)
@@ -284,6 +281,8 @@ class Problem(Base):
     description: Mapped[DbFile | None] = mapped_column(default=None)
 
     config: Mapped[Config] = relationship(uselist=False, lazy="joined")
+
+    use_store_manager: bool = True
 
     class Schema(Base.Schema):
         name: str
@@ -348,11 +347,6 @@ class Problem(Base):
                 if self.description is None:
                     self.description = DbFile()
                 self.description.attach(desc)
-            db.commit()
-
-    def delete(self, db: Session):
-        with StoreManager(db):
-            db.delete(self)
             db.commit()
 
 
