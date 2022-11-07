@@ -372,7 +372,7 @@ class Program(Base):
         team: ObjID
         type: Program.Role
         file: DbFile.Schema
-        creation_type: datetime
+        creation_time: datetime
         problem: ObjID
 
     @classmethod
