@@ -1,5 +1,5 @@
 import { createApp, reactive } from "vue"
-import { send_form, send_request } from "base"
+import { send_form, send_request, fmt_date } from "base"
 
 
 const store = reactive({
@@ -66,13 +66,7 @@ app.component("Problem", {
                 this.toggle_editing()
             }
         },
-        fmt_date(date) {
-            if (!date) {
-                return ""
-            }
-            date = new Date(date)
-            return date.toLocaleString()
-        }
+        fmt_date
     }
 })
 

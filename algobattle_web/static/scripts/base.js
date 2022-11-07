@@ -19,3 +19,11 @@ export async function send_form(endpoint, content) {
         return response
     }
 }
+
+export function fmt_date(date) {
+    if (!date) {
+        return ""
+    }
+    date = new Date(date)
+    return date.toLocaleString()
+}
