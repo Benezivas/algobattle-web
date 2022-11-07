@@ -376,7 +376,9 @@ class Program(Base):
         problem: ObjID
 
     @classmethod
-    def create(cls, db: Session, name: str, team: Team, role: Program.Role, file: BinaryIO | UploadFile, problem: Problem) -> Program:
+    def create(
+        cls, db: Session, name: str, team: Team, role: Program.Role, file: BinaryIO | UploadFile, problem: Problem
+    ) -> Program:
         if cls.get(db, name) is not None:
             raise ValueTaken(name)
         with StoreManager(db):
@@ -393,8 +395,15 @@ class Program(Base):
         return db.query(cls).filter(filter_type == prog).first()
 
     @with_store_manager
-    def update(self, db: Session, name: str | None = None, team: Team | None = None, role: Program.Role | None = None, file: BinaryIO | UploadFile | None = None,
-        problem: Problem | None = None):
+    def update(
+        self,
+        db: Session,
+        name: str | None = None,
+        team: Team | None = None,
+        role: Program.Role | None = None,
+        file: BinaryIO | UploadFile | None = None,
+        problem: Problem | None = None,
+    ):
         if name is not None:
             if Program.get(db, name) is not None:
                 raise ValueTaken(name)
