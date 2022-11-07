@@ -5,7 +5,7 @@ from datetime import datetime
 import functools
 import json
 from pathlib import Path
-from typing import Annotated, Any, Iterator
+from typing import Annotated, Any, Callable, Concatenate, Iterator, ParamSpec, TypeVar
 from uuid import UUID, uuid4
 
 from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime
@@ -100,6 +100,17 @@ class DbFile(SqlFile):
 DbFile.associate_with(Json)
 
 
+P = ParamSpec("P")
+T = TypeVar("T")
+def with_store_manager(func: Callable[Concatenate[Any, Session, P], T]) -> Callable[Concatenate[Any, Session, P], T]:
+    def inner(obj, db: Session, *args: P.args, **kwargs: P.kwargs) -> T:
+        if obj.use_store_manager:
+            with StoreManager(db):
+                return func(obj, db, *args, **kwargs)
+        else:
+            return func(obj, db, *args, **kwargs)
+    return inner
+
 class Base(DeclarativeBase):
     registry = registry(
         type_annotation_map={
@@ -111,6 +122,8 @@ class Base(DeclarativeBase):
 
     id: Mapped[ID] = mapped_column(primary_key=True)
 
+    use_store_manager: bool = False
+
     class Schema(BaseSchema, ABC):
         id: ID
 
@@ -119,6 +132,7 @@ class Base(DeclarativeBase):
     def __tablename__(cls):
         return cls.__name__.lower() + "s"
 
+    @with_store_manager
     def delete(self, db: Session):
         db.delete(self)
         db.commit()

@@ -370,7 +370,9 @@ class Program(Base):
     problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"))
 
     team: Mapped[Team] = relationship(lazy="joined")
-    problem: Mapped[Team] = relationship(lazy="joined")
+    problem: Mapped[Problem] = relationship(lazy="joined")
+
+    use_store_manager: bool = True
 
     class Role(Enum):
         generator = 0
@@ -401,10 +403,4 @@ class Program(Base):
         """Queries the db by either its id or name."""
         filter_type = cls.name if isinstance(prog, str) else cls.id
         return db.query(cls).filter(filter_type == prog).first()
-
-
-    def delete(self, db: Session):
-        with StoreManager(db):
-            db.delete(self)
-            db.commit()
 
