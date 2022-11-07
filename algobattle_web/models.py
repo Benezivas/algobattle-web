@@ -376,16 +376,14 @@ class Program(Base):
         problem: ObjID
 
     @classmethod
+    @with_store_manager
     def create(
         cls, db: Session, name: str, team: Team, role: Program.Role, file: BinaryIO | UploadFile, problem: Problem
     ) -> Program:
-        if cls.get(db, name) is not None:
-            raise ValueTaken(name)
-        with StoreManager(db):
-            db_file = DbFile.create_from(file)
-            program = cls(name=name, team=team, role=role, file=db_file, problem=problem)
-            db.add(program)
-            db.commit()
+        db_file = DbFile.create_from(file)
+        program = cls(name=name, team=team, role=role, file=db_file, problem=problem)
+        db.add(program)
+        db.commit()
         return program
 
     @classmethod
