@@ -323,7 +323,6 @@ class ProgramEdit(BaseSchema):
     id: ID
     name: str | None = None
     role: Program.Role | None = None
-    file: UploadFile | None = None
     problem: ID | None = None
 
 @router.post("/program/edit_own", response_model=Program.Schema)
