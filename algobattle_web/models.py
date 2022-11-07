@@ -365,8 +365,8 @@ class Program(Base):
     use_store_manager: bool = True
 
     class Role(Enum):
-        generator = 0
-        solver = 0
+        generator = "generator"
+        solver = "solver"
 
     class Schema(Base.Schema):
         name: str
