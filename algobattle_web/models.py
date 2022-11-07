@@ -13,7 +13,7 @@ from fastapi import UploadFile
 from uuid import UUID
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, DbFile, ID
+from algobattle_web.database import Base, Session, DbFile, ID, with_store_manager
 from algobattle_web.base_classes import ObjID
 
 
@@ -404,3 +404,19 @@ class Program(Base):
         filter_type = cls.name if isinstance(prog, str) else cls.id
         return db.query(cls).filter(filter_type == prog).first()
 
+    @with_store_manager
+    def update(self, db: Session, name: str | None = None, team: Team | None = None, role: Program.Role | None = None, file: BinaryIO | UploadFile | None = None,
+        problem: Problem | None = None):
+        if name is not None:
+            if Program.get(db, name) is not None:
+                raise ValueTaken(name)
+            self.name = name
+        if team is not None:
+            self.team = team
+        if role is not None:
+            self.role = role
+        if file is not None:
+            self.file.attach(file)
+        if problem is not None:
+            self.problem = problem
+        db.commit()
