@@ -370,7 +370,7 @@ class Program(Base):
     class Schema(Base.Schema):
         name: str
         team: ObjID
-        type: Program.Role
+        role: Program.Role
         file: DbFile.Schema
         creation_time: datetime
         problem: ObjID
