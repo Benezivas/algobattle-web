@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Tuple
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File
 from algobattle_web.database import get_db, Session, ID
-from algobattle_web.models import Config, Context, Problem, Team, User, UserSettings
+from algobattle_web.models import Config, Context, Problem, Program, Team, User, UserSettings
 from algobattle_web.util import curr_user
 from algobattle_web.base_classes import BaseSchema
 
@@ -297,6 +297,66 @@ async def delete_problem(*, db: Session = Depends(get_db), id: ID):
     if problem is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
     problem.delete(db)
+    return True
+
+#*******************************************************************************
+#* Problem
+#*******************************************************************************
+
+class ProgramCreate(BaseSchema):
+    name: str
+    role: Program.Role
+    file: UploadFile
+    problem: ID
+
+@router.post("/program/create", response_model=Program.Schema)
+async def add_program(*, db: Session = Depends(get_db), user: User = Depends(curr_user), program: ProgramCreate = Depends(ProgramCreate.from_form())):
+    if user.settings.selected_team is None:
+        raise HTTPException(400)
+    args = program.dict()
+    args["problem"] = Problem.get(db, program.problem)
+    if args["problem"] is None:
+        raise HTTPException(400)
+    return Program.create(db, team=user.settings.selected_team, **program.dict())
+
+class ProgramEdit(BaseSchema):
+    id: ID
+    name: str | None = None
+    role: Program.Role | None = None
+    file: UploadFile | None = None
+    problem: ID | None = None
+
+@router.post("/program/edit_own", response_model=Program.Schema)
+async def edit_own_program(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: ProgramEdit = Depends(ProgramEdit.from_form())):
+    args = edit.dict()
+    program = Program.get(db, edit.id)
+    if program is None or user.settings.selected_team != program.team:
+        raise HTTPException(400)
+    if edit.problem is not None:
+        args["problem"] = Problem.get(db, edit.problem)
+        if args["problem"] is None:
+            raise HTTPException(400)
+    program.update(db, **args)
+
+
+@admin.post("/program/edit", response_model=Program.Schema)
+async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEdit = Depends(ProgramEdit.from_form())):
+    args = edit.dict()
+    program = Program.get(db, edit.id)
+    if program is None:
+        raise HTTPException(400)
+    if edit.problem is not None:
+        args["problem"] = Problem.get(db, edit.problem)
+        if args["team"] is None or args["problem"] is None:
+            raise HTTPException(400)
+    program.update(db, **args)
+
+@admin.post("/program/delete({id}")
+async def delete_program(*, db: Session = Depends(get_db), id: ID):
+    program = Program.get(db, id)
+    if program is None:
+        raise HTTPException(400)
+    program.delete(db)
     return True
 
 #* has to be executed after all route defns
