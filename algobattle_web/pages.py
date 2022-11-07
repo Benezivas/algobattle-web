@@ -1,13 +1,13 @@
 "Module specifying the regular user pages."
 from __future__ import annotations
 from datetime import datetime
-from typing import Any
+from typing import Any, Collection
 from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import or_
 
-from algobattle_web.database import get_db, Session
-from algobattle_web.models import Config, Context, Problem, Team, User, ValueTaken
+from algobattle_web.database import Base, get_db, Session
+from algobattle_web.models import Config, Context, Problem, Program, Team, User, ValueTaken
 from algobattle_web.templates import templated, templates
 from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError, encode
 
@@ -68,9 +68,22 @@ async def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_
         problems = db.query(Problem).all()
         configs = db.query(Config).all()
     else:
-        problems = db.query(Problem).filter(or_(Problem.start is None, Problem.start < datetime.now())).all()   # type: ignore
+        problems = db.query(Problem).filter(or_((Problem.start).is_(None), Problem.start < datetime.now())).all()
         configs = {p.config for p in problems}
     return "problems.jinja", {"problems": encode(problems), "configs": encode(configs)}
+
+@router.get("/programs")
+@templated
+async def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
+    params: dict[str, Collection[Base]] = {}
+    if user.is_admin:
+        params["programs"] = db.query(Program).all()
+        params["problems"] = db.query(Problem).all()
+        params["teams"] = db.query(Team).all()
+    else:
+        params["programs"] = db.query(Program).filter(Program.team_id == user.settings.selected_team_id).all()
+        params["problems"] = db.query(Problem).filter(or_(Problem.start.is_(None), Problem.start < datetime.now())).all()
+    return "programs.jinja", {"roles": [r.value for r in Program.Role]} | {k: encode(v) for k, v in params.items()}
 
 #*******************************************************************************
 #* Admin
