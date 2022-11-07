@@ -106,13 +106,13 @@
               <tr>
                 <td>Name</td>
                 <td>
-                  <input class="form-control form-control-sm" name="name" type="text" required="required">
+                  <input class="form-control form-control-sm w-em" name="name" type="text" required="required">
                 </td>
               </tr>
               <tr>
                 <td>Role</td>
                 <td>
-                  <select class="form-select form-select-sm" name="role">
+                  <select class="form-select form-select-sm w-em" name="role">
                     <option v-for="role in store.roles" :value="role">${role}</option>
                   </select>
                 </td>
@@ -120,7 +120,7 @@
               <tr>
                 <td>Problem</td>
                 <td>
-                  <select class="form-select form-select-sm" name="config">
+                  <select class="form-select form-select-sm w-em" name="config">
                     <option v-for="(problem, id) in store.problems" :value="id">${problem.name}</option>
                   </select>
                 </td>
@@ -128,7 +128,7 @@
               <tr>
                 <td>File</td>
                 <td>
-                  <input class="form-control form-control-sm" name="file" type="file" required="required">
+                  <input class="form-control form-control-sm w-em" name="file" type="file" required="required">
                 </td>
               </tr>
             </tbody>
