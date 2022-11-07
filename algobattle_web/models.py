@@ -357,6 +357,7 @@ class Program(Base):
     file: Mapped[DbFile]
     creation_time: Mapped[datetime] = mapped_column(default=datetime.now)
     problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"))
+    locked: Mapped[bool] = mapped_column(default=False)
 
     team: Mapped[Team] = relationship(lazy="joined")
     problem: Mapped[Problem] = relationship(lazy="joined")
@@ -374,6 +375,7 @@ class Program(Base):
         file: DbFile.Schema
         creation_time: datetime
         problem: ObjID
+        locked: bool
 
     @classmethod
     @with_store_manager
@@ -401,6 +403,7 @@ class Program(Base):
         role: Program.Role | None = None,
         file: BinaryIO | UploadFile | None = None,
         problem: Problem | None = None,
+        locked: bool | None = None,
     ):
         if name is not None:
             if Program.get(db, name) is not None:
@@ -414,4 +417,6 @@ class Program(Base):
             self.file.attach(file)
         if problem is not None:
             self.problem = problem
+        if locked is not None:
+            self.locked = locked
         db.commit()

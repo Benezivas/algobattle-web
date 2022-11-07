@@ -338,6 +338,8 @@ async def edit_own_program(*, db: Session = Depends(get_db), user: User = Depend
             raise HTTPException(400)
     program.update(db, **args)
 
+class ProgramEditAdmin(ProgramEdit):
+    locked: bool | None = None
 
 @admin.post("/program/edit", response_model=Program.Schema)
 async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEdit = Depends(ProgramEdit.from_form())):
