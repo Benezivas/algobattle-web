@@ -80,7 +80,6 @@ class User(Base):
         db.add(new_user)
         db.add(UserSettings(user_id=new_user.id))
         db.commit()
-        db.refresh(new_user)
         return new_user
 
     def update(self, db: Session, email: str | None = None, name: str | None = None, is_admin: bool | None = None) -> User:
@@ -154,7 +153,6 @@ class Context(Base):
         context = Context(name=name)
         db.add(context)
         db.commit()
-        db.refresh(context)
         return context
 
     def update(self, db: Session, name: str | None) -> Context:
@@ -212,7 +210,6 @@ class Team(Base):
         team = cls(name=name, context_id=context.id)
         db.add(team)
         db.commit()
-        db.refresh(team)
         return team
 
     def update(self, db: Session, name: str | None = None, context: str | ID | Context | None = None):
@@ -256,7 +253,6 @@ class Config(Base):
             config = cls(name=name, file=db_file)
             db.add(config)
             db.commit()
-        db.refresh(config)
         return config
 
     @classmethod
@@ -319,7 +315,6 @@ class Problem(Base):
             problem = cls(name=name, file=db_file, config=config, start=start, end=end, description=desc_file)
             db.add(problem)
             db.commit()
-        db.refresh(problem)
         return problem
 
     @classmethod
@@ -395,7 +390,6 @@ class Program(Base):
             program = cls(name=name, team=team, role=role, file=db_file, problem=problem)
             db.add(program)
             db.commit()
-        db.refresh(program)
         return program
 
     @classmethod
