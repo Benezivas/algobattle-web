@@ -419,3 +419,35 @@ class Program(Base):
         if locked is not None:
             self.locked = locked
         db.commit()
+
+
+class Documentation(Base):
+    team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"))
+    problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"))
+    file: Mapped[DbFile]
+
+    team: Mapped[Team] = relationship(lazy="joined")
+    problem: Mapped[Problem] = relationship(lazy="joined")
+
+    use_store_manager: bool = True
+
+    @classmethod
+    @with_store_manager
+    def create(cls, db: Session, team: Team, problem: Problem, file: BinaryIO | UploadFile) -> Documentation:
+        if cls.get(db, team, problem) is not None:
+            raise ValueTaken("team/problem")
+        db_file = DbFile.create_from(file)
+        docs = cls(team=team, problem=problem, file=db_file)
+        db.add(docs)
+        db.commit()
+        return docs
+
+    @classmethod
+    def get(cls, db: Session, team: Team, problem: Problem) -> Documentation | None:
+        return db.query(cls).filter(cls.team_id == team.id, cls.problem_id == problem.id).first()
+
+    @with_store_manager
+    def update(self, db: Session, file: BinaryIO | UploadFile | None):
+        if file is not None:
+            self.file.attach(file)
+            db.commit()
