@@ -78,6 +78,7 @@ class User(Base):
             raise ValueTaken(email)
         new_user = cls(email=email, name=name, is_admin=is_admin)
         db.add(new_user)
+        db.commit()
         db.add(UserSettings(user_id=new_user.id))
         db.commit()
         return new_user
