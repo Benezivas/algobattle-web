@@ -85,6 +85,15 @@ async def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_
         params["problems"] = db.query(Problem).filter(Problem.visible_to_sql(user)).all()
     return "programs.jinja", {"roles": [r.value for r in Program.Role]} | {k: encode(v) for k, v in params.items()}
 
+@router.get("/documentation")
+@templated
+def docs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
+    if user.settings.selected_team is None:
+        raise HTTPException(400)
+    problems = db.scalars(select(Problem).where(Problem.visible_to_sql(user))).all()
+    teams = db.scalars(select(Team)).all() if user.is_admin else []
+    return "documentation.jinja", {"problems": encode(problems), "teams": encode(teams)}
+
 #*******************************************************************************
 #* Admin
 #*******************************************************************************
