@@ -1,9 +1,9 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Concatenate, ParamSpec, Tuple, TypeVar
+from typing import Any, Awaitable, Callable, Concatenate, ParamSpec, Tuple, TypeVar, cast
 from fastapi import Request, Response, Depends
 from fastapi.templating import Jinja2Templates
-from inspect import Parameter, Signature, get_annotations, signature
+from inspect import Parameter, Signature, get_annotations, iscoroutinefunction, signature
 
 from algobattle_web.models import User
 from algobattle_web.util import curr_user
@@ -20,7 +20,16 @@ P = ParamSpec("P")
 R = ParamSpec("R")
 S = TypeVar("S")
 
-def templated(fn: Callable[P, Awaitable[Tuple[str, dict[str, Any]] | str]]) -> Callable[Concatenate[Request, User, P], Awaitable[Response]]:
+RetType = Tuple[str, dict[str, Any]] | str
+
+def templated(fn: Callable[P, Awaitable[RetType] | RetType]) -> Callable[Concatenate[Request, User, P], Response | Awaitable[Response]]:
+    """Adds the `request: Request` and `user: User = Depends(curr_user)` parameters and passes them to the context of the template."""
+    if iscoroutinefunction(fn):
+        return templated_async(fn)
+    else:
+        return templated_sync(cast(Callable[P, RetType], fn))
+
+def templated_async(fn: Callable[P, Awaitable[Tuple[str, dict[str, Any]] | str]]) -> Callable[Concatenate[Request, User, P], Awaitable[Response]]:
     """Adds the `request: Request` and `user: User = Depends(curr_user)` parameters and passes them to the context of the template."""
     async def inner(request: Request, user: User, *args: P.args, **kwargs: P.kwargs) -> Response:
         if "request" in orig_params:
