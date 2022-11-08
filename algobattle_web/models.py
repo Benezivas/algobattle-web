@@ -350,6 +350,12 @@ class Problem(Base):
                 self.description.attach(desc)
             db.commit()
 
+    def visible_to(self, user: User) -> bool:
+        if user.is_admin or self.start is None:
+            return True
+        else:
+            return self.start <= datetime.now()
+
 class _Program_Role(Enum):
     generator = "generator"
     solver = "solver"

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Tuple
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File
 from algobattle_web.database import get_db, Session, ID
-from algobattle_web.models import Config, Context, Problem, Program, Team, User, UserSettings
+from algobattle_web.models import Config, Context, Documentation, Problem, Program, Team, User, UserSettings
 from algobattle_web.util import curr_user
 from algobattle_web.base_classes import BaseSchema
 
@@ -362,6 +362,48 @@ async def delete_program(*, db: Session = Depends(get_db), id: ID):
     if program is None:
         raise HTTPException(400)
     program.delete(db)
+    return True
+
+#*******************************************************************************
+#* Docs
+#*******************************************************************************
+
+class DocsCreate(BaseSchema):
+    problem: ID
+    file: UploadFile
+
+@router.post("/documentation/create", response_model=Documentation.Schema)
+async def create_docs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), create: DocsCreate = Depends(DocsCreate.from_form())):
+    if user.settings.selected_team is None:
+        raise HTTPException(400)
+    problem = Problem.get(db, create.problem)
+    if problem is None or not problem.visible_to(user):
+        raise HTTPException(400)
+    return Documentation.create(db, user.settings.selected_team, problem, create.file)
+
+class DocsEdit(BaseSchema):
+    problem: ID
+    file: UploadFile | None
+
+@router.post("/documentation/edit", response_model=Documentation.Schema)
+async def edit_docs(db: Session = Depends(get_db), user: User = Depends(curr_user), edit: DocsEdit = Depends(DocsEdit.from_form())):
+    if user.settings.selected_team is None:
+        raise HTTPException(400)
+    problem = Problem.get(db, edit.problem)
+    if problem is None:
+        raise HTTPException(400)
+    docs = Documentation.get(db, user.settings.selected_team, problem)
+    if docs is None:
+        raise HTTPException(400)
+    docs.update(db, edit.file)
+    return docs
+
+@router.post("/documentation/delete/{problem_id}")
+async def delete_docs(*, db: Session = Depends(get_db), problem_id: ID):
+    problem = db.get(Problem, problem_id)
+    if problem is None:
+        raise HTTPException(400)
+    problem.delete(db)
     return True
 
 #* has to be executed after all route defns
