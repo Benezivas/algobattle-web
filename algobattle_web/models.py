@@ -7,6 +7,8 @@ from enum import Enum
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum
+from sqlalchemy.sql import true as sql_true, or_
+from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
@@ -355,6 +357,13 @@ class Problem(Base):
             return True
         else:
             return self.start <= datetime.now()
+
+    @classmethod
+    def visible_to_sql(cls, user: User) -> _ColumnExpressionArgument[bool]:
+        if user.is_admin:
+            return sql_true
+        else:
+            return or_(cls.start.is_(None), cls.start < datetime.now())
 
 class _Program_Role(Enum):
     generator = "generator"

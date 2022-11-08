@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Collection
 from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy import or_
+from sqlalchemy import or_, select
 
 from algobattle_web.database import Base, get_db, Session
 from algobattle_web.models import Config, Context, Problem, Program, Team, User
@@ -68,7 +68,7 @@ async def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_
         problems = db.query(Problem).all()
         configs = db.query(Config).all()
     else:
-        problems = db.query(Problem).filter(or_((Problem.start).is_(None), Problem.start < datetime.now())).all()
+        problems = db.query(Problem).filter(Problem.visible_to_sql(user)).all()
         configs = {p.config for p in problems}
     return "problems.jinja", {"problems": encode(problems), "configs": encode(configs)}
 
@@ -82,7 +82,7 @@ async def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_
         params["teams"] = db.query(Team).all()
     else:
         params["programs"] = db.query(Program).filter(Program.team_id == user.settings.selected_team_id).all()
-        params["problems"] = db.query(Problem).filter(or_(Problem.start.is_(None), Problem.start < datetime.now())).all()
+        params["problems"] = db.query(Problem).filter(Problem.visible_to_sql(user)).all()
     return "programs.jinja", {"roles": [r.value for r in Program.Role]} | {k: encode(v) for k, v in params.items()}
 
 #*******************************************************************************
