@@ -7,6 +7,7 @@ const store = reactive({
     problems: problems,
     roles: roles,
     teams: teams,
+    user: user,
 })
 
 
@@ -46,19 +47,17 @@ app.component("Program", {
         toggle_editing() {
             this.editing = !this.editing
         },
-        async delete_problem() {
-            var response = await send_request("program/delete/" + this.problem.id)
+        async remove() {
+            var response = await send_request("program/delete/" + this.program.id)
             if (response) {
-                delete store.programs[this.problem.id]
+                delete store.programs[this.program.id]
             }
         },
         async edit(event) {
             const payload = new FormData(event.currentTarget)
-            payload.append("id", this.problem.id)
-            if (payload.get("file").size == 0) {
-                payload.delete("file")
-            }
-            var response = await send_form("program/edit", payload)
+            payload.append("id", this.program.id)
+            const endpoint = store.user.is_admin ? "program/edit" : "program/edit_own"
+            var response = await send_form(endpoint, payload)
             if (response) {
                 response = await response.json()
                 store.programs[response.id] = response

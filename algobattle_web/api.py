@@ -317,7 +317,7 @@ async def add_program(*, db: Session = Depends(get_db), user: User = Depends(cur
     args["problem"] = Problem.get(db, program.problem)
     if args["problem"] is None:
         raise HTTPException(400)
-    return Program.create(db, team=user.settings.selected_team, **program.dict())
+    return Program.create(db, team=user.settings.selected_team, **args)
 
 class ProgramEdit(BaseSchema):
     id: ID
@@ -327,30 +327,34 @@ class ProgramEdit(BaseSchema):
 
 @router.post("/program/edit_own", response_model=Program.Schema)
 async def edit_own_program(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: ProgramEdit = Depends(ProgramEdit.from_form())):
-    args = edit.dict()
     program = Program.get(db, edit.id)
     if program is None or user.settings.selected_team != program.team or program.locked:
         raise HTTPException(400)
     if edit.problem is not None:
-        args["problem"] = Problem.get(db, edit.problem)
-        if args["problem"] is None:
+        problem = Problem.get(db, edit.problem)
+        if problem is None:
             raise HTTPException(400)
-    program.update(db, **args)
+    else:
+        problem = None
+    program.update(db, name=edit.name, role=edit.role, problem=problem)
+    return program
 
 class ProgramEditAdmin(ProgramEdit):
     locked: bool | None = None
 
 @admin.post("/program/edit", response_model=Program.Schema)
-async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEdit = Depends(ProgramEdit.from_form())):
-    args = edit.dict()
+async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEditAdmin = Depends(ProgramEditAdmin.from_form())):
     program = Program.get(db, edit.id)
     if program is None:
         raise HTTPException(400)
     if edit.problem is not None:
-        args["problem"] = Problem.get(db, edit.problem)
-        if args["team"] is None or args["problem"] is None:
+        problem = Problem.get(db, edit.problem)
+        if problem is None:
             raise HTTPException(400)
-    program.update(db, **args)
+    else:
+        problem = None
+    program.update(db, name=edit.name, role=edit.role, problem=problem, locked=edit.locked)
+    return program
 
 @admin.post("/program/delete/{id}")
 async def delete_program(*, db: Session = Depends(get_db), id: ID):

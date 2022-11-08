@@ -38,7 +38,7 @@
                   <option v-for="(team, id) in store.teams" :value="id" :selected="id == program.team">${team.name}</option>
                 </select>
                 <div v-else>
-                  ${store.teams[problem.team].name}
+                  ${store.teams[program.team].name}
                 </div>
               </td>
             </tr>
@@ -120,7 +120,7 @@
               <tr>
                 <td>Problem</td>
                 <td>
-                  <select class="form-select form-select-sm w-em" name="config">
+                  <select class="form-select form-select-sm w-em" name="problem">
                     <option v-for="(problem, id) in store.problems" :value="id">${problem.name}</option>
                   </select>
                 </td>

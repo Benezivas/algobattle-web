@@ -6,7 +6,7 @@ from typing import Any, BinaryIO, Mapping, cast, overload
 from enum import Enum
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey, Column
+from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
@@ -349,11 +349,14 @@ class Problem(Base):
                 self.description.attach(desc)
             db.commit()
 
+class _Program_Role(Enum):
+    generator = "generator"
+    solver = "solver"
 
 class Program(Base):
-    name: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str]
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"))
-    role: Mapped[Program.Role]
+    role: Mapped[_Program_Role] = mapped_column(SqlEnum(_Program_Role))
     file: Mapped[DbFile]
     creation_time: Mapped[datetime] = mapped_column(default=datetime.now)
     problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"))
@@ -364,14 +367,12 @@ class Program(Base):
 
     use_store_manager: bool = True
 
-    class Role(Enum):
-        generator = "generator"
-        solver = "solver"
+    Role = _Program_Role
 
     class Schema(Base.Schema):
         name: str
         team: ObjID
-        role: Program.Role
+        role: _Program_Role
         file: DbFile.Schema
         creation_time: datetime
         problem: ObjID
@@ -389,10 +390,9 @@ class Program(Base):
         return program
 
     @classmethod
-    def get(cls, db: Session, prog: ID | str) -> Program | None:
-        """Queries the db by either its id or name."""
-        filter_type = cls.name if isinstance(prog, str) else cls.id
-        return db.query(cls).filter(filter_type == prog).first()
+    def get(cls, db: Session, prog: ID) -> Program | None:
+        """Queries the db by its id."""
+        return db.query(cls).filter(cls.id == prog).first()
 
     @with_store_manager
     def update(
@@ -406,8 +406,6 @@ class Program(Base):
         locked: bool | None = None,
     ):
         if name is not None:
-            if Program.get(db, name) is not None:
-                raise ValueTaken(name)
             self.name = name
         if team is not None:
             self.team = team
