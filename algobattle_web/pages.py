@@ -1,13 +1,13 @@
 "Module specifying the regular user pages."
 from __future__ import annotations
 from datetime import datetime
-from typing import Any, Collection
+from typing import Collection
 from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import or_
 
 from algobattle_web.database import Base, get_db, Session
-from algobattle_web.models import Config, Context, Problem, Program, Team, User, ValueTaken
+from algobattle_web.models import Config, Context, Problem, Program, Team, User
 from algobattle_web.templates import templated, templates
 from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError, encode
 
