@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import or_, select
 
 from algobattle_web.database import Base, get_db, Session
-from algobattle_web.models import Config, Context, Problem, Program, Team, User
+from algobattle_web.models import Config, Context, Documentation, Problem, Program, Team, User
 from algobattle_web.templates import templated, templates
 from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError, encode
 
@@ -91,8 +91,10 @@ def docs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     if user.settings.selected_team is None:
         raise HTTPException(400)
     problems = db.scalars(select(Problem).where(Problem.visible_to_sql(user))).all()
-    teams = db.scalars(select(Team)).all() if user.is_admin else []
-    return "documentation.jinja", {"problems": encode(problems), "teams": encode(teams)}
+    teams = db.scalars(select(Team)).all() if user.is_admin else [user.settings.selected_team]
+    docs = db.scalars(select(Documentation)).all()
+    docs_by_team = {team.id: {doc.problem.id: doc.encode() for doc in docs if doc.team == team} for team in teams}
+    return "documentation.jinja", {"problems": encode(problems), "teams": encode(teams), "docs": docs_by_team}
 
 #*******************************************************************************
 #* Admin
