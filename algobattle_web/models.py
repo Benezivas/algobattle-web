@@ -449,6 +449,7 @@ class Documentation(Base):
     class Schema(Base.Schema):
         team: ObjID
         problem: ObjID
+        file: DbFile.Schema
 
     @classmethod
     @with_store_manager
