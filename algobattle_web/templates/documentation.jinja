@@ -41,10 +41,15 @@
               <tr v-if="doc(id)">
                 <td>${team.name}</td>
                 <td>
-                  <a role="button" class="btn btn-primary btn-sm" :href="'/api/documentation/getfile/'+doc(id).id" data-bs-toggle="tooltip" title="Download file">${doc(id).file.name} <i class="bi bi-download ms-1"></i></a>
+                  <input v-if="editing" class="e-em form-control form-control-sm" name="file" type="file" required="required">
+                  <a v-else role="button" class="btn btn-primary btn-sm" :href="'/api/documentation/getfile/'+doc(id).id" data-bs-toggle="tooltip" title="Download file">${doc(id).file.name} <i class="bi bi-download ms-1"></i></a>
                 </td>
-                <td>
-                  <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="tooltip" title="Delete" @click="remove(id)"><i class="bi bi-trash"></i></button>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete team" v-if="editing" @click="remove(id)"><i class="bi bi-trash"></i></button>
+                    <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit team" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
+                    <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
+                  </div>
                 </td>
               </tr>
             </template>
