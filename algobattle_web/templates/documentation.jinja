@@ -44,7 +44,7 @@
                   <a role="button" class="btn btn-primary btn-sm" :href="'/api/documentation/getfile/'+doc(id).id" data-bs-toggle="tooltip" title="Download file">${doc(id).file.name} <i class="bi bi-download ms-1"></i></a>
                 </td>
                 <td>
-                  <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete" @click="remove(id)"><i class="bi bi-trash"></i></button>
+                  <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="tooltip" title="Delete" @click="remove(id)"><i class="bi bi-trash"></i></button>
                 </td>
               </tr>
             </template>
