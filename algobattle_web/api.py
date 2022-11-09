@@ -257,10 +257,12 @@ async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate =
     return Problem.create(db, **args)
 
 @router.get("/problem/getfile/{id}")
-async def get_problemfile(*, db: Session = Depends(get_db), id: ID):
+async def get_problemfile(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID):
     problem = Problem.get(db, id)
     if problem is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    if not problem.visible_to(user):
+        raise HTTPException(401)
     return problem.file.response()
 
 @router.get("/problem/getdesc/{id}")
@@ -300,7 +302,7 @@ async def delete_problem(*, db: Session = Depends(get_db), id: ID):
     return True
 
 #*******************************************************************************
-#* Problem
+#* Program
 #*******************************************************************************
 
 class ProgramCreate(BaseSchema):
@@ -318,6 +320,15 @@ async def add_program(*, db: Session = Depends(get_db), user: User = Depends(cur
     if args["problem"] is None:
         raise HTTPException(400)
     return Program.create(db, team=user.settings.selected_team, **args)
+
+@router.get("/program/getfile/{id}")
+async def get_program_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID):
+    program = db.get(Program, id)
+    if program is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    if not user.is_admin and program.team not in user.teams:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+    return program.file.response()
 
 class ProgramEdit(BaseSchema):
     id: ID
@@ -397,6 +408,15 @@ async def edit_docs(db: Session = Depends(get_db), user: User = Depends(curr_use
         raise HTTPException(400)
     docs.update(db, edit.file)
     return docs
+
+@router.get("/documentation/getfile/{id}")
+async def get_docs_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID):
+    docs = db.get(Documentation, id)
+    if docs is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    if not user.is_admin and docs.team not in user.teams:
+        raise HTTPException(401)
+    return docs.file.response()
 
 @router.post("/documentation/delete/{problem_id}")
 async def delete_docs(*, db: Session = Depends(get_db), problem_id: ID):
