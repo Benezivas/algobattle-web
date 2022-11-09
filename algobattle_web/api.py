@@ -418,12 +418,12 @@ async def get_docs_file(*, db: Session = Depends(get_db), user: User = Depends(c
         raise HTTPException(401)
     return docs.file.response()
 
-@router.post("/documentation/delete/{problem_id}")
-async def delete_docs(*, db: Session = Depends(get_db), problem_id: ID):
-    problem = db.get(Problem, problem_id)
-    if problem is None:
+@router.post("/documentation/delete/{id}")
+async def delete_docs(*, db: Session = Depends(get_db), id: ID):
+    docs = db.get(Documentation, id)
+    if docs is None:
         raise HTTPException(400)
-    problem.delete(db)
+    docs.delete(db)
     return True
 
 #* has to be executed after all route defns
