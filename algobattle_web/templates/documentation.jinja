@@ -1,0 +1,82 @@
+{% extends "base.jinja" %}
+{% block content %}
+
+<script src="/static/scripts/documentation.js" type="module"></script>
+<script>
+  const problems = {{problems | tojson}}
+  const teams = {{teams | tojson}}
+  const docs = {{docs | tojson}}
+</script>
+
+
+<script type="text/x-template" id="problem">
+  <div class="accordion-item">
+    <h2 class="accordion-header" :id="'heading' + problem.name">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" :data-bs-target="'#collapse' + problem.name" aria-expanded="false" :aria-controls="'collapse' + problem.name">
+        ${problem.name}
+      </button>
+    </h2>
+    <div :id="'collapse' + problem.name" class="accordion-collapse collapse" :aria-labelledby="'heading' + problem.name" data-bs-parent="#problems">
+      <form class="accordion-body">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Team</th>
+              <th scope="col">Documentation</th>
+              <th scope="col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(team, id) in store.teams">
+              <div v-if="doc(id)">
+                <td>${team.name}</td>
+                <td>
+                  <a role="button" class="btn btn-primary btn-sm" :href="'/api/documentation/getfile/'+doc(id).id" data-bs-toggle="tooltip" title="Download file">${doc(id).file.name} <i class="bi bi-download ms-1"></i></a>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete" @click="remove(id)"><i class="bi bi-trash"></i></button>
+                </td>
+              </div>
+            </tr>
+          </tbody>
+        </table>
+      </form>
+    </div>
+  </div>
+</script>
+
+<script type="text/x-template" id="problem_row">
+  <tr>
+    <td>${problem.name}</td>
+    <td>
+      <input v-if="editing" class="e-em form-control form-control-sm" name="file" type="file">
+      <a v-else role="button" class="btn btn-primary btn-sm" :href="'/api/documentation/getfile/'+docs[problem.id].id" data-bs-toggle="tooltip" title="Download config file">${docs[problem.id].file.name} <i class="bi bi-download ms-1"></i></a>
+    </td>
+  </tr>
+</script>
+
+<div id="app">
+  <h3>Documentation</h3>
+  {% if user.is_admin %}
+  <div class="accordion" id="problems">
+    <Problem v-for="(problem, id) in store.problems" :key="id" :problem="problem"></Problem>
+  </div>
+  {% else %}
+  <form>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Problem</th>
+          <th scope="col">Documentation</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr is="vue:problem-row" v-for="(problem, id) in store.problems" :key="id" :problem="problem"></tr>
+      </tbody>
+    </table>
+  </form>
+  {% endif %}
+</div>
+
+{% endblock %}
