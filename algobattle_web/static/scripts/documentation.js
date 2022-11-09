@@ -7,6 +7,7 @@ const store = reactive({
     teams: teams,
     user: user,
     docs: docs,
+    user_team: user_team,
 })
 
 
@@ -14,9 +15,6 @@ const app = createApp({
     methods: {
         async upload(event) {
             const payload = new FormData(event.currentTarget)
-            if (payload.get("file").size == 0) {
-                payload.delete("file")
-            }
             var response = await send_form("documentation/create", payload)
             if (response) {
                 response = await response.json()
@@ -53,6 +51,15 @@ app.component("Problem", {
             var response = await send_request("documentation/delete/" + this.doc(id).id)
             if (response) {
                 delete store.docs[this.doc(id).id]
+            }
+        },
+        async upload(event) {
+            const payload = new FormData(event.currentTarget)
+            payload.append("problem", this.problem.id)
+            var response = await send_form("documentation/create", payload)
+            if (response) {
+                response = await response.json()
+                store.docs[response.team][response.problem] = response
             }
         },
     }
