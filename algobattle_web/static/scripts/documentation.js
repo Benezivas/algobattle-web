@@ -15,10 +15,11 @@ const app = createApp({
     methods: {
         async upload(event) {
             const payload = new FormData(event.currentTarget)
+            payload.append("problem", this.problem.id)
             var response = await send_form("documentation/create", payload)
             if (response) {
                 response = await response.json()
-                store.docs[response.team.id][response.problem.id] = response
+                store.docs[response.problem][response.team] = response
             }
         },
     },
@@ -47,7 +48,7 @@ app.component("Problem", {
         async remove(doc) {
             var response = await send_request("documentation/delete/" + doc.id)
             if (response) {
-                delete store.docs[this.problem.id][doc.id]
+                delete store.docs[this.problem.id][doc.team]
                 this.toggle_editing()
             }
         },
