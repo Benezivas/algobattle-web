@@ -446,6 +446,10 @@ class Documentation(Base):
 
     use_store_manager: bool = True
 
+    class Schema(Base.Schema):
+        team: ObjID
+        problem: ObjID
+
     @classmethod
     @with_store_manager
     def create(cls, db: Session, team: Team, problem: Problem, file: BinaryIO | UploadFile) -> Documentation:
