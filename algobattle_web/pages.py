@@ -93,7 +93,7 @@ def docs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     problems = db.scalars(select(Problem).where(Problem.visible_to_sql(user))).all()
     teams = db.scalars(select(Team)).unique().all() if user.is_admin else [user.settings.selected_team]
     docs = db.scalars(select(Documentation)).unique().all()
-    docs_by_team = {team.id: {doc.problem.id: doc.encode() for doc in docs if doc.team == team} for team in teams}
+    docs_by_team = {problem.id: {doc.team.id: doc.encode() for doc in docs if doc.problem == problem} for problem in problems}
     user_team = user.settings.selected_team
     return "documentation.jinja", {"problems": encode(problems), "teams": encode(teams), "docs": jsonable_encoder(docs_by_team), "user_team": user_team.encode()}
 

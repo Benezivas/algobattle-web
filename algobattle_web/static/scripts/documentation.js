@@ -44,15 +44,11 @@ app.component("Problem", {
         toggle_editing() {
             this.editing = !this.editing
         },
-        doc(id) {
-            return store.docs[id][this.problem.id]
-        },
-        async remove(id) {
-            var response = await send_request("documentation/delete/" + this.doc(id).id)
+        async remove(doc) {
+            var response = await send_request("documentation/delete/" + doc.id)
             if (response) {
-                delete store.docs[this.doc(id).id]
+                delete store.docs[this.problem.id][doc.id]
                 this.toggle_editing()
-                this.$forceUpdate()
             }
         },
         async upload(event) {
@@ -61,7 +57,7 @@ app.component("Problem", {
             var response = await send_form("documentation/create", payload)
             if (response) {
                 response = await response.json()
-                store.docs[response.team][response.problem] = response
+                store.docs[response.problem][response.team] = response
             }
         },
     }

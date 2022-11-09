@@ -28,7 +28,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="!doc(store.user_team.id)">
+            <tr v-if="!(store.user_team.id in store.docs[problem.id])">
                 <td>${store.user_team.name}</td>
                 <td>
                   <input class="w-em form-control form-control-sm" name="file" type="file" required="required">
@@ -37,22 +37,20 @@
                   <button type="submit" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Upload">Upload</button>
                 </td>
             </tr>
-            <template v-for="(team, id) in store.teams">
-              <tr v-if="doc(id)">
-                <td>${team.name}</td>
-                <td>
-                  <input v-if="editing" class="e-em form-control form-control-sm" name="file" type="file" required="required">
-                  <a v-else role="button" class="btn btn-primary btn-sm" :href="'/api/documentation/getfile/'+doc(id).id" data-bs-toggle="tooltip" title="Download file">${doc(id).file.name} <i class="bi bi-download ms-1"></i></a>
-                </td>
-                <td class="text-end">
-                  <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete team" v-if="editing" @click="remove(id)"><i class="bi bi-trash"></i></button>
-                    <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit team" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
-                    <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
-                  </div>
-                </td>
-              </tr>
-            </template>
+            <tr v-for="(doc, team_id) in store.docs[problem.id]">
+              <td>${store.teams[team_id].name}</td>
+              <td>
+                <input v-if="editing" class="e-em form-control form-control-sm" name="file" type="file" required="required">
+                <a v-else role="button" class="btn btn-primary btn-sm" :href="'/api/documentation/getfile/'+doc.id" data-bs-toggle="tooltip" title="Download file">${doc.file.name} <i class="bi bi-download ms-1"></i></a>
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm" role="group">
+                  <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete team" v-if="editing" @click="remove(doc)"><i class="bi bi-trash"></i></button>
+                  <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit team" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
+                  <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
+                </div>
+              </td>
+            </tr>
           </tbody>
         </table>
       </form>
