@@ -51,6 +51,8 @@ app.component("Problem", {
             var response = await send_request("documentation/delete/" + this.doc(id).id)
             if (response) {
                 delete store.docs[this.doc(id).id]
+                this.toggle_editing()
+                this.$forceUpdate()
             }
         },
         async upload(event) {
