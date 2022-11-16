@@ -64,5 +64,37 @@ app.component("Problem", {
     }
 })
 
+app.component("ProblemRow", {
+    template: "#problem_row",
+    props: ["problem"],
+    data() {
+        return {
+            editing: false,
+            store: store,
+        }
+    },
+    methods: {
+        toggle_editing() {
+            this.editing = !this.editing
+        },
+        async remove(doc) {
+            var response = await send_request("documentation/delete/" + doc.id)
+            if (response) {
+                delete store.docs[this.problem.id][doc.team]
+                this.toggle_editing()
+            }
+        },
+        async upload(event) {
+            const payload = new FormData(event.currentTarget)
+            payload.append("problem", this.problem.id)
+            var response = await send_form("documentation/create", payload)
+            if (response) {
+                response = await response.json()
+                store.docs[response.problem][response.team] = response
+            }
+        },
+    },
+})
+
 
 app.mount("#app")
