@@ -481,17 +481,27 @@ class ProgramSource(Enum):
 class ScheduleParticipant(Base):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), primary_key=True)
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True)
-    generator: Mapped[ProgramSource] = mapped_column(SqlEnum(_Program_Role))
-    generator_id: Mapped[ID] = mapped_column(ForeignKey("programs.id"))
+    generator: Mapped[ProgramSource] = mapped_column(SqlEnum(ProgramSource))
+    generator_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"))
     solver: Mapped[ProgramSource] = mapped_column(SqlEnum(ProgramSource))
-    solver_id: Mapped[ID] = mapped_column(ForeignKey("programs.id"))
+    solver_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"))
 
     team: Mapped[Team] = relationship()
-    generator_prog: Mapped[Program] = relationship(foreign_keys=[generator_id])
-    solver_prog: Mapped[Program] = relationship(foreign_keys=[solver_id])
+    generator_prog: Mapped[Program | None] = relationship(foreign_keys=[generator_id])
+    solver_prog: Mapped[Program | None] = relationship(foreign_keys=[solver_id])
+
+    class Schema(Base.Schema):
+        team: ObjID
+        generator: ProgramSource
+        solver: ProgramSource
+
 
 
 class Schedule(Base):
     time: Mapped[datetime]
 
     participants: Mapped[list[ScheduleParticipant]] = relationship()
+
+    class Schema(Base.Schema):
+        time: datetime
+        participants: list[ScheduleParticipant.Schema]
