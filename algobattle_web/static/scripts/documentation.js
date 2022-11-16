@@ -16,11 +16,12 @@ const app = createApp({
     methods: {
         async upload(event) {
             const payload = new FormData(event.currentTarget)
-            payload.append("problem", this.problem.id)
-            var response = await send_form("documentation/create", payload)
+            payload.append("problem", store.curr_row.problem.id)
+            var response = await send_form("documentation/upload", payload)
             if (response) {
                 response = await response.json()
-                store.docs[response.problem][response.team] = response
+                store.docs[response.problem] = response
+                store.curr_row.toggle_editing()
             }
         },
     },
@@ -63,7 +64,7 @@ app.component("Problem", {
         async upload(event) {
             const payload = new FormData(event.currentTarget)
             payload.append("problem", this.problem.id)
-            var response = await send_form("documentation/create", payload)
+            var response = await send_form("documentation/upload", payload)
             if (response) {
                 response = await response.json()
                 store.docs[response.problem][response.team] = response
@@ -92,20 +93,11 @@ app.component("ProblemRow", {
                 this.editing = true
             }
         },
-        async remove(doc) {
-            var response = await send_request("documentation/delete/" + doc.id)
+        async remove(problem) {
+            var response = await send_request("documentation/delete/" + store.docs[problem.id].id)
             if (response) {
-                delete store.docs[this.problem.id][doc.team]
+                delete store.docs[this.problem.id]
                 this.toggle_editing()
-            }
-        },
-        async upload(event) {
-            const payload = new FormData(event.currentTarget)
-            payload.append("problem", this.problem.id)
-            var response = await send_form("documentation/create", payload)
-            if (response) {
-                response = await response.json()
-                store.docs[response.problem][response.team] = response
             }
         },
     },

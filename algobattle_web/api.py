@@ -379,35 +379,23 @@ async def delete_program(*, db: Session = Depends(get_db), id: ID):
 #* Docs
 #*******************************************************************************
 
-class DocsCreate(BaseSchema):
+class DocsUpload(BaseSchema):
     problem: ID
     file: UploadFile
 
-@router.post("/documentation/create", response_model=Documentation.Schema)
-async def create_docs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), create: DocsCreate = Depends(DocsCreate.from_form())):
+@router.post("/documentation/upload", response_model=Documentation.Schema)
+async def upload_docs(db: Session = Depends(get_db), user: User = Depends(curr_user), data: DocsUpload = Depends(DocsUpload.from_form())):
     if user.settings.selected_team is None:
         raise HTTPException(400)
-    problem = Problem.get(db, create.problem)
+    problem = Problem.get(db, data.problem)
     if problem is None or not problem.visible_to(user):
-        raise HTTPException(400)
-    return Documentation.create(db, user.settings.selected_team, problem, create.file)
-
-class DocsEdit(BaseSchema):
-    problem: ID
-    file: UploadFile | None
-
-@router.post("/documentation/edit", response_model=Documentation.Schema)
-async def edit_docs(db: Session = Depends(get_db), user: User = Depends(curr_user), edit: DocsEdit = Depends(DocsEdit.from_form())):
-    if user.settings.selected_team is None:
-        raise HTTPException(400)
-    problem = Problem.get(db, edit.problem)
-    if problem is None:
         raise HTTPException(400)
     docs = Documentation.get(db, user.settings.selected_team, problem)
     if docs is None:
-        raise HTTPException(400)
-    docs.update(db, edit.file)
-    return docs
+        return Documentation.create(db, user.settings.selected_team, problem, data.file)
+    else:
+        docs.update(db, data.file)
+        return docs
 
 @router.get("/documentation/getfile/{id}")
 async def get_docs_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID):
