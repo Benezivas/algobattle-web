@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta, datetime
-from typing import Any, BinaryIO, Mapping, cast, overload
+from typing import Any, BinaryIO, Mapping, Union, cast, overload
 from enum import Enum
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
@@ -471,3 +471,27 @@ class Documentation(Base):
         if file is not None:
             self.file.attach(file)
             db.commit()
+
+
+class ProgramSource(Enum):
+    TeamSpec = "teamspec"
+    Program = "program"
+
+
+class ScheduleParticipant(Base):
+    schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), primary_key=True)
+    team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True)
+    generator: Mapped[ProgramSource] = mapped_column(SqlEnum(_Program_Role))
+    generator_id: Mapped[ID] = mapped_column(ForeignKey("programs.id"))
+    solver: Mapped[ProgramSource] = mapped_column(SqlEnum(ProgramSource))
+    solver_id: Mapped[ID] = mapped_column(ForeignKey("programs.id"))
+
+    team: Mapped[Team] = relationship()
+    generator_prog: Mapped[Program] = relationship(foreign_keys=[generator_id])
+    solver_prog: Mapped[Program] = relationship(foreign_keys=[solver_id])
+
+
+class Schedule(Base):
+    time: Mapped[datetime]
+
+    participants: Mapped[list[ScheduleParticipant]] = relationship()
