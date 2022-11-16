@@ -39,19 +39,16 @@ app.component("Problem", {
     props: ["problem"],
     data() {
         return {
-            editing: false,
+            editing: undefined,
             store: store,
         }
     },
     methods: {
-        toggle_editing() {
-            if (this.editing) {
-                this.editing = false
-                store.curr_row = {}
+        toggle_editing(team_id) {
+            if (this.editing == team_id) {
+                this.editing = undefined
             } else {
-                store.curr_row.editing = false
-                store.curr_row = this
-                this.editing = true
+                this.editing = team_id
             }
         },
         async remove(doc) {
@@ -68,6 +65,7 @@ app.component("Problem", {
             if (response) {
                 response = await response.json()
                 store.docs[response.problem][response.team] = response
+                this.editing = undefined
             }
         },
     }
