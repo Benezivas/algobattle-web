@@ -64,7 +64,7 @@
     <td>
       <input v-if="editing" class="e-em form-control form-control-sm" name="file" type="file">
       <a v-else-if="store.docs[problem.id]" role="button" class="btn btn-primary btn-sm" :href="'/api/documentation/getfile/'+store.docs[problem.id]?.id" data-bs-toggle="tooltip" title="Download config file">
-        ${store.docs[problem.id]?.file.name} <i class="bi bi-download ms-1"></i>
+        ${store.docs[problem.id].file.name} <i class="bi bi-download ms-1"></i>
       </a>
     </td>
     <td class="text-end">

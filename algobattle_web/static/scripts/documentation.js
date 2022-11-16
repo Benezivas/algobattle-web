@@ -8,6 +8,7 @@ const store = reactive({
     user: user,
     docs: docs,
     user_team: user_team,
+    curr_row: {},
 })
 
 
@@ -43,7 +44,14 @@ app.component("Problem", {
     },
     methods: {
         toggle_editing() {
-            this.editing = !this.editing
+            if (this.editing) {
+                this.editing = false
+                store.curr_row = {}
+            } else {
+                store.curr_row.editing = false
+                store.curr_row = this
+                this.editing = true
+            }
         },
         async remove(doc) {
             var response = await send_request("documentation/delete/" + doc.id)
@@ -75,7 +83,14 @@ app.component("ProblemRow", {
     },
     methods: {
         toggle_editing() {
-            this.editing = !this.editing
+            if (this.editing) {
+                this.editing = false
+                store.curr_row = {}
+            } else {
+                store.curr_row.editing = false
+                store.curr_row = this
+                this.editing = true
+            }
         },
         async remove(doc) {
             var response = await send_request("documentation/delete/" + doc.id)
