@@ -8,6 +8,24 @@ from pydantic import BaseModel
 from fastapi import UploadFile, File, Form
 
 
+class NoEdit:
+    def __eq__(self, o: object) -> bool:
+        return isinstance(o, NoEdit)
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, val: Any):
+        if isinstance(val, NoEdit):
+            return val
+        elif val == "__NO_EDIT__":
+            return NoEdit()
+        else:
+            raise TypeError
+
+
 class BaseSchema(BaseModel):
     class Config:
         orm_mode = True

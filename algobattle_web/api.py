@@ -4,10 +4,10 @@ from datetime import datetime
 from typing import Tuple
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File
 from algobattle_web.database import get_db, Session, ID
-from algobattle_web.models import Config, Context, Documentation, ParticipantInfo, Problem, Program, Schedule, ScheduleParticipant, Team, User, UserSettings
+from algobattle_web.models import Config, Context, Documentation, Problem, Program, Schedule, ScheduleParticipant, Team, User, UserSettings
 from algobattle_web.util import unwrap
 from algobattle_web.dependencies import curr_user
-from algobattle_web.base_classes import BaseSchema
+from algobattle_web.base_classes import BaseSchema, NoEdit
 
 
 def check_if_admin(user: User = Depends(curr_user)):
@@ -434,23 +434,50 @@ def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate):
     else:
         config = unwrap(Config.get(db, data.config))
 
-    participants = []
-    for info in data.participants:
-        team = unwrap(Team.get(db, info.team))
-        generator = info.generator.into_obj(db)
-        solver = info.solver.into_obj(db)
-        participants.append(ParticipantInfo(team, generator=generator, solver=solver))
+    participants = [info.into_obj(db) for info in data.participants]
 
     Schedule.create(db, time=data.time, problem=problem, config=config, participants=participants)
 
 class ScheduleEdit(BaseSchema):
-    time: datetime | None
-    probem: ID | None
-    config: ID | None
+    id: ID
+    time: datetime | NoEdit = NoEdit()
+    problem: ID | NoEdit = NoEdit()
+    config: ID | None | NoEdit = NoEdit()
 
-@admin.post("/schedule/update", response_model=ScheduleEdit)
+@admin.post("/schedule/update", response_model=Schedule.Schema)
 def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit):
-    pass
+    schedule = unwrap(Schedule.get(db, edit.id))
+    
+    if isinstance(edit.problem, NoEdit):
+        problem = NoEdit()
+    else:
+        problem = unwrap(Problem.get(db, edit.problem))
+    
+    if isinstance(edit.config, NoEdit):
+        config = NoEdit()
+    elif edit.config is None:
+        config = None
+    else:
+        config = unwrap(Config.get(db, edit.config))
+    
+    schedule.update(db, edit.time, problem, config)
+
+@admin.post("schedule/add_team", response_model=Schedule.Schema)
+def add_team(*, db: Session = Depends(get_db), id: ID, participant: ScheduleParticipant.Schema):
+    schedule = unwrap(Schedule.get(db, id))
+    schedule.update(db, add=[participant.into_obj(db)])
+    return schedule
+
+@admin.post("schedule/remove_team", response_model=Schedule.Schema)
+def remove_team(*, db: Session = Depends(get_db), id: ID, team: ID):
+    schedule = unwrap(Schedule.get(db, id))
+    team_obj = unwrap(Team.get(db, team))
+    schedule.update(db, remove=[team_obj])
+
+@admin.post("schedule/delete/{id}")
+def delete_schedule(*, db: Session = Depends(get_db), id: ID):
+    unwrap(Schedule.get(db, id)).delete(db)
+    return True
 
 #* has to be executed after all route defns
 router.include_router(admin)

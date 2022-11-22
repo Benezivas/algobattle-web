@@ -16,7 +16,7 @@ from uuid import UUID
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import Base, Session, DbFile, ID, with_store_manager
-from algobattle_web.base_classes import ObjID
+from algobattle_web.base_classes import BaseSchema, NoEdit, ObjID
 from algobattle_web.util import unwrap
 
 
@@ -398,9 +398,11 @@ class Problem(Base):
         else:
             return or_(cls.start.is_(None), cls.start < datetime.now())
 
+
 class _Program_Role(Enum):
     generator = "generator"
     solver = "solver"
+
 
 class Program(Base):
     name: Mapped[str]
@@ -507,12 +509,14 @@ class Documentation(Base):
 
 
 ProgramSource = Literal["team_spec", "program"]
+
+
 @dataclass(frozen=True)
 class ProgramSpec:
     src: ProgramSource
     program: ID | None = None
 
-    class Schema(Base.Schema):
+    class Schema(BaseSchema):
         src: ProgramSource
         program: ObjID | None
 
@@ -525,6 +529,13 @@ class ProgramSpec:
                     return ProgramSpec("program", prog.id)
                 case _:
                     raise ValueError
+
+
+@dataclass
+class ParticipantInfo:
+    team: Team
+    generator: ProgramSpec
+    solver: ProgramSpec
 
 
 class ScheduleParticipant(Base):
@@ -547,12 +558,12 @@ class ScheduleParticipant(Base):
         generator: ProgramSpec.Schema
         solver: ProgramSpec.Schema
 
+        def into_obj(self, db: Session) -> ParticipantInfo:
+            team = unwrap(Team.get(db, self.team))
+            generator = self.generator.into_obj(db)
+            solver = self.solver.into_obj(db)
+            return ParticipantInfo(team, generator=generator, solver=solver)
 
-@dataclass    
-class ParticipantInfo:
-    team: Team
-    generator: ProgramSpec
-    solver: ProgramSpec
 
 
 class Schedule(Base):
@@ -563,7 +574,7 @@ class Schedule(Base):
     participants: Mapped[list[ScheduleParticipant]] = relationship()
     problem: Mapped[Problem] = relationship()
     config: Mapped[Config | None] = relationship()
-    
+
     class Schema(Base.Schema):
         time: datetime
         problem: ObjID
@@ -571,7 +582,9 @@ class Schedule(Base):
         participants: list[ScheduleParticipant.Schema]
 
     @classmethod
-    def create(cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None) -> Schedule:
+    def create(
+        cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None
+    ) -> Schedule:
         if config is None:
             config = problem.config
         schedule = cls(time=time, problem=problem, config=config)
@@ -586,18 +599,30 @@ class Schedule(Base):
     def get(cls, db: Session, id: ID) -> Schedule | None:
         return db.query(cls).filter(cls.id == id).first()
 
-    def update(self, db: Session, time: datetime | None, problem: Problem | None = None, config: Config | None = None, *, add: list[ParticipantInfo] | None = None, remove: list[Team] | None = None):
+    def update(
+        self,
+        db: Session,
+        time: datetime | NoEdit = NoEdit(),
+        problem: Problem | NoEdit = NoEdit(),
+        config: Config | None | NoEdit = NoEdit(),
+        *,
+        add: list[ParticipantInfo] | None = None,
+        remove: list[Team] | None = None,
+    ):
         if add is not None and remove is not None:
             raise TypeError
-        if time is not None:
+
+        if not isinstance(time, NoEdit):
             self.time = time
-        if problem is not None:
+        if not isinstance(problem, NoEdit):
             self.problem = problem
-        if config is not None:
+        if not isinstance(config, NoEdit):
             self.config = config
         if add is not None:
             for info in add:
-                self.participants.append(ScheduleParticipant(schedule_id=self.id, team=info.team, generator=info.generator, solver=info.solver))
+                self.participants.append(
+                    ScheduleParticipant(schedule_id=self.id, team=info.team, generator=info.generator, solver=info.solver)
+                )
         if remove is not None:
             for info in self.participants:
                 if info.team in remove:
