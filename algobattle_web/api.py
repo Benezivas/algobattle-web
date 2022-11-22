@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Tuple
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File
 from algobattle_web.database import get_db, Session, ID
-from algobattle_web.models import Config, Context, Documentation, ParticipantInfo, Problem, Program, ProgramSpec, Schedule, ScheduleParticipant, Team, User, UserSettings
+from algobattle_web.models import Config, Context, Documentation, ParticipantInfo, Problem, Program, Schedule, ScheduleParticipant, Team, User, UserSettings
 from algobattle_web.util import unwrap
 from algobattle_web.dependencies import curr_user
 from algobattle_web.base_classes import BaseSchema

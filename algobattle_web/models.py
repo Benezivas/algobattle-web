@@ -6,7 +6,7 @@ from typing import Any, BinaryIO, Literal, Mapping, cast, overload
 from enum import Enum
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum, select
+from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum
 from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, composite
@@ -16,7 +16,7 @@ from uuid import UUID
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import Base, Session, DbFile, ID, with_store_manager
-from algobattle_web.base_classes import BaseSchema, ObjID
+from algobattle_web.base_classes import ObjID
 from algobattle_web.util import unwrap
 
 
