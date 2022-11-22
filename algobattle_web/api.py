@@ -443,5 +443,14 @@ def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate):
 
     Schedule.create(db, time=data.time, problem=problem, config=config, participants=participants)
 
+class ScheduleEdit(BaseSchema):
+    time: datetime | None
+    probem: ID | None
+    config: ID | None
+
+@admin.post("/schedule/update", response_model=ScheduleEdit)
+def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit):
+    pass
+
 #* has to be executed after all route defns
 router.include_router(admin)
