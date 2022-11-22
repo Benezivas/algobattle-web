@@ -2,14 +2,14 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta, datetime
-from typing import Any, BinaryIO, Mapping, Union, cast, overload
+from typing import Any, BinaryIO, Literal, Mapping, cast, overload
 from enum import Enum
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum
 from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.orm import relationship, Mapped, mapped_column, composite
 from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
 from uuid import UUID
@@ -473,35 +473,67 @@ class Documentation(Base):
             db.commit()
 
 
-class ProgramSource(Enum):
-    TeamSpec = "teamspec"
-    Program = "program"
+ProgramSource = Literal["team_spec", "program"]
+@dataclass(frozen=True)
+class ProgramSpec:
+    src: ProgramSource
+    program: ID | None = None
+
+    class Schema(Base.Schema):
+        src: ProgramSource
+        program: ObjID | None
 
 
 class ScheduleParticipant(Base):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), primary_key=True)
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True)
-    generator: Mapped[ProgramSource] = mapped_column(SqlEnum(ProgramSource))
-    generator_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"))
-    solver: Mapped[ProgramSource] = mapped_column(SqlEnum(ProgramSource))
-    solver_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"))
-
     team: Mapped[Team] = relationship()
-    generator_prog: Mapped[Program | None] = relationship(foreign_keys=[generator_id])
-    solver_prog: Mapped[Program | None] = relationship(foreign_keys=[solver_id])
+
+    gen_src: Mapped[str] = mapped_column()
+    gen_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"))
+    gen_prog: Mapped[Program | None] = relationship(foreign_keys=[gen_id])
+    generator: Mapped[ProgramSpec] = composite(ProgramSpec, gen_src, gen_id)
+
+    sol_src: Mapped[str] = mapped_column()
+    sol_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"))
+    sol_prog: Mapped[Program | None] = relationship(foreign_keys=[sol_id])
+    solver: Mapped[ProgramSpec] = composite(ProgramSpec, sol_src, sol_id)
 
     class Schema(Base.Schema):
         team: ObjID
-        generator: ProgramSource
-        solver: ProgramSource
+        generator: ProgramSpec.Schema
+        solver: ProgramSpec.Schema
 
+
+@dataclass    
+class ParticipantInfo:
+    team: Team
+    generator: ProgramSpec
+    solver: ProgramSpec
 
 
 class Schedule(Base):
     time: Mapped[datetime]
+    problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"))
+    config_id: Mapped[ID | None] = mapped_column(ForeignKey("configs.id"))
 
     participants: Mapped[list[ScheduleParticipant]] = relationship()
-
+    problem: Mapped[Problem] = relationship()
+    config: Mapped[Config | None] = relationship()
+    
     class Schema(Base.Schema):
         time: datetime
         participants: list[ScheduleParticipant.Schema]
+
+    @classmethod
+    def create(cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None):
+        if config is None:
+            config = problem.config
+        schedule = cls(time=time, problem=problem, config=config)
+        db.add(schedule)
+        db.commit()
+        for info in participants:
+            db.add(ScheduleParticipant(schedule_id=schedule.id, team=info.team, generator=info.generator, solver=info.solver))
+        db.commit()
+        return schedule
+
