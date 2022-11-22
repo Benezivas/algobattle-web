@@ -6,7 +6,7 @@ from typing import Any, BinaryIO, Literal, Mapping, cast, overload
 from enum import Enum
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum
+from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum, select
 from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, composite
@@ -526,7 +526,7 @@ class Schedule(Base):
         participants: list[ScheduleParticipant.Schema]
 
     @classmethod
-    def create(cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None):
+    def create(cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None) -> Schedule:
         if config is None:
             config = problem.config
         schedule = cls(time=time, problem=problem, config=config)
@@ -537,3 +537,24 @@ class Schedule(Base):
         db.commit()
         return schedule
 
+    @classmethod
+    def get(cls, db: Session, id: ID) -> Schedule | None:
+        return db.query(cls).filter(cls.id == id).first()
+
+    def update(self, db: Session, time: datetime | None, problem: Problem | None = None, config: Config | None = None, *, add: list[ParticipantInfo] | None = None, remove: list[Team] | None = None):
+        if add is not None and remove is not None:
+            raise TypeError
+        if time is not None:
+            self.time = time
+        if problem is not None:
+            self.problem = problem
+        if config is not None:
+            self.config = config
+        if add is not None:
+            for info in add:
+                self.participants.append(ScheduleParticipant(schedule_id=self.id, team=info.team, generator=info.generator, solver=info.solver))
+        if remove is not None:
+            for info in self.participants:
+                if info.team in remove:
+                    info.delete(db)
+        db.commit()
