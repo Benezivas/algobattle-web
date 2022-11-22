@@ -101,6 +101,11 @@ def docs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     user_team = user.settings.selected_team
     return "documentation.jinja", {"problems": encode(problems), "teams": encode(teams), "docs": jsonable_encoder(docs_by_team), "user_team": user_team.encode()}
 
+@router.get("/schedule")
+@templated
+def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
+    return "schedule.jinja"
+
 #*******************************************************************************
 #* Admin
 #*******************************************************************************
