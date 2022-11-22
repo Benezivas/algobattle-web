@@ -473,6 +473,7 @@ def remove_team(*, db: Session = Depends(get_db), id: ID, team: ID):
     schedule = unwrap(Schedule.get(db, id))
     team_obj = unwrap(Team.get(db, team))
     schedule.update(db, remove=[team_obj])
+    return schedule
 
 @admin.post("schedule/delete/{id}")
 def delete_schedule(*, db: Session = Depends(get_db), id: ID):
