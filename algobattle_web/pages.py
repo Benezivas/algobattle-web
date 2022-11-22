@@ -7,9 +7,10 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 
 from algobattle_web.database import Base, get_db, Session
-from algobattle_web.models import Config, Context, Documentation, Problem, Program, Team, User
+from algobattle_web.models import Config, Context, Documentation, Problem, Program, Team, User, LoginError
 from algobattle_web.templates import templated, templates
-from algobattle_web.util import curr_user, curr_user_maybe, login_token, decode_login_token, send_email, LoginError, encode
+from algobattle_web.util import send_email, encode
+from algobattle_web.dependencies import curr_user, curr_user_maybe
 
 router = APIRouter()
 
@@ -21,7 +22,7 @@ async def home_get():
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request, db: Session = Depends(get_db), token: str | None = None, user: User | None = Depends(curr_user_maybe)):
-    res = decode_login_token(db, token)
+    res = User.decode_login_token(db, token)
     if isinstance(res, User):
         response = RedirectResponse("/")
         response.set_cookie(**res.cookie())
@@ -38,7 +39,7 @@ async def login_get(request: Request, db: Session = Depends(get_db), token: str 
 @router.post("/login", response_class=HTMLResponse)
 async def login_post(request: Request, db: Session = Depends(get_db), email: str = Form()):
     if User.get(db, email) is not None:
-        token = login_token(email)
+        token = User.login_token(email)
         send_email(email, f"{request.url_for('login_post')}?token={token}")
         return templates.TemplateResponse("login.jinja", {"request": request, "user": None, "email_sent": True})
     else:

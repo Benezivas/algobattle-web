@@ -4,8 +4,9 @@ from datetime import datetime
 from typing import Tuple
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File
 from algobattle_web.database import get_db, Session, ID
-from algobattle_web.models import Config, Context, Documentation, Problem, Program, Team, User, UserSettings
-from algobattle_web.util import curr_user
+from algobattle_web.models import Config, Context, Documentation, ParticipantInfo, Problem, Program, ProgramSpec, Schedule, ScheduleParticipant, Team, User, UserSettings
+from algobattle_web.util import unwrap
+from algobattle_web.dependencies import curr_user
 from algobattle_web.base_classes import BaseSchema
 
 
@@ -413,6 +414,34 @@ async def delete_docs(*, db: Session = Depends(get_db), id: ID):
         raise HTTPException(400)
     docs.delete(db)
     return True
+
+#*******************************************************************************
+#* Schedule
+#*******************************************************************************
+
+class ScheduleCreate(BaseSchema):
+    time: datetime
+    problem: ID
+    config: ID | None
+    participants: list[ScheduleParticipant.Schema]
+
+@admin.post("/schedule/create", response_model=Schedule.Schema)
+def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate):
+    problem = unwrap(Problem.get(db, data.problem))
+
+    if data.config is None:
+        config = None
+    else:
+        config = unwrap(Config.get(db, data.config))
+
+    participants = []
+    for info in data.participants:
+        team = unwrap(Team.get(db, info.team))
+        generator = info.generator.into_obj(db)
+        solver = info.solver.into_obj(db)
+        participants.append(ParticipantInfo(team, generator=generator, solver=solver))
+
+    Schedule.create(db, time=data.time, problem=problem, config=config, participants=participants)
 
 #* has to be executed after all route defns
 router.include_router(admin)

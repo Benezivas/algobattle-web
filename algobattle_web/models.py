@@ -16,7 +16,8 @@ from uuid import UUID
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import Base, Session, DbFile, ID, with_store_manager
-from algobattle_web.base_classes import ObjID
+from algobattle_web.base_classes import BaseSchema, ObjID
+from algobattle_web.util import unwrap
 
 
 class ModelError(Exception):
@@ -39,6 +40,13 @@ team_members = Table(
     Column("team", ForeignKey("teams.id"), primary_key=True),
     Column("user", ForeignKey("users.id"), primary_key=True),
 )
+
+
+class LoginError(Enum):
+    NoToken = 0
+    UnregisteredUser = 1
+    InvalidToken = 2
+    ExpiredToken = 3
 
 
 class User(Base):
@@ -122,6 +130,31 @@ class User(Base):
                     return user
         except (JWTError, ExpiredSignatureError, NameError):
             return
+
+    @staticmethod
+    def login_token(email: str, lifetime: timedelta = timedelta(hours=1)) -> str:
+        payload = {
+            "type": "login",
+            "email": email,
+            "exp": datetime.now() + lifetime,
+        }
+        return jwt.encode(payload, SECRET_KEY, ALGORITHM)
+
+    @staticmethod
+    def decode_login_token(db: Session, token: str | None) -> User | LoginError:
+        if token is None:
+            return LoginError.NoToken
+        try:
+            payload = jwt.decode(token, SECRET_KEY, ALGORITHM)
+            if payload["type"] == "login":
+                user = User.get(db, cast(str, payload["email"]))
+                if user is not None:
+                    return user
+        except ExpiredSignatureError:
+            return LoginError.ExpiredToken
+        except (JWTError, NameError):
+            pass
+        return LoginError.InvalidToken
 
 
 class UserSettings(Base):
@@ -483,6 +516,16 @@ class ProgramSpec:
         src: ProgramSource
         program: ObjID | None
 
+        def into_obj(self, db: Session) -> ProgramSpec:
+            match self.src:
+                case "team_spec":
+                    return ProgramSpec("team_spec")
+                case "program":
+                    prog = unwrap(Program.get(db, unwrap(self.program)))
+                    return ProgramSpec("program", prog.id)
+                case _:
+                    raise ValueError
+
 
 class ScheduleParticipant(Base):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), primary_key=True)
@@ -523,6 +566,8 @@ class Schedule(Base):
     
     class Schema(Base.Schema):
         time: datetime
+        problem: ObjID
+        config: ObjID
         participants: list[ScheduleParticipant.Schema]
 
     @classmethod

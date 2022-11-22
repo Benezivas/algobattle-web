@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from inspect import Parameter, Signature, get_annotations, iscoroutinefunction, signature
 
 from algobattle_web.models import User
-from algobattle_web.util import curr_user
+from algobattle_web.dependencies import curr_user
 
 templates = Jinja2Templates(directory=Path(__file__).parent)
 templates.env.policies |= {
