@@ -7,7 +7,7 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 
 from algobattle_web.database import Base, get_db, Session
-from algobattle_web.models import Config, Context, Documentation, Problem, Program, Team, User, LoginError
+from algobattle_web.models import Config, Context, Documentation, Problem, Program, Schedule, Team, User, LoginError
 from algobattle_web.templates import templated, templates
 from algobattle_web.util import send_email, encode
 from algobattle_web.dependencies import curr_user, curr_user_maybe
@@ -104,7 +104,22 @@ def docs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
 @router.get("/schedule")
 @templated
 def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
-    return "schedule.jinja"
+    schedules = db.scalars(select(Schedule).join(Problem).where(Problem.visible_to_sql(user))).unique().all()
+    if user.is_admin:
+        problems = Problem.get_all(db)
+        teams = Team.get_all(db)
+        configs = Config.get_all(db)
+    else:
+        problems = {s.problem for s in schedules}
+        teams = {participant.team for sched in schedules for participant in sched.participants}
+        configs = {sched.config for sched in schedules if sched.config is not None}
+
+    return "schedule.jinja", {
+                "schedules": encode(schedules),
+                "problem": encode(problems),
+                "teams": encode(teams),
+                "configs": encode(configs),
+            }
 
 #*******************************************************************************
 #* Admin

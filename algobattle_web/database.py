@@ -5,10 +5,10 @@ from datetime import datetime
 import functools
 import json
 from pathlib import Path
-from typing import Annotated, Any, Callable, Concatenate, Iterator, ParamSpec, TypeVar
+from typing import Annotated, Any, Callable, Concatenate, Iterator, ParamSpec, Sequence, Type, TypeVar
 from uuid import UUID, uuid4
 
-from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime
+from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime, select
 from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase, registry, mapped_column, Mapped
 from sqlalchemy_utils import UUIDType
 from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable, Attachment
@@ -139,3 +139,8 @@ class Base(DeclarativeBase):
 
     def encode(self) -> dict[str, Any]:
         return jsonable_encoder(self.Schema.from_orm(self))
+
+    @classmethod
+    def get_all(cls: Type[T], db: Session) -> Sequence[T]:
+        """Get all database entries of this type."""
+        return db.scalars(select(cls)).unique().all()
