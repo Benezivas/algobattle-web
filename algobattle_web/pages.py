@@ -109,16 +109,23 @@ def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user))
         problems = Problem.get_all(db)
         teams = Team.get_all(db)
         configs = Config.get_all(db)
+        progs = Program.get_all(db)
+        programs = {team: {
+            "generators": {prog.id: prog for prog in progs if prog.team == team and prog.role == Program.Role.generator},
+            "solvers": {prog.id: prog for prog in progs if prog.team == team and prog.role == Program.Role.solver},
+        } for team in teams}
     else:
         problems = {s.problem for s in schedules}
         teams = {participant.team for sched in schedules for participant in sched.participants}
         configs = {sched.config for sched in schedules if sched.config is not None}
+        programs = {}
 
     return "schedule.jinja", {
                 "schedules": encode(schedules),
                 "problems": encode(problems),
                 "teams": encode(teams),
                 "configs": encode(configs),
+                "programs": encode(programs),
             }
 
 #*******************************************************************************

@@ -438,7 +438,7 @@ def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate):
 
     participants = [info.into_obj(db) for info in data.participants]
 
-    Schedule.create(db, time=data.time, problem=problem, config=config, participants=participants)
+    return Schedule.create(db, time=data.time, problem=problem, config=config, participants=participants)
 
 class ScheduleEdit(BaseSchema):
     id: ID

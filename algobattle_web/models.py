@@ -570,7 +570,7 @@ class Schedule(Base):
     time: Mapped[datetime]
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"))
     config_id: Mapped[ID | None] = mapped_column(ForeignKey("configs.id"))
-    tag: Mapped[str] = mapped_column(default="")
+    name: Mapped[str] = mapped_column(default="")
     points: Mapped[int] = mapped_column(default=0)
 
     participants: Mapped[list[ScheduleParticipant]] = relationship()
