@@ -116,7 +116,7 @@ def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user))
 
     return "schedule.jinja", {
                 "schedules": encode(schedules),
-                "problem": encode(problems),
+                "problems": encode(problems),
                 "teams": encode(teams),
                 "configs": encode(configs),
             }
