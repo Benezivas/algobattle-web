@@ -424,6 +424,8 @@ class ScheduleCreate(BaseSchema):
     problem: ID
     config: ID | None
     participants: list[ScheduleParticipant.Schema]
+    tag: str = ""
+    give_points: bool = True
 
 @admin.post("/schedule/create", response_model=Schedule.Schema)
 def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate):
@@ -443,6 +445,8 @@ class ScheduleEdit(BaseSchema):
     time: datetime | NoEdit = NoEdit()
     problem: ID | NoEdit = NoEdit()
     config: ID | None | NoEdit = NoEdit()
+    tag: str | NoEdit = NoEdit()
+    give_points: bool | NoEdit = NoEdit()
 
 @admin.post("/schedule/update", response_model=Schedule.Schema)
 def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit):

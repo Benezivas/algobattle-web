@@ -570,6 +570,8 @@ class Schedule(Base):
     time: Mapped[datetime]
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"))
     config_id: Mapped[ID | None] = mapped_column(ForeignKey("configs.id"))
+    tag: Mapped[str] = mapped_column(default="")
+    give_points: Mapped[bool] = mapped_column(default=True)
 
     participants: Mapped[list[ScheduleParticipant]] = relationship()
     problem: Mapped[Problem] = relationship()
@@ -580,14 +582,16 @@ class Schedule(Base):
         problem: ObjID
         config: ObjID
         participants: list[ScheduleParticipant.Schema]
+        tag: str
+        give_points: bool
 
     @classmethod
     def create(
-        cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None
+        cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None, tag: str = "", give_points: bool = True
     ) -> Schedule:
         if config is None:
             config = problem.config
-        schedule = cls(time=time, problem=problem, config=config)
+        schedule = cls(time=time, problem=problem, config=config, tag=tag, give_points=give_points)
         db.add(schedule)
         db.commit()
         for info in participants:
@@ -605,6 +609,8 @@ class Schedule(Base):
         time: datetime | NoEdit = NoEdit(),
         problem: Problem | NoEdit = NoEdit(),
         config: Config | None | NoEdit = NoEdit(),
+        tag: str | NoEdit = NoEdit(),
+        give_points: bool | NoEdit = NoEdit(),
         *,
         add: list[ParticipantInfo] | None = None,
         remove: list[Team] | None = None,
@@ -618,6 +624,11 @@ class Schedule(Base):
             self.problem = problem
         if not isinstance(config, NoEdit):
             self.config = config
+        if not isinstance(tag, NoEdit):
+            self.tag = tag
+        if not isinstance(give_points, NoEdit):
+            self.give_points = give_points
+        
         if add is not None:
             for info in add:
                 self.participants.append(
