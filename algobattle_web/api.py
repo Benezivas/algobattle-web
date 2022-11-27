@@ -2,7 +2,8 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Tuple
-from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File
+from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
+from algobattle_web.battle import run_match
 from algobattle_web.database import get_db, Session, ID
 from algobattle_web.models import (
     Config,
@@ -12,7 +13,6 @@ from algobattle_web.models import (
     Problem,
     Program,
     Schedule,
-    ScheduleParticipant,
     Team,
     User,
     UserSettings,
@@ -513,7 +513,7 @@ class ScheduleCreate(BaseSchema):
 
 
 @admin.post("/schedule/create", response_model=Schedule.Schema)
-def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate):
+def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate, background_tasks: BackgroundTasks):
     problem = unwrap(Problem.get(db, data.problem))
 
     if data.config is None:
@@ -523,9 +523,12 @@ def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate):
 
     participants = [info.into_obj(db) for info in data.participants]
 
-    return Schedule.create(
+    schedule = Schedule.create(
         db, name=data.name, time=data.time, points=data.points, problem=problem, config=config, participants=participants
     )
+    if schedule.time <= datetime.now():
+        background_tasks.add_task(run_match, schedule)
+    return schedule
 
 
 class ScheduleEdit(BaseSchema):
