@@ -571,7 +571,7 @@ class Schedule(Base):
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"))
     config_id: Mapped[ID | None] = mapped_column(ForeignKey("configs.id"))
     tag: Mapped[str] = mapped_column(default="")
-    give_points: Mapped[bool] = mapped_column(default=True)
+    points: Mapped[int] = mapped_column(default=0)
 
     participants: Mapped[list[ScheduleParticipant]] = relationship()
     problem: Mapped[Problem] = relationship()
@@ -583,15 +583,15 @@ class Schedule(Base):
         problem: ObjID
         config: ObjID
         participants: list[ScheduleParticipant.Schema]
-        give_points: bool
+        points: int
 
     @classmethod
     def create(
-        cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None, name: str = "", give_points: bool = True
+        cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None, name: str = "", points: int = 0
     ) -> Schedule:
         if config is None:
             config = problem.config
-        schedule = cls(time=time, problem=problem, config=config, name=name, give_points=give_points)
+        schedule = cls(time=time, problem=problem, config=config, name=name, points=points)
         db.add(schedule)
         db.commit()
         for info in participants:
@@ -610,7 +610,7 @@ class Schedule(Base):
         problem: Problem | NoEdit = NoEdit(),
         config: Config | None | NoEdit = NoEdit(),
         name: str | NoEdit = NoEdit(),
-        give_points: bool | NoEdit = NoEdit(),
+        points: int | NoEdit = NoEdit(),
         *,
         add: list[ParticipantInfo] | None = None,
         remove: list[Team] | None = None,
@@ -626,8 +626,8 @@ class Schedule(Base):
             self.config = config
         if not isinstance(name, NoEdit):
             self.name = name
-        if not isinstance(give_points, NoEdit):
-            self.give_points = give_points
+        if not isinstance(points, NoEdit):
+            self.points = points
         
         if add is not None:
             for info in add:
