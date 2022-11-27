@@ -578,20 +578,20 @@ class Schedule(Base):
     config: Mapped[Config | None] = relationship()
 
     class Schema(Base.Schema):
+        name: str
         time: datetime
         problem: ObjID
         config: ObjID
         participants: list[ScheduleParticipant.Schema]
-        tag: str
         give_points: bool
 
     @classmethod
     def create(
-        cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None, tag: str = "", give_points: bool = True
+        cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None, name: str = "", give_points: bool = True
     ) -> Schedule:
         if config is None:
             config = problem.config
-        schedule = cls(time=time, problem=problem, config=config, tag=tag, give_points=give_points)
+        schedule = cls(time=time, problem=problem, config=config, name=name, give_points=give_points)
         db.add(schedule)
         db.commit()
         for info in participants:
@@ -609,7 +609,7 @@ class Schedule(Base):
         time: datetime | NoEdit = NoEdit(),
         problem: Problem | NoEdit = NoEdit(),
         config: Config | None | NoEdit = NoEdit(),
-        tag: str | NoEdit = NoEdit(),
+        name: str | NoEdit = NoEdit(),
         give_points: bool | NoEdit = NoEdit(),
         *,
         add: list[ParticipantInfo] | None = None,
@@ -624,8 +624,8 @@ class Schedule(Base):
             self.problem = problem
         if not isinstance(config, NoEdit):
             self.config = config
-        if not isinstance(tag, NoEdit):
-            self.tag = tag
+        if not isinstance(name, NoEdit):
+            self.name = name
         if not isinstance(give_points, NoEdit):
             self.give_points = give_points
         
