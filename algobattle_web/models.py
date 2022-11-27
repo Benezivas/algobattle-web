@@ -15,7 +15,7 @@ from fastapi import UploadFile
 from uuid import UUID
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, DbFile, ID, with_store_manager
+from algobattle_web.database import Base, Session, DbFile, ID, with_store_manager, WithFiles, BaseNoID
 from algobattle_web.base_classes import BaseSchema, NoEdit, ObjID
 from algobattle_web.util import unwrap
 
@@ -272,11 +272,9 @@ class Team(Base):
         db.commit()
 
 
-class Config(Base):
+class Config(WithFiles):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
-
-    use_store_manager: bool = True
 
     class Schema(Base.Schema):
         name: str
@@ -308,7 +306,7 @@ class Config(Base):
             db.commit()
 
 
-class Problem(Base):
+class Problem(WithFiles):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
@@ -317,8 +315,6 @@ class Problem(Base):
     description: Mapped[DbFile | None] = mapped_column(default=None)
 
     config: Mapped[Config] = relationship(uselist=False, lazy="joined")
-
-    use_store_manager: bool = True
 
     class Schema(Base.Schema):
         name: str
@@ -404,7 +400,7 @@ class _Program_Role(Enum):
     solver = "solver"
 
 
-class Program(Base):
+class Program(WithFiles):
     name: Mapped[str]
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"))
     role: Mapped[_Program_Role] = mapped_column(SqlEnum(_Program_Role))
@@ -415,8 +411,6 @@ class Program(Base):
 
     team: Mapped[Team] = relationship(lazy="joined")
     problem: Mapped[Problem] = relationship(lazy="joined")
-
-    use_store_manager: bool = True
 
     Role = _Program_Role
 
@@ -471,15 +465,13 @@ class Program(Base):
         db.commit()
 
 
-class Documentation(Base):
+class Documentation(WithFiles):
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"))
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"))
     file: Mapped[DbFile]
 
     team: Mapped[Team] = relationship(lazy="joined")
     problem: Mapped[Problem] = relationship(lazy="joined")
-
-    use_store_manager: bool = True
 
     class Schema(Base.Schema):
         team: ObjID
@@ -549,7 +541,7 @@ class ParticipantInfo:
             return ParticipantInfo(team, generator=generator, solver=solver)
 
 
-class ScheduleParticipant(Base):
+class ScheduleParticipant(BaseNoID):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), primary_key=True)
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True)
     team: Mapped[Team] = relationship()
@@ -661,7 +653,7 @@ class ResultParticipantInfo:
             return ResultParticipantInfo(team, generator=generator, solver=solver, points=self.points)
 
 
-class ResultParticipant(Base):
+class ResultParticipant(BaseNoID):
     result_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True)
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True)
     team: Mapped[Team] = relationship()
@@ -674,7 +666,7 @@ class ResultParticipant(Base):
     solver: Mapped[Program] = relationship(foreign_keys=[sol_id])
 
 
-class MatchResult(Base):
+class MatchResult(WithFiles):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"))
     logs: Mapped[DbFile]
     config: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
@@ -682,8 +674,6 @@ class MatchResult(Base):
 
     participants: Mapped[list[ResultParticipant]] = relationship()
     schedule: Mapped[Schedule] = relationship()
-
-    use_store_manager: bool = True
 
     Status = Literal["completed", "failed", "running"]
 

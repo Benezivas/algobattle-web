@@ -104,14 +104,12 @@ P = ParamSpec("P")
 T = TypeVar("T")
 def with_store_manager(func: Callable[Concatenate[Any, Session, P], T]) -> Callable[Concatenate[Any, Session, P], T]:
     def inner(obj, db: Session, *args: P.args, **kwargs: P.kwargs) -> T:
-        if obj.use_store_manager:
-            with StoreManager(db):
-                return func(obj, db, *args, **kwargs)
-        else:
+        with StoreManager(db):
             return func(obj, db, *args, **kwargs)
     return inner
 
-class Base(DeclarativeBase):
+
+class BaseNoID(DeclarativeBase):
     registry = registry(
         type_annotation_map={
             UUID: UUIDType,
@@ -120,19 +118,14 @@ class Base(DeclarativeBase):
         }
     )
 
-    id: Mapped[ID] = mapped_column(primary_key=True)
-
-    use_store_manager: bool = False
-
     class Schema(BaseSchema, ABC):
-        id: ID
+        pass
 
     @classmethod
     @property
     def __tablename__(cls):
         return cls.__name__.lower() + "s"
 
-    @with_store_manager
     def delete(self, db: Session):
         db.delete(self)
         db.commit()
@@ -144,3 +137,18 @@ class Base(DeclarativeBase):
     def get_all(cls: Type[T], db: Session) -> Sequence[T]:
         """Get all database entries of this type."""
         return db.scalars(select(cls)).unique().all()
+
+
+class Base(BaseNoID):
+    __abstract__ = True
+    id: Mapped[ID] = mapped_column(primary_key=True)
+
+    class Schema(BaseNoID.Schema, ABC):
+        id: ID
+
+
+class WithFiles(Base):
+    __abstract__ = True
+    def delete(self, db: Session):
+        with StoreManager(db):
+            return super().delete(db)
