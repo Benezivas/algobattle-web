@@ -552,7 +552,8 @@ def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit):
     else:
         config = unwrap(Config.get(db, edit.config))
 
-    schedule.update(db, edit.time, problem, config)
+    schedule.update(db, name=edit.name, time=edit.time, problem=problem, config=config, points=edit.points)
+    return schedule
 
 
 @admin.post("/schedule/add_team", response_model=Schedule.Schema)
