@@ -1,5 +1,5 @@
 import { createApp, reactive } from "vue"
-import { send_form, send_request, fmt_date } from "base"
+import { send_request, fmt_date } from "base"
 
 
 const store = reactive({
@@ -49,9 +49,7 @@ const app = createApp({
                 })
             var response = await send_request("schedule/create", data)
             if (response) {
-                console.log(response)
-                response = await response.json()
-                store.schedule[response.id] = response
+                store.schedules[response.id] = response
                 this.editing = undefined
             }
         },
@@ -82,25 +80,20 @@ app.component("Schedule", {
         },
     },
     methods: {
-        toggle_editing(team_id) {
-            if (this.editing == team_id) {
-                this.editing = false
-            } else {
-                this.editing = team_id
-            }
+        toggle_editing() {
+            this.editing = !this.editing
         },
         async remove() {
             var response = await send_request("schedule/delete/" + this.schedule.id)
             if (response) {
-                delete store.schedule[this.schedule.id]
+                delete store.schedules[this.schedule.id]
                 this.toggle_editing()
             }
         },
         async edit(event) {
             var response = await send_request("schedule/update", this.schedule)
             if (response) {
-                response = await response.json()
-                store.schedule[response.id] = response
+                store.schedules[response.id] = response
                 this.editing = undefined
             }
         },

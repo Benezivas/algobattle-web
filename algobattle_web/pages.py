@@ -110,9 +110,9 @@ def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user))
         teams = Team.get_all(db)
         configs = Config.get_all(db)
         progs = Program.get_all(db)
-        programs = {team: {
-            "generators": {prog.id: prog for prog in progs if prog.team == team and prog.role == Program.Role.generator},
-            "solvers": {prog.id: prog for prog in progs if prog.team == team and prog.role == Program.Role.solver},
+        programs = {team.id: {
+            "generators": {prog.id: prog.encode() for prog in progs if prog.team == team and prog.role == Program.Role.generator},
+            "solvers": {prog.id: prog.encode() for prog in progs if prog.team == team and prog.role == Program.Role.solver},
         } for team in teams}
     else:
         problems = {s.problem for s in schedules}
@@ -125,7 +125,7 @@ def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user))
                 "problems": encode(problems),
                 "teams": encode(teams),
                 "configs": encode(configs),
-                "programs": encode(programs),
+                "programs": jsonable_encoder(programs),
             }
 
 #*******************************************************************************
