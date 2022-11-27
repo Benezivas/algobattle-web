@@ -581,7 +581,7 @@ class Schedule(Base):
         name: str
         time: datetime
         problem: ObjID
-        config: ObjID
+        config: ObjID | None
         participants: list[ScheduleParticipant.Schema]
         points: int
 
