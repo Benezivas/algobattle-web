@@ -639,3 +639,43 @@ class Schedule(Base):
                 if info.team in remove:
                     info.delete(db)
         db.commit()
+
+
+class ResultParticipant(Base):
+    result_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True)
+    team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True)
+    team: Mapped[Team] = relationship()
+    points: Mapped[int]
+
+    gen_id: Mapped[ID] = mapped_column(ForeignKey("programs.id"))
+    generator: Mapped[Program] = relationship(foreign_keys=[gen_id])
+
+    sol_id: Mapped[ID] = mapped_column(ForeignKey("programs.id"))
+    solver: Mapped[Program] = relationship(foreign_keys=[sol_id])
+
+    class Schema(Base.Schema):
+        team: ObjID
+        points: int
+        generator: ObjID
+        solver: ObjID
+        
+
+class MatchResult(Base):
+    schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"))
+    logs: Mapped[DbFile]
+    config: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
+    status: Mapped[str]
+
+    participants: Mapped[list[ResultParticipant]] = relationship()
+    schedule: Mapped[Schedule] = relationship()
+
+    use_store_manager: bool = True
+
+    Status = Literal["completed", "failed", "running"]
+
+    class Schema(Base.Schema):
+        schedule: ObjID
+        logs: DbFile.Schema
+        config: ObjID
+        participants: list[ResultParticipant.Schema]
+        status: str
