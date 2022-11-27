@@ -641,6 +641,26 @@ class Schedule(Base):
         db.commit()
 
 
+@dataclass
+class ResultParticipantInfo:
+    team: Team
+    points: int
+    generator: Program
+    solver: Program
+
+    class Schema(Base.Schema):
+        team: ObjID
+        points: int
+        generator: ObjID
+        solver: ObjID
+
+        def into_obj(self, db: Session) -> ResultParticipantInfo:
+            team = unwrap(Team.get(db, self.team))
+            generator = unwrap(Program.get(db, self.generator))
+            solver = unwrap(Program.get(db, self.solver))
+            return ResultParticipantInfo(team, generator=generator, solver=solver, points=self.points)
+
+
 class ResultParticipant(Base):
     result_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True)
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True)
@@ -653,12 +673,6 @@ class ResultParticipant(Base):
     sol_id: Mapped[ID] = mapped_column(ForeignKey("programs.id"))
     solver: Mapped[Program] = relationship(foreign_keys=[sol_id])
 
-    class Schema(Base.Schema):
-        team: ObjID
-        points: int
-        generator: ObjID
-        solver: ObjID
-        
 
 class MatchResult(Base):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"))
@@ -679,3 +693,19 @@ class MatchResult(Base):
         config: ObjID
         participants: list[ResultParticipant.Schema]
         status: str
+
+    @classmethod
+    def create(
+        cls, db: Session, schedule: Schedule, logs: BinaryIO | UploadFile, config: Config, status: MatchResult.Status, participants: list[ResultParticipantInfo]
+    ) -> MatchResult:
+        result = cls(schedule=schedule, logs=logs, config=config, status=status)
+        db.add(result)
+        db.commit()
+        for participant in participants:
+            db.add(ResultParticipant(result_id=result.id, team_id=participant.team.id, points=participant.points, generator=participant.generator, solver=participant.solver))
+        db.commit()
+        return result
+
+    @classmethod
+    def get(cls, db: Session, id: ID) -> MatchResult | None:
+        return db.query(cls).filter(cls.id == id).first()
