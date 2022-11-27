@@ -76,7 +76,7 @@ app.component("Schedule", {
     },
     computed: {
         participants_str() {
-            return this.schedule.participants.map(t => store.teams[t].name).join(", ")
+            return this.schedule.participants.map(t => store.teams[t.team].name).join(", ")
         },
     },
     methods: {

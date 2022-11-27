@@ -65,6 +65,8 @@ class ObjID(UUID):
                 return obj.id
             else:
                 raise ValueError
+        elif isinstance(obj, str):
+            return UUID(obj)
         else:
             raise TypeError
 

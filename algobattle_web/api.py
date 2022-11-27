@@ -8,6 +8,7 @@ from algobattle_web.models import (
     Config,
     Context,
     Documentation,
+    ParticipantInfo,
     Problem,
     Program,
     Schedule,
@@ -507,7 +508,7 @@ class ScheduleCreate(BaseSchema):
     time: datetime
     problem: ID
     config: ID | None
-    participants: list[ScheduleParticipant.Schema]
+    participants: list[ParticipantInfo.Schema]
     points: int = 0
 
 
@@ -557,7 +558,7 @@ def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit):
 
 
 @admin.post("/schedule/add_team", response_model=Schedule.Schema)
-def add_team(*, db: Session = Depends(get_db), id: ID, participant: ScheduleParticipant.Schema):
+def add_team(*, db: Session = Depends(get_db), id: ID, participant: ParticipantInfo.Schema):
     schedule = unwrap(Schedule.get(db, id))
     schedule.update(db, add=[participant.into_obj(db)])
     return schedule

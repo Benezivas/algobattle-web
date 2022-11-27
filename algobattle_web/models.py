@@ -537,6 +537,17 @@ class ParticipantInfo:
     generator: ProgramSpec
     solver: ProgramSpec
 
+    class Schema(BaseSchema):
+        team: ObjID
+        generator: ProgramSpec.Schema
+        solver: ProgramSpec.Schema
+
+        def into_obj(self, db: Session) -> ParticipantInfo:
+            team = unwrap(Team.get(db, self.team))
+            generator = self.generator.into_obj(db)
+            solver = self.solver.into_obj(db)
+            return ParticipantInfo(team, generator=generator, solver=solver)
+
 
 class ScheduleParticipant(Base):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), primary_key=True)
@@ -552,17 +563,6 @@ class ScheduleParticipant(Base):
     sol_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"))
     sol_prog: Mapped[Program | None] = relationship(foreign_keys=[sol_id])
     solver: Mapped[ProgramSpec] = composite(ProgramSpec, sol_src, sol_id)
-
-    class Schema(Base.Schema):
-        team: ObjID
-        generator: ProgramSpec.Schema
-        solver: ProgramSpec.Schema
-
-        def into_obj(self, db: Session) -> ParticipantInfo:
-            team = unwrap(Team.get(db, self.team))
-            generator = self.generator.into_obj(db)
-            solver = self.solver.into_obj(db)
-            return ParticipantInfo(team, generator=generator, solver=solver)
 
 
 
@@ -582,7 +582,7 @@ class Schedule(Base):
         time: datetime
         problem: ObjID
         config: ObjID | None
-        participants: list[ScheduleParticipant.Schema]
+        participants: list[ParticipantInfo.Schema]
         points: int
 
     @classmethod
