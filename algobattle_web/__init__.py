@@ -1,9 +1,10 @@
 from __future__ import annotations
+from contextlib import contextmanager
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from algobattle_web.database import SessionLocal, Base, engine
+import algobattle_web.database as database
 from algobattle_web.models import User
 from algobattle_web.config import ADMIN_EMAIL
 from algobattle_web.api import router as api
@@ -11,8 +12,8 @@ from algobattle_web.pages import router as pages
 
 
 
-Base.metadata.create_all(bind=engine)
-with SessionLocal() as db:
+database.Base.metadata.create_all(bind=database.engine)
+with contextmanager(database.get_db)() as db:
     if User.get(db, ADMIN_EMAIL) is None:
         User.create(db, email=ADMIN_EMAIL, name="Admin", is_admin=True)
 

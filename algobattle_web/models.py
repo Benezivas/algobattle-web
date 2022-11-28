@@ -15,7 +15,7 @@ from fastapi import UploadFile
 from uuid import UUID
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, DbFile, ID, BaseNoID
+from algobattle_web.database import Base, Session, DbFile, ID, with_store_manager, WithFiles, BaseNoID
 from algobattle_web.base_classes import BaseSchema, NoEdit, ObjID
 from algobattle_web.util import unwrap
 
@@ -272,7 +272,7 @@ class Team(Base):
         db.commit()
 
 
-class Config(Base):
+class Config(WithFiles):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
 
@@ -306,7 +306,7 @@ class Config(Base):
             db.commit()
 
 
-class Problem(Base):
+class Problem(WithFiles):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
@@ -400,7 +400,7 @@ class _Program_Role(Enum):
     solver = "solver"
 
 
-class Program(Base):
+class Program(WithFiles):
     name: Mapped[str]
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"))
     role: Mapped[_Program_Role] = mapped_column(SqlEnum(_Program_Role))
@@ -424,6 +424,7 @@ class Program(Base):
         locked: bool
 
     @classmethod
+    @with_store_manager
     def create(
         cls, db: Session, name: str, team: Team, role: Program.Role, file: BinaryIO | UploadFile, problem: Problem
     ) -> Program:
@@ -438,6 +439,7 @@ class Program(Base):
         """Queries the db by its id."""
         return db.query(cls).filter(cls.id == prog).first()
 
+    @with_store_manager
     def update(
         self,
         db: Session,
@@ -463,7 +465,7 @@ class Program(Base):
         db.commit()
 
 
-class Documentation(Base):
+class Documentation(WithFiles):
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"))
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"))
     file: Mapped[DbFile]
@@ -477,6 +479,7 @@ class Documentation(Base):
         file: DbFile.Schema
 
     @classmethod
+    @with_store_manager
     def create(cls, db: Session, team: Team, problem: Problem, file: BinaryIO | UploadFile) -> Documentation:
         if cls.get(db, team, problem) is not None:
             raise ValueTaken("team/problem")
@@ -490,6 +493,7 @@ class Documentation(Base):
     def get(cls, db: Session, team: Team, problem: Problem) -> Documentation | None:
         return db.query(cls).filter(cls.team_id == team.id, cls.problem_id == problem.id).first()
 
+    @with_store_manager
     def update(self, db: Session, file: BinaryIO | UploadFile | None):
         if file is not None:
             self.file.attach(file)
@@ -666,7 +670,7 @@ class ResultParticipant(BaseNoID):
     solver: Mapped[Program] = relationship(foreign_keys=[sol_id])
 
 
-class MatchResult(Base):
+class MatchResult(WithFiles):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"))
     logs: Mapped[DbFile | None] = mapped_column(default=None)
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
@@ -691,6 +695,7 @@ class MatchResult(Base):
         problem: ObjID
 
     @classmethod
+    @with_store_manager
     def create(
         cls, db: Session, *, schedule: Schedule, logs: BinaryIO | UploadFile | None = None, config: Config, status: MatchResult.Status, participants: list[ResultParticipantInfo]
     ) -> MatchResult:
