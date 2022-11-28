@@ -24,6 +24,9 @@ dependencies = [
     "python-multipart",
 ]
 
+[project.scripts]
+algobattle_web = "algobattle_web:main"
+
 [tool.pyright]
 diagnosticMode = "workspace"
 

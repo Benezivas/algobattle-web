@@ -2,6 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from uvicorn import run
 
 from algobattle_web.database import Base, SessionLocal, engine
 from algobattle_web.models import User
@@ -22,3 +23,8 @@ app.include_router(api)
 app.include_router(pages)
 
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+
+
+def main():
+    """Starts a basic webserver."""
+    run("algobattle_web:app")
