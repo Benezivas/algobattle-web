@@ -10,7 +10,6 @@ from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum
 from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, composite
-from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
 from uuid import UUID
 
@@ -283,12 +282,11 @@ class Config(Base):
     def create(cls, db: Session, name: str, file: BinaryIO | UploadFile):
         if cls.get(db, name) is not None:
             raise ValueTaken(name)
-        with StoreManager(db):
-            db_file = DbFile()
-            db_file.attach(file)
-            config = cls(name=name, file=db_file)
-            db.add(config)
-            db.commit()
+        db_file = DbFile()
+        db_file.attach(file)
+        config = cls(name=name, file=db_file)
+        db.add(config)
+        db.commit()
         return config
 
     @classmethod
@@ -298,12 +296,11 @@ class Config(Base):
         return db.query(cls).filter(filter_type == context).first()
 
     def update(self, db: Session, name: str | None = None, file: BinaryIO | UploadFile | None = None):
-        with StoreManager(db):
-            if name is not None:
-                self.name = name
-            if file is not None:
-                self.file.attach(file)
-            db.commit()
+        if name is not None:
+            self.name = name
+        if file is not None:
+            self.file.attach(file)
+        db.commit()
 
 
 class Problem(Base):
@@ -337,15 +334,14 @@ class Problem(Base):
     ):
         if cls.get(db, name) is not None:
             raise ValueTaken(name)
-        with StoreManager(db):
-            db_file = DbFile.create_from(file)
-            if description is not None:
-                desc_file = DbFile.create_from(description)
-            else:
-                desc_file = None
-            problem = cls(name=name, file=db_file, config=config, start=start, end=end, description=desc_file)
-            db.add(problem)
-            db.commit()
+        db_file = DbFile.create_from(file)
+        if description is not None:
+            desc_file = DbFile.create_from(description)
+        else:
+            desc_file = None
+        problem = cls(name=name, file=db_file, config=config, start=start, end=end, description=desc_file)
+        db.add(problem)
+        db.commit()
         return problem
 
     @classmethod
@@ -364,22 +360,21 @@ class Problem(Base):
         end: datetime | None = None,
         desc: BinaryIO | UploadFile | None = None,
     ):
-        with StoreManager(db):
-            if name:
-                self.name = name
-            if file is not None:
-                self.file.attach(file)
-            if config is not None:
-                self.config_id = config.id
-            if start is not None:
-                self.start = start
-            if end is not None:
-                self.end = end
-            if desc is not None:
-                if self.description is None:
-                    self.description = DbFile()
-                self.description.attach(desc)
-            db.commit()
+        if name:
+            self.name = name
+        if file is not None:
+            self.file.attach(file)
+        if config is not None:
+            self.config_id = config.id
+        if start is not None:
+            self.start = start
+        if end is not None:
+            self.end = end
+        if desc is not None:
+            if self.description is None:
+                self.description = DbFile()
+            self.description.attach(desc)
+        db.commit()
 
     def visible_to(self, user: User) -> bool:
         if user.is_admin or self.start is None:
