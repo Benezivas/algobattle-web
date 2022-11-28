@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime, select
 from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase, registry, mapped_column, Mapped
 from sqlalchemy_utils import UUIDType
-from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable, Attachment
+from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable
 from starlette.datastructures import UploadFile
 from fastapi.responses import FileResponse
 from fastapi.encoders import jsonable_encoder
