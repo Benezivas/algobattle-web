@@ -632,6 +632,10 @@ class Schedule(Base):
                     info.delete(db)
         db.commit()
 
+    def delete(self, db: Session):
+        for participant in self.participants:
+            participant.delete(db)
+        return super().delete(db)
 
 @dataclass
 class ResultParticipantInfo:
@@ -640,7 +644,7 @@ class ResultParticipantInfo:
     generator: Program
     solver: Program
 
-    class Schema(Base.Schema):
+    class Schema(BaseSchema):
         team: ObjID
         points: float
         generator: ObjID
@@ -683,7 +687,7 @@ class MatchResult(WithFiles):
 
     class Schema(Base.Schema):
         schedule: ObjID
-        logs: DbFile.Schema
+        logs: DbFile.Schema | None
         config: ObjID
         participants: list[ResultParticipantInfo.Schema]
         status: str
@@ -695,7 +699,7 @@ class MatchResult(WithFiles):
     def create(
         cls, db: Session, *, schedule: Schedule, logs: BinaryIO | UploadFile | None = None, config: Config, status: MatchResult.Status, participants: list[ResultParticipantInfo]
     ) -> MatchResult:
-        result = cls(schedule=schedule, logs=logs, config=config, status=status, time=datetime.now())
+        result = cls(schedule=schedule, logs=logs, config=config, status=status, time=datetime.now(), problem=schedule.problem)
         db.add(result)
         db.commit()
         for participant in participants:

@@ -77,6 +77,7 @@ def run_match(db: Session, scheduled_match: Schedule):
             participants.append(ResultParticipantInfo(participant.team, 0, generator=gen, solver=sol))
             team_infos.append(TeamInfo(participant.team.name, generator=gen_path, solver=sol_path))
         db_result = MatchResult.create(db, schedule=scheduled_match, config=config, status="running", participants=participants)
+        db.commit()
 
         with MatchInfo.build(
             problem_path=problem_path,
@@ -99,7 +100,8 @@ def run_match(db: Session, scheduled_match: Schedule):
             db_result.status = "complete"
             logging.shutdown()
             with StoreManager(db), open(logging_path, "rb") as logs:
-                db_result.logs = DbFile.create_from(logs)
+                db_result.logs = DbFile.create_from(logs, original_filename=logs.name)
                 db.commit()
     finally:
+        logging.shutdown()
         shutil.rmtree(STORAGE_PATH / "tmp")
