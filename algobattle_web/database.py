@@ -5,7 +5,7 @@ from datetime import datetime
 import functools
 import json
 from pathlib import Path
-from typing import Annotated, Any, AsyncIterable, Callable, Concatenate, Iterator, ParamSpec, Sequence, Type, TypeVar, cast
+from typing import Annotated, Any, AsyncIterable, Callable, Concatenate, ParamSpec, Sequence, Type, TypeVar, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime, select
