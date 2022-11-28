@@ -57,15 +57,11 @@ class DbFile(SqlFile):
         **kwargs,
     ) -> DbFile:
         if isinstance(attachable, UploadFile):
-            file = attachable.file
-            filename = attachable.filename
-        else:
-            file = attachable
-            filename = None
+            attachable, original_filename = attachable.file, attachable.filename
         return super().attach(
-            file,
+            attachable,
             content_type,   # type: ignore
-            filename,   # type: ignore
+            original_filename,   # type: ignore
             extension,  # type: ignore
             store_id,   # type: ignore
             overwrite,
