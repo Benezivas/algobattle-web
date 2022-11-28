@@ -47,7 +47,6 @@ def run_match(db: Session, scheduled_match: Schedule):
 
         participants.append(ResultParticipantInfo(participant.team, 0, generator=gen, solver=sol))
         team_infos.append(TeamInfo(participant.team.name, generator=gen_path, solver=sol_path))
-
     db_result = MatchResult.create(db, schedule=scheduled_match, config=config, status="running", participants=participants)
 
     with MatchInfo.build(
@@ -55,6 +54,7 @@ def run_match(db: Session, scheduled_match: Schedule):
         config_path = STORAGE_PATH / config.file.path,
         team_infos=team_infos,
         battle_type="iterated",
+        rounds=2,
     ) as match_info:
         result = match_info.run_match()
         points = result.calculate_points(scheduled_match.points)
@@ -68,6 +68,9 @@ def run_match(db: Session, scheduled_match: Schedule):
         for participant in db_result.participants:
             participant.points = points[team_table[participant.team.name]]
         db_result.status = "complete"
+        for handler in logger.handlers:
+            logger.removeHandler(handler)
+            handler.close()
         with StoreManager(db), open(logging_path, "rb") as logs:
             db_result.logs = DbFile.create_from(logs)
             db.commit()

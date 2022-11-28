@@ -669,11 +669,12 @@ class ResultParticipant(BaseNoID):
 class MatchResult(WithFiles):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"))
     logs: Mapped[DbFile | None] = mapped_column(default=None)
-    config: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
+    config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
     status: Mapped[str]
 
     participants: Mapped[list[ResultParticipant]] = relationship()
     schedule: Mapped[Schedule] = relationship()
+    config: Mapped[Config] = relationship()
 
     Status = Literal["complete", "failed", "running"]
 
@@ -685,6 +686,7 @@ class MatchResult(WithFiles):
         status: str
 
     @classmethod
+    @with_store_manager
     def create(
         cls, db: Session, *, schedule: Schedule, logs: BinaryIO | UploadFile | None = None, config: Config, status: MatchResult.Status, participants: list[ResultParticipantInfo]
     ) -> MatchResult:
