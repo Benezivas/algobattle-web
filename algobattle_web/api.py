@@ -527,7 +527,7 @@ def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate, back
         db, name=data.name, time=data.time, points=data.points, problem=problem, config=config, participants=participants
     )
     if schedule.time <= datetime.now():
-        background_tasks.add_task(run_match, schedule)
+        background_tasks.add_task(run_match, db, schedule)
     return schedule
 
 

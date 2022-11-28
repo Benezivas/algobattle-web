@@ -636,13 +636,13 @@ class Schedule(Base):
 @dataclass
 class ResultParticipantInfo:
     team: Team
-    points: int
+    points: float
     generator: Program
     solver: Program
 
     class Schema(Base.Schema):
         team: ObjID
-        points: int
+        points: float
         generator: ObjID
         solver: ObjID
 
@@ -657,7 +657,7 @@ class ResultParticipant(BaseNoID):
     result_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True)
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True)
     team: Mapped[Team] = relationship()
-    points: Mapped[int]
+    points: Mapped[float]
 
     gen_id: Mapped[ID] = mapped_column(ForeignKey("programs.id"))
     generator: Mapped[Program] = relationship(foreign_keys=[gen_id])
@@ -668,14 +668,14 @@ class ResultParticipant(BaseNoID):
 
 class MatchResult(WithFiles):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"))
-    logs: Mapped[DbFile]
+    logs: Mapped[DbFile | None] = mapped_column(default=None)
     config: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
     status: Mapped[str]
 
     participants: Mapped[list[ResultParticipant]] = relationship()
     schedule: Mapped[Schedule] = relationship()
 
-    Status = Literal["completed", "failed", "running"]
+    Status = Literal["complete", "failed", "running"]
 
     class Schema(Base.Schema):
         schedule: ObjID
@@ -686,7 +686,7 @@ class MatchResult(WithFiles):
 
     @classmethod
     def create(
-        cls, db: Session, schedule: Schedule, logs: BinaryIO | UploadFile, config: Config, status: MatchResult.Status, participants: list[ResultParticipantInfo]
+        cls, db: Session, *, schedule: Schedule, logs: BinaryIO | UploadFile | None = None, config: Config, status: MatchResult.Status, participants: list[ResultParticipantInfo]
     ) -> MatchResult:
         result = cls(schedule=schedule, logs=logs, config=config, status=status)
         db.add(result)

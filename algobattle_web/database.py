@@ -5,7 +5,7 @@ from datetime import datetime
 import functools
 import json
 from pathlib import Path
-from typing import Annotated, Any, Callable, Concatenate, Iterator, ParamSpec, Sequence, Type, TypeVar
+from typing import Annotated, Any, Callable, Concatenate, Iterator, ParamSpec, Sequence, Type, TypeVar, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime, select
@@ -58,7 +58,7 @@ class DbFile(SqlFile):
         suppress_pre_process: bool = False,
         suppress_validation: bool = False,
         **kwargs,
-    ) -> Attachment:
+    ) -> DbFile:
         if isinstance(attachable, UploadFile):
             file = attachable.file
             filename = attachable.filename
@@ -76,6 +76,10 @@ class DbFile(SqlFile):
             suppress_validation,
             **kwargs,
         )
+
+    @classmethod
+    def create_from(cls, *args, **kwargs) -> DbFile:
+        return cast(DbFile, super().create_from(*args, **kwargs))
     
     def response(self) -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
