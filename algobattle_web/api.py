@@ -9,6 +9,7 @@ from algobattle_web.models import (
     Config,
     Context,
     Documentation,
+    MatchResult,
     ParticipantInfo,
     Problem,
     Program,
@@ -578,6 +579,25 @@ def remove_team(*, db: Session = Depends(get_db), id: ID, team: ID):
 @admin.post("/schedule/delete/{id}")
 def delete_schedule(*, db: Session = Depends(get_db), id: ID):
     unwrap(Schedule.get(db, id)).delete(db)
+    return True
+
+
+# *******************************************************************************
+# * Schedule
+# *******************************************************************************
+
+@router.get("/result/logs/{id}")
+async def get_match_logs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID):
+    result = unwrap(db.get(MatchResult, id))
+    if user.is_admin or set(user.teams).intersection(p.team for p in result.participants):
+        return unwrap(result.logs).response()
+    else:
+        raise HTTPException(401)
+
+
+@admin.post("/result/delete/{id}")
+def delete_result(*, db: Session = Depends(get_db), id: ID):
+    unwrap(MatchResult.get(db, id)).delete(db)
     return True
 
 
