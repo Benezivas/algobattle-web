@@ -5,7 +5,7 @@ from datetime import datetime
 import functools
 import json
 from pathlib import Path
-from typing import Annotated, Any, Callable, Concatenate, Iterator, ParamSpec, Sequence, Type, TypeVar, cast
+from typing import Annotated, Any, Callable, Concatenate, ParamSpec, Sequence, Type, TypeVar, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime, select
@@ -26,12 +26,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 StoreManager.register("fs", functools.partial(FileSystemStore, STORAGE_PATH, ""), True)
 
 
-def get_db() -> Iterator[Session]:
-    db = SessionLocal()
-    try:
+async def get_db():
+    with SessionLocal() as db, StoreManager(db):
         yield db
-    finally:
-        db.close()
 
 
 class Json(TypeDecorator[Any]):
@@ -150,10 +147,3 @@ class Base(BaseNoID):
 
     class Schema(BaseNoID.Schema, ABC):
         id: ID
-
-
-class WithFiles(Base):
-    __abstract__ = True
-    def delete(self, db: Session):
-        with StoreManager(db):
-            return super().delete(db)
