@@ -671,10 +671,13 @@ class MatchResult(WithFiles):
     logs: Mapped[DbFile | None] = mapped_column(default=None)
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
     status: Mapped[str]
+    time: Mapped[datetime]
+    problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id))
 
     participants: Mapped[list[ResultParticipant]] = relationship()
     schedule: Mapped[Schedule] = relationship()
     config: Mapped[Config] = relationship()
+    problem: Mapped[Problem] = relationship()
 
     Status = Literal["complete", "failed", "running"]
 
@@ -682,15 +685,17 @@ class MatchResult(WithFiles):
         schedule: ObjID
         logs: DbFile.Schema
         config: ObjID
-        participants: list[ResultParticipant.Schema]
+        participants: list[ResultParticipantInfo.Schema]
         status: str
+        time: datetime
+        problem: ObjID
 
     @classmethod
     @with_store_manager
     def create(
         cls, db: Session, *, schedule: Schedule, logs: BinaryIO | UploadFile | None = None, config: Config, status: MatchResult.Status, participants: list[ResultParticipantInfo]
     ) -> MatchResult:
-        result = cls(schedule=schedule, logs=logs, config=config, status=status)
+        result = cls(schedule=schedule, logs=logs, config=config, status=status, time=datetime.now())
         db.add(result)
         db.commit()
         for participant in participants:
