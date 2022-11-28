@@ -137,6 +137,7 @@ class BaseNoID(DeclarativeBase):
         return db.scalars(select(cls)).unique().all()
 
 
+
 class Base(BaseNoID):
     __abstract__ = True
     id: Mapped[ID] = mapped_column(primary_key=True)
@@ -144,6 +145,10 @@ class Base(BaseNoID):
     class Schema(BaseNoID.Schema, ABC):
         id: ID
 
+    @classmethod
+    def get(cls: Type[T], db: Session, identifier: ID) -> T | None:
+        """Queries the database for the object with the given id."""
+        return db.query(cls).filter(cls.id == identifier).first()   # type: ignore
 
 class WithFiles(Base):
     __abstract__ = True

@@ -6,7 +6,7 @@ from typing import Any, BinaryIO, Literal, Mapping, cast, overload
 from enum import Enum
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum
+from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum, select
 from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, composite
@@ -76,10 +76,12 @@ class User(Base):
         return NotImplemented
 
     @classmethod
-    def get(cls, db: Session, user: ID | str) -> User | None:
+    def get(cls, db: Session, identifier: ID | str) -> User | None:
         """Queries the user db by either the user id or their email."""
-        filter_type = cls.email if isinstance(user, str) else cls.id
-        return db.query(cls).filter(filter_type == user).first()
+        if isinstance(identifier, UUID):
+            return super().get(db, identifier)
+        else:
+            return db.scalars(select(cls).filter(cls.email == identifier)).first()
 
     @classmethod
     def create(cls, db: Session, email: str, name: str, is_admin: bool = False) -> User:
@@ -178,9 +180,12 @@ class Context(Base):
         name: str
 
     @classmethod
-    def get(cls, db: Session, context: str | ID) -> Context | None:
-        row = cls.name if isinstance(context, str) else cls.id
-        return db.query(cls).filter(row == context).first()
+    def get(cls, db: Session, identifier: str | ID) -> Context | None:
+        """Queries the database for the context with the given id or name."""
+        if isinstance(identifier, UUID):
+            return super().get(db, identifier)
+        else:
+            return db.scalars(select(cls).filter(cls.name == identifier)).first()
 
     @classmethod
     def create(cls, db: Session, name: str) -> Context:
@@ -221,23 +226,25 @@ class Team(Base):
 
     @overload
     @classmethod
-    def get(cls, db: Session, team: ID) -> Team | None:
+    def get(cls, db: Session, identifier: ID) -> Team | None:
+        """Queries the database for the team with the given id."""
         ...
 
     @overload
     @classmethod
-    def get(cls, db: Session, team: str, context: Context) -> Team | None:
+    def get(cls, db: Session, identifier: str, context: Context) -> Team | None:
+        """Queries the database for the team with the given name in that context."""
         ...
 
     @classmethod
-    def get(cls, db: Session, team: str | ID, context: Context | None = None) -> Team | None:
-        if isinstance(team, str):
+    def get(cls, db: Session, identifier: str | ID, context: Context | None = None) -> Team | None:
+        """Queries the database for the team with the given id or name and context."""
+        if isinstance(identifier, UUID):
+            return super().get(db, identifier)
+        else:
             if context is None:
                 raise ValueError("If the team is given by its name, you have to specify a context!")
-            filter_expr = (cls.name == team, cls.context_id == context.id)
-        else:
-            filter_expr = (cls.id == team,)
-        return db.query(cls).filter(*filter_expr).first()
+            return db.query(cls).filter(cls.name == identifier, cls.context_id == context.id).first()
 
     @classmethod
     def create(cls, db: Session, name: str, context: Context) -> Team:
@@ -292,10 +299,12 @@ class Config(WithFiles):
         return config
 
     @classmethod
-    def get(cls, db: Session, context: ID | str) -> Config | None:
-        """Queries the db by either its id or name."""
-        filter_type = cls.name if isinstance(context, str) else cls.id
-        return db.query(cls).filter(filter_type == context).first()
+    def get(cls, db: Session, identifier: ID | str) -> Config | None:
+        """Queries the database for the config with the given id or name."""
+        if isinstance(identifier, UUID):
+            return super().get(db, identifier)
+        else:
+            return db.query(cls).filter(cls.name == identifier).first()
 
     def update(self, db: Session, name: str | None = None, file: BinaryIO | UploadFile | None = None):
         with StoreManager(db):
@@ -349,10 +358,12 @@ class Problem(WithFiles):
         return problem
 
     @classmethod
-    def get(cls, db: Session, problem: ID | str) -> Problem | None:
-        """Queries the db by either its id or name."""
-        filter_type = cls.name if isinstance(problem, str) else cls.id
-        return db.query(cls).filter(filter_type == problem).first()
+    def get(cls, db: Session, identifier: ID | str) -> Problem | None:
+        """Queries the database for the problem with the given id or name."""
+        if isinstance(identifier, UUID):
+            return super().get(db, identifier)
+        else:
+            return db.query(cls).filter(cls.name == identifier).first()
 
     def update(
         self,
@@ -434,10 +445,6 @@ class Program(WithFiles):
         db.commit()
         return program
 
-    @classmethod
-    def get(cls, db: Session, prog: ID) -> Program | None:
-        """Queries the db by its id."""
-        return db.query(cls).filter(cls.id == prog).first()
 
     @with_store_manager
     def update(
@@ -489,9 +496,27 @@ class Documentation(WithFiles):
         db.commit()
         return docs
 
+    @overload
     @classmethod
-    def get(cls, db: Session, team: Team, problem: Problem) -> Documentation | None:
-        return db.query(cls).filter(cls.team_id == team.id, cls.problem_id == problem.id).first()
+    def get(cls, db: Session, identifier: ID) -> Documentation | None:
+        """Queries the database for the team with the given id."""
+        ...
+
+    @overload
+    @classmethod
+    def get(cls, db: Session, identifier: Team, problem: Problem) -> Documentation | None:
+        """Queries the database for the team with the given name in that context."""
+        ...
+
+    @classmethod
+    def get(cls, db: Session, identifier: ID | Team, problem: Problem | None = None) -> Documentation | None:
+        """Queries the database for the documentation with the given id or team and problem."""
+        if isinstance(identifier, UUID):
+            return super().get(db, identifier)
+        else:
+            if problem is None:
+                raise TypeError
+            return db.query(cls).filter(cls.team_id == identifier.id, cls.problem_id == problem.id).first()
 
     @with_store_manager
     def update(self, db: Session, file: BinaryIO | UploadFile | None):
@@ -590,10 +615,6 @@ class Schedule(Base):
             db.add(ScheduleParticipant(schedule_id=schedule.id, team=info.team, generator=info.generator, solver=info.solver))
         db.commit()
         return schedule
-
-    @classmethod
-    def get(cls, db: Session, id: ID) -> Schedule | None:
-        return db.query(cls).filter(cls.id == id).first()
 
     def update(
         self,
@@ -706,7 +727,3 @@ class MatchResult(WithFiles):
             db.add(ResultParticipant(result_id=result.id, team_id=participant.team.id, points=participant.points, generator=participant.generator, solver=participant.solver))
         db.commit()
         return result
-
-    @classmethod
-    def get(cls, db: Session, id: ID) -> MatchResult | None:
-        return db.query(cls).filter(cls.id == id).first()
