@@ -6,6 +6,7 @@ import shutil
 import sys
 from zipfile import ZipFile
 from sqlalchemy import select
+from sqlalchemy_media import StoreManager
 
 from algobattle_web.models import MatchResult, Program, ResultParticipantInfo, Schedule
 from algobattle_web.database import DbFile, Session
@@ -98,7 +99,7 @@ def run_match(db: Session, scheduled_match: Schedule):
                 participant.points = points[team_table[participant.team.name]]
             db_result.status = "complete"
             logging.shutdown()
-            with open(logging_path, "rb") as logs:
+            with StoreManager(db), open(logging_path, "rb") as logs:
                 db_result.logs = DbFile.create_from(logs, original_filename=logs.name)
                 db.commit()
     finally:
