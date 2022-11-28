@@ -15,6 +15,11 @@ classifiers = [
 dependencies = [
     "algobattle",
     "tomli",
+    # I think this is a windows only issue
+    # what we want is python-magic-bin 0.4.14 but something installs
+    # python-magic >= 0.4.15 so that gets found rather than the good version
+    # it seems to work to just force the bad one to 0.4.13 like this and ignore it
+    "python-magic == 0.4.13",
     "uvicorn",
     "fastapi",
     "jinja2",
