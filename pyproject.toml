@@ -14,14 +14,15 @@ classifiers = [
 ]
 dependencies = [
     "algobattle",
+    "tomli",
+    "uvicorn",
     "fastapi",
     "jinja2",
     "python-jose[cryptography]",
-    "sqlalchemy",
-    "sqlalchemy_utils",
-    "tomli",
-    "sqlalchemy-media",
     "python-multipart",
+    "sqlalchemy >= 2.0.0b1",
+    "sqlalchemy_utils @ git+https://github.com/kvesteri/sqlalchemy-utils.git",
+    "sqlalchemy-media",
 ]
 
 [project.scripts]
