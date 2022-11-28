@@ -50,7 +50,7 @@ def _setup_logging(logging_path: Path, *, verbose: bool = True, silent: bool = F
 
 def run_match(db: Session, scheduled_match: Schedule):
     try:
-        logger, logging_path = _setup_logging(STORAGE_PATH / "tmp", verbose=False, silent=False)
+        logger, logging_path = _setup_logging(STORAGE_PATH / "tmp", verbose=True, silent=True)
         if scheduled_match.config is None:
             config = scheduled_match.problem.config
         else:
