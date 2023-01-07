@@ -49,7 +49,7 @@ class LoginError(Enum):
     ExpiredToken = 3
 
 
-class User(Base):
+class User(Base, kw_only=True):
     email: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str]
     token_id: Mapped[ID]
@@ -279,7 +279,7 @@ class Team(Base):
         db.commit()
 
 
-class Config(WithFiles):
+class Config(WithFiles, kw_only=True):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
 
@@ -411,7 +411,7 @@ class _Program_Role(Enum):
     solver = "solver"
 
 
-class Program(WithFiles):
+class Program(WithFiles, kw_only=True):
     name: Mapped[str]
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"))
     role: Mapped[_Program_Role] = mapped_column(SqlEnum(_Program_Role))
@@ -472,7 +472,7 @@ class Program(WithFiles):
         db.commit()
 
 
-class Documentation(WithFiles):
+class Documentation(WithFiles, kw_only=True):
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"))
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"))
     file: Mapped[DbFile]
@@ -678,7 +678,7 @@ class ResultParticipantInfo:
             return ResultParticipantInfo(team, generator=generator, solver=solver, points=self.points)
 
 
-class ResultParticipant(BaseNoID):
+class ResultParticipant(BaseNoID, kw_only=True):
     result_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True)
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True)
     team: Mapped[Team] = relationship()
@@ -691,7 +691,7 @@ class ResultParticipant(BaseNoID):
     solver: Mapped[Program] = relationship(foreign_keys=[sol_id])
 
 
-class MatchResult(WithFiles):
+class MatchResult(WithFiles, kw_only=True):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"))
     logs: Mapped[DbFile | None] = mapped_column(default=None)
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))

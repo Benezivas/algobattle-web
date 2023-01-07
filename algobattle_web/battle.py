@@ -8,12 +8,13 @@ from zipfile import ZipFile
 from sqlalchemy import select
 from sqlalchemy_media import StoreManager
 
+from algobattle.team import TeamInfo
+from algobattle.match import Match
+from algobattle.util import TempDir
 from algobattle_web.models import MatchResult, Program, ResultParticipantInfo, Schedule
 from algobattle_web.database import DbFile, Session
 from algobattle_web.config import STORAGE_PATH
 
-from algobattle.team import TeamInfo
-from algobattle.match import MatchInfo
 
 def _extract_to(source: Path, target: Path) -> Path:
     target.mkdir(parents=True, exist_ok=True)
@@ -27,16 +28,9 @@ def _setup_logging(logging_path: Path, *, verbose: bool = True, silent: bool = F
     logging_path.mkdir(exist_ok=True)
     t = datetime.now()
     logging_path = logging_path / f"{t.year:04d}-{t.month:02d}-{t.day:02d}_{t.hour:02d}-{t.minute:02d}-{t.second:02d}.log"
-    handlers: list[logging.Handler] = [logging.FileHandler(logging_path, 'w', 'utf-8')]
-
-    if not silent:
-        _consolehandler = logging.StreamHandler(stream=sys.stderr)
-        _consolehandler.setLevel(common_logging_level)
-        _consolehandler.setFormatter(logging.Formatter('%(message)s'))
-        handlers.append(_consolehandler)
 
     logging.basicConfig(
-            handlers=handlers,
+            handlers=[logging.FileHandler(logging_path, 'w', 'utf-8')],
             level=common_logging_level,
             format='%(asctime)s %(levelname)s: %(message)s',
             datefmt='%H:%M:%S',
@@ -44,18 +38,17 @@ def _setup_logging(logging_path: Path, *, verbose: bool = True, silent: bool = F
         )
     logger = logging.getLogger('algobattle')
 
-    logger.info(f"You can find the log files for this run in {logging_path}")
     return logger, logging_path
 
 
 def run_match(db: Session, scheduled_match: Schedule):
-    try:
-        logger, logging_path = _setup_logging(STORAGE_PATH / "tmp", verbose=True, silent=True)
+    with TempDir() as folder:
+        logger, logging_path = _setup_logging(folder, verbose=True, silent=True)
         if scheduled_match.config is None:
             config = scheduled_match.problem.config
         else:
             config = scheduled_match.config
-        problem_path = _extract_to(STORAGE_PATH / scheduled_match.problem.file.path, STORAGE_PATH / "tmp" / "problem")
+        problem_path = _extract_to(STORAGE_PATH / scheduled_match.problem.file.path, folder / "problem")
             
         participants = []
         team_infos = []
@@ -102,6 +95,3 @@ def run_match(db: Session, scheduled_match: Schedule):
             with StoreManager(db), open(logging_path, "rb") as logs:
                 db_result.logs = DbFile.create_from(logs, original_filename=logs.name)
                 db.commit()
-    finally:
-        logging.shutdown()
-        shutil.rmtree(STORAGE_PATH / "tmp")
