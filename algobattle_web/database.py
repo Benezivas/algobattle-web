@@ -138,7 +138,7 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
 
 
 
-class Base(BaseNoID, kw_only=True):
+class Base(BaseNoID, kw_only=True, unsafe_hash=True):
     __abstract__ = True
     id: Mapped[ID] = mapped_column(primary_key=True)
 

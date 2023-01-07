@@ -49,7 +49,7 @@ class LoginError(Enum):
     ExpiredToken = 3
 
 
-class User(Base, kw_only=True):
+class User(Base, kw_only=True, unsafe_hash=True):
     email: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str]
     token_id: Mapped[ID] = mapped_column(init=False)
@@ -159,7 +159,7 @@ class User(Base, kw_only=True):
         return LoginError.InvalidToken
 
 
-class UserSettings(Base):
+class UserSettings(Base, unsafe_hash=True):
     __tablename__ = "usersettings"  # type: ignore
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), default=None)
@@ -171,7 +171,7 @@ class UserSettings(Base):
         selected_team: ObjID | None
 
 
-class Context(Base):
+class Context(Base, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
 
     teams: Mapped[list[Team]] = relationship(back_populates="context")
@@ -209,7 +209,7 @@ class Context(Base):
         db.commit()
 
 
-class Team(Base):
+class Team(Base, unsafe_hash=True):
     name: Mapped[str]
     context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"))
 
@@ -279,7 +279,7 @@ class Team(Base):
         db.commit()
 
 
-class Config(WithFiles, kw_only=True):
+class Config(WithFiles, kw_only=True, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
 
@@ -315,7 +315,7 @@ class Config(WithFiles, kw_only=True):
             db.commit()
 
 
-class Problem(WithFiles, kw_only=True):
+class Problem(WithFiles, kw_only=True, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
@@ -411,7 +411,7 @@ class _Program_Role(Enum):
     solver = "solver"
 
 
-class Program(WithFiles, kw_only=True):
+class Program(WithFiles, kw_only=True, unsafe_hash=True):
     name: Mapped[str]
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"))
     role: Mapped[_Program_Role] = mapped_column(SqlEnum(_Program_Role))
@@ -472,7 +472,7 @@ class Program(WithFiles, kw_only=True):
         db.commit()
 
 
-class Documentation(WithFiles, kw_only=True):
+class Documentation(WithFiles, kw_only=True, unsafe_hash=True):
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"))
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"))
     file: Mapped[DbFile]
@@ -528,7 +528,7 @@ class Documentation(WithFiles, kw_only=True):
 ProgramSource = Literal["team_spec", "program"]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, unsafe_hash=True)
 class ProgramSpec:
     src: ProgramSource
     program: ID | None = None
@@ -566,7 +566,7 @@ class ParticipantInfo:
             return ParticipantInfo(team, generator=generator, solver=solver)
 
 
-class ScheduleParticipant(BaseNoID):
+class ScheduleParticipant(BaseNoID, unsafe_hash=True):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), primary_key=True)
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True)
     team: Mapped[Team] = relationship()
@@ -583,7 +583,7 @@ class ScheduleParticipant(BaseNoID):
 
 
 
-class Schedule(Base):
+class Schedule(Base, unsafe_hash=True):
     time: Mapped[datetime]
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"))
     config_id: Mapped[ID | None] = mapped_column(ForeignKey("configs.id"))
@@ -678,7 +678,7 @@ class ResultParticipantInfo:
             return ResultParticipantInfo(team, generator=generator, solver=solver, points=self.points)
 
 
-class ResultParticipant(BaseNoID, kw_only=True):
+class ResultParticipant(BaseNoID, kw_only=True, unsafe_hash=True):
     result_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True)
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True)
     team: Mapped[Team] = relationship()
@@ -691,7 +691,7 @@ class ResultParticipant(BaseNoID, kw_only=True):
     solver: Mapped[Program] = relationship(foreign_keys=[sol_id])
 
 
-class MatchResult(WithFiles, kw_only=True):
+class MatchResult(WithFiles, kw_only=True, unsafe_hash=True):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"))
     logs: Mapped[DbFile | None] = mapped_column(default=None)
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
