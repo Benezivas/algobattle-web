@@ -2,7 +2,7 @@
 name = "algobattle_web"
 version = "0.0.1"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [{name = "Imogen Hergeth"}, {name = "Henri Lotze"}]
 urls = {github = "https://github.com/Benezivas/algobattle-web"}
@@ -14,7 +14,6 @@ classifiers = [
 ]
 dependencies = [
     "algobattle",
-    "tomli",
     # I think this is a windows only issue
     # what we want is python-magic-bin 0.4.14 but something installs
     # python-magic >= 0.4.15 so that gets found rather than the good version
@@ -26,7 +25,7 @@ dependencies = [
     "python-jose[cryptography]",
     "python-multipart",
     "sqlalchemy >= 2.0.0b1",
-    "sqlalchemy_utils @ git+https://github.com/kvesteri/sqlalchemy-utils.git",
+    "SQLALchemy-Utils",
     "sqlalchemy-media",
 ]
 
