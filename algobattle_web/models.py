@@ -720,7 +720,11 @@ class MatchResult(WithFiles, kw_only=True, unsafe_hash=True):
     def create(
         cls, db: Session, *, schedule: Schedule, logs: BinaryIO | UploadFile | None = None, config: Config, status: MatchResult.Status, participants: list[ResultParticipantInfo]
     ) -> MatchResult:
-        result = cls(schedule=schedule, logs=logs, config=config, status=status, time=datetime.now(), problem=schedule.problem)
+        if logs is not None:
+            log_file = DbFile.create_from(logs)
+        else:
+            log_file = None
+        result = cls(schedule=schedule, logs=log_file, config=config, status=status, time=datetime.now(), problem=schedule.problem)
         db.add(result)
         db.commit()
         for participant in participants:
