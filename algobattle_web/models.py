@@ -52,7 +52,7 @@ class LoginError(Enum):
 class User(Base, kw_only=True):
     email: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str]
-    token_id: Mapped[ID]
+    token_id: Mapped[ID] = mapped_column(init=False)
     is_admin: Mapped[bool] = mapped_column(default=False)
 
     teams: Mapped[list[Team]] = relationship(secondary=team_members, back_populates="members", lazy="joined")
@@ -315,7 +315,7 @@ class Config(WithFiles, kw_only=True):
             db.commit()
 
 
-class Problem(WithFiles):
+class Problem(WithFiles, kw_only=True):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"))
