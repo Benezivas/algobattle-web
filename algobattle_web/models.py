@@ -1,8 +1,8 @@
 "Database models"
-from __future__ import annotations
+#from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta, datetime
-from typing import Any, BinaryIO, Literal, Mapping, cast, overload
+from typing import Any, BinaryIO, Literal, Mapping, Self, cast, overload
 from enum import Enum
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
@@ -55,8 +55,8 @@ class User(Base, kw_only=True, unsafe_hash=True):
     token_id: Mapped[ID] = mapped_column(init=False)
     is_admin: Mapped[bool] = mapped_column(default=False)
 
-    teams: Mapped[list[Team]] = relationship(secondary=team_members, back_populates="members", lazy="joined")
-    settings: Mapped[UserSettings] = relationship(back_populates="user", lazy="joined")
+    teams: Mapped[list["Team"]] = relationship(secondary=team_members, back_populates="members", lazy="joined", init=False)
+    settings: Mapped["UserSettings"] = relationship(back_populates="user", lazy="joined", init=False)
 
     class Schema(Base.Schema):
         name: str
@@ -76,7 +76,7 @@ class User(Base, kw_only=True, unsafe_hash=True):
         return NotImplemented
 
     @classmethod
-    def get(cls, db: Session, identifier: ID | str) -> User | None:
+    def get(cls, db: Session, identifier: ID | str) -> Self | None:
         """Queries the user db by either the user id or their email."""
         if isinstance(identifier, UUID):
             return super().get(db, identifier)
@@ -84,7 +84,7 @@ class User(Base, kw_only=True, unsafe_hash=True):
             return db.scalars(select(cls).filter(cls.email == identifier)).first()
 
     @classmethod
-    def create(cls, db: Session, email: str, name: str, is_admin: bool = False) -> User:
+    def create(cls, db: Session, email: str, name: str, is_admin: bool = False) -> Self:
         """Creates a new user, raises `EmailTaken` if the email is already in use."""
         if cls.get(db, email) is not None:
             raise ValueTaken(email)
@@ -95,7 +95,7 @@ class User(Base, kw_only=True, unsafe_hash=True):
         db.commit()
         return new_user
 
-    def update(self, db: Session, email: str | None = None, name: str | None = None, is_admin: bool | None = None) -> User:
+    def update(self, db: Session, email: str | None = None, name: str | None = None, is_admin: bool | None = None) -> Self:
         if email:
             email_user = self.get(db, email)
             if email_user is not None and email_user != self:
@@ -119,7 +119,7 @@ class User(Base, kw_only=True, unsafe_hash=True):
         return {"key": "user_token", "value": jwt.encode(payload, SECRET_KEY, ALGORITHM)}
 
     @classmethod
-    def decode_token(cls, db: Session, token: str | None) -> User | None:
+    def decode_token(cls, db: Session, token: str | None) -> Self | None:
         if token is None:
             return
         try:
@@ -142,8 +142,8 @@ class User(Base, kw_only=True, unsafe_hash=True):
         }
         return jwt.encode(payload, SECRET_KEY, ALGORITHM)
 
-    @staticmethod
-    def decode_login_token(db: Session, token: str | None) -> User | LoginError:
+    @classmethod
+    def decode_login_token(cls, db: Session, token: str | None) -> Self | LoginError:
         if token is None:
             return LoginError.NoToken
         try:
@@ -164,8 +164,8 @@ class UserSettings(Base, unsafe_hash=True):
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), default=None)
 
-    user: Mapped[User] = relationship(back_populates="settings", lazy="joined")
-    selected_team: Mapped[Team | None] = relationship(lazy="joined")
+    user: Mapped[User] = relationship(back_populates="settings", lazy="joined", init=False)
+    selected_team: Mapped["Team | None"] = relationship(lazy="joined", init=False)
 
     class Schema(Base.Schema):
         selected_team: ObjID | None
@@ -174,13 +174,13 @@ class UserSettings(Base, unsafe_hash=True):
 class Context(Base, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
 
-    teams: Mapped[list[Team]] = relationship(back_populates="context")
+    teams: Mapped[list["Team"]] = relationship(back_populates="context")
 
     class Schema(Base.Schema):
         name: str
 
     @classmethod
-    def get(cls, db: Session, identifier: str | ID) -> Context | None:
+    def get(cls, db: Session, identifier: str | ID) -> Self | None:
         """Queries the database for the context with the given id or name."""
         if isinstance(identifier, UUID):
             return super().get(db, identifier)
@@ -188,7 +188,7 @@ class Context(Base, unsafe_hash=True):
             return db.scalars(select(cls).filter(cls.name == identifier)).first()
 
     @classmethod
-    def create(cls, db: Session, name: str) -> Context:
+    def create(cls, db: Session, name: str) -> Self:
         if cls.get(db, name) is not None:
             raise ValueTaken(name)
         context = Context(name=name)
@@ -196,7 +196,7 @@ class Context(Base, unsafe_hash=True):
         db.commit()
         return context
 
-    def update(self, db: Session, name: str | None) -> Context:
+    def update(self, db: Session, name: str | None) -> Self:
         if name is not None:
             self.name = name
             db.commit()
@@ -226,18 +226,18 @@ class Team(Base, unsafe_hash=True):
 
     @overload
     @classmethod
-    def get(cls, db: Session, identifier: ID) -> Team | None:
+    def get(cls, db: Session, identifier: ID) -> Self | None:
         """Queries the database for the team with the given id."""
         ...
 
     @overload
     @classmethod
-    def get(cls, db: Session, identifier: str, context: Context) -> Team | None:
+    def get(cls, db: Session, identifier: str, context: Context) -> Self | None:
         """Queries the database for the team with the given name in that context."""
         ...
 
     @classmethod
-    def get(cls, db: Session, identifier: str | ID, context: Context | None = None) -> Team | None:
+    def get(cls, db: Session, identifier: str | ID, context: Context | None = None) -> Self | None:
         """Queries the database for the team with the given id or name and context."""
         if isinstance(identifier, UUID):
             return super().get(db, identifier)
@@ -247,7 +247,7 @@ class Team(Base, unsafe_hash=True):
             return db.query(cls).filter(cls.name == identifier, cls.context_id == context.id).first()
 
     @classmethod
-    def create(cls, db: Session, name: str, context: Context) -> Team:
+    def create(cls, db: Session, name: str, context: Context) -> Self:
         if cls.get(db, name, context) is not None:
             raise ValueTaken(name)
         team = cls(name=name, context_id=context.id)
@@ -299,7 +299,7 @@ class Config(WithFiles, kw_only=True, unsafe_hash=True):
         return config
 
     @classmethod
-    def get(cls, db: Session, identifier: ID | str) -> Config | None:
+    def get(cls, db: Session, identifier: ID | str) -> Self | None:
         """Queries the database for the config with the given id or name."""
         if isinstance(identifier, UUID):
             return super().get(db, identifier)
@@ -358,7 +358,7 @@ class Problem(WithFiles, kw_only=True, unsafe_hash=True):
         return problem
 
     @classmethod
-    def get(cls, db: Session, identifier: ID | str) -> Problem | None:
+    def get(cls, db: Session, identifier: ID | str) -> Self | None:
         """Queries the database for the problem with the given id or name."""
         if isinstance(identifier, UUID):
             return super().get(db, identifier)
@@ -437,8 +437,8 @@ class Program(WithFiles, kw_only=True, unsafe_hash=True):
     @classmethod
     @with_store_manager
     def create(
-        cls, db: Session, name: str, team: Team, role: Program.Role, file: BinaryIO | UploadFile, problem: Problem
-    ) -> Program:
+        cls, db: Session, name: str, team: Team, role: "Program.Role", file: BinaryIO | UploadFile, problem: Problem
+    ) -> Self:
         db_file = DbFile.create_from(file)
         program = cls(name=name, team=team, role=role, file=db_file, problem=problem)
         db.add(program)
@@ -452,7 +452,7 @@ class Program(WithFiles, kw_only=True, unsafe_hash=True):
         db: Session,
         name: str | None = None,
         team: Team | None = None,
-        role: Program.Role | None = None,
+        role: "Program.Role | None" = None,
         file: BinaryIO | UploadFile | None = None,
         problem: Problem | None = None,
         locked: bool | None = None,
@@ -487,7 +487,7 @@ class Documentation(WithFiles, kw_only=True, unsafe_hash=True):
 
     @classmethod
     @with_store_manager
-    def create(cls, db: Session, team: Team, problem: Problem, file: BinaryIO | UploadFile) -> Documentation:
+    def create(cls, db: Session, team: Team, problem: Problem, file: BinaryIO | UploadFile) -> Self:
         if cls.get(db, team, problem) is not None:
             raise ValueTaken("team/problem")
         db_file = DbFile.create_from(file)
@@ -498,18 +498,18 @@ class Documentation(WithFiles, kw_only=True, unsafe_hash=True):
 
     @overload
     @classmethod
-    def get(cls, db: Session, identifier: ID) -> Documentation | None:
+    def get(cls, db: Session, identifier: ID) -> Self | None:
         """Queries the database for the team with the given id."""
         ...
 
     @overload
     @classmethod
-    def get(cls, db: Session, identifier: Team, problem: Problem) -> Documentation | None:
+    def get(cls, db: Session, identifier: Team, problem: Problem) -> Self | None:
         """Queries the database for the team with the given name in that context."""
         ...
 
     @classmethod
-    def get(cls, db: Session, identifier: ID | Team, problem: Problem | None = None) -> Documentation | None:
+    def get(cls, db: Session, identifier: ID | Team, problem: Problem | None = None) -> Self | None:
         """Queries the database for the documentation with the given id or team and problem."""
         if isinstance(identifier, UUID):
             return super().get(db, identifier)
@@ -537,7 +537,7 @@ class ProgramSpec:
         src: ProgramSource
         program: ObjID | None
 
-        def into_obj(self, db: Session) -> ProgramSpec:
+        def into_obj(self, db: Session) -> "ProgramSpec":
             match self.src:
                 case "team_spec":
                     return ProgramSpec("team_spec")
@@ -559,7 +559,7 @@ class ParticipantInfo:
         generator: ProgramSpec.Schema
         solver: ProgramSpec.Schema
 
-        def into_obj(self, db: Session) -> ParticipantInfo:
+        def into_obj(self, db: Session) -> "ParticipantInfo":
             team = unwrap(Team.get(db, self.team))
             generator = self.generator.into_obj(db)
             solver = self.solver.into_obj(db)
@@ -605,7 +605,7 @@ class Schedule(Base, unsafe_hash=True):
     @classmethod
     def create(
         cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None, name: str = "", points: int = 0
-    ) -> Schedule:
+    ) -> Self:
         if config is None:
             config = problem.config
         schedule = cls(time=time, problem=problem, config=config, name=name, points=points)
@@ -671,7 +671,7 @@ class ResultParticipantInfo:
         generator: ObjID
         solver: ObjID
 
-        def into_obj(self, db: Session) -> ResultParticipantInfo:
+        def into_obj(self, db: Session) -> "ResultParticipantInfo":
             team = unwrap(Team.get(db, self.team))
             generator = unwrap(Program.get(db, self.generator))
             solver = unwrap(Program.get(db, self.solver))
@@ -718,8 +718,8 @@ class MatchResult(WithFiles, kw_only=True, unsafe_hash=True):
     @classmethod
     @with_store_manager
     def create(
-        cls, db: Session, *, schedule: Schedule, logs: BinaryIO | UploadFile | None = None, config: Config, status: MatchResult.Status, participants: list[ResultParticipantInfo]
-    ) -> MatchResult:
+        cls, db: Session, *, schedule: Schedule, logs: BinaryIO | UploadFile | None = None, config: Config, status: "MatchResult.Status", participants: list[ResultParticipantInfo]
+    ) -> Self:
         if logs is not None:
             log_file = DbFile.create_from(logs)
         else:
