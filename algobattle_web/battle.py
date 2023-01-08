@@ -2,8 +2,6 @@ from __future__ import annotations
 from datetime import datetime
 import logging
 from pathlib import Path
-import shutil
-import sys
 from zipfile import ZipFile
 from sqlalchemy import select
 from sqlalchemy_media import StoreManager
