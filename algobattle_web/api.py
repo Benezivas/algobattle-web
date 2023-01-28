@@ -1,7 +1,7 @@
 "Module specifying the json api actions."
 from __future__ import annotations
 from datetime import datetime
-from typing import Tuple
+from typing import Any, Tuple
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from algobattle_web.battle import run_match
 from algobattle_web.database import get_db, Session, ID
@@ -309,7 +309,7 @@ async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate =
     config = Config.get(db, problem.config)
     if config is None:
         raise HTTPException(400)
-    args = problem.dict() | {"config": config}
+    args: dict[str, Any] = problem.dict() | {"config": config}
     return Problem.create(db, **args)
 
 

@@ -152,6 +152,7 @@ class Base(BaseNoID, kw_only=True, unsafe_hash=True):
 
 class WithFiles(Base):
     __abstract__ = True
+
     def delete(self, db: Session):
         with StoreManager(db):
             return super().delete(db)
