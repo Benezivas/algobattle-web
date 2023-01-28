@@ -140,7 +140,7 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
 
 class Base(BaseNoID, kw_only=True, unsafe_hash=True):
     __abstract__ = True
-    id: Mapped[ID] = mapped_column(default_factory=uuid4, primary_key=True)
+    id: Mapped[ID] = mapped_column(default_factory=uuid4, primary_key=True, init=False)
 
     class Schema(BaseNoID.Schema, ABC):
         id: ID

@@ -49,7 +49,7 @@ class LoginError(Enum):
     ExpiredToken = 3
 
 
-class User(Base, kw_only=True, unsafe_hash=True):
+class User(Base, unsafe_hash=True):
     email: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str]
     token_id: Mapped[ID] = mapped_column(init=False)
@@ -279,7 +279,7 @@ class Team(Base, unsafe_hash=True):
         db.commit()
 
 
-class Config(WithFiles, kw_only=True, unsafe_hash=True):
+class Config(WithFiles, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
 
@@ -315,15 +315,15 @@ class Config(WithFiles, kw_only=True, unsafe_hash=True):
             db.commit()
 
 
-class Problem(WithFiles, kw_only=True, unsafe_hash=True):
+class Problem(WithFiles, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
+    config: Mapped[Config] = relationship(uselist=False, lazy="joined")
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"), init=False)
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
     description: Mapped[DbFile | None] = mapped_column(default=None)
 
-    config: Mapped[Config] = relationship(uselist=False, lazy="joined")
 
     class Schema(Base.Schema):
         name: str
@@ -411,17 +411,17 @@ class _Program_Role(Enum):
     solver = "solver"
 
 
-class Program(WithFiles, kw_only=True, unsafe_hash=True):
+class Program(WithFiles, unsafe_hash=True):
     name: Mapped[str]
+    team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
     role: Mapped[_Program_Role] = mapped_column(SqlEnum(_Program_Role))
     file: Mapped[DbFile]
-    creation_time: Mapped[datetime] = mapped_column(default=datetime.now)
+    problem: Mapped[Problem] = relationship(lazy="joined")
     problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"), init=False)
+    creation_time: Mapped[datetime] = mapped_column(default=datetime.now)
     locked: Mapped[bool] = mapped_column(default=False)
 
-    team: Mapped[Team] = relationship(lazy="joined")
-    problem: Mapped[Problem] = relationship(lazy="joined")
 
     Role = _Program_Role
 
@@ -472,7 +472,7 @@ class Program(WithFiles, kw_only=True, unsafe_hash=True):
         db.commit()
 
 
-class Documentation(WithFiles, kw_only=True, unsafe_hash=True):
+class Documentation(WithFiles, unsafe_hash=True):
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
     file: Mapped[DbFile]
@@ -566,7 +566,7 @@ class ParticipantInfo:
             return ParticipantInfo(team, generator=generator, solver=solver)
 
 
-class ScheduleParticipant(BaseNoID, kw_only=True, unsafe_hash=True):
+class ScheduleParticipant(BaseNoID, unsafe_hash=True):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), primary_key=True)
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True, init=False)
     team: Mapped[Team] = relationship(uselist=False)
@@ -583,16 +583,16 @@ class ScheduleParticipant(BaseNoID, kw_only=True, unsafe_hash=True):
 
 
 
-class Schedule(Base, kw_only=True, unsafe_hash=True):
+class Schedule(Base, unsafe_hash=True):
     time: Mapped[datetime]
+    problem: Mapped[Problem] = relationship(uselist=False)
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
+    config: Mapped[Config | None] = relationship(uselist=False)
     config_id: Mapped[ID | None] = mapped_column(ForeignKey("configs.id"), init=False)
     name: Mapped[str] = mapped_column(default="")
     points: Mapped[int] = mapped_column(default=0)
 
     participants: Mapped[list[ScheduleParticipant]] = relationship(init=False)
-    problem: Mapped[Problem] = relationship(uselist=False)
-    config: Mapped[Config | None] = relationship(uselist=False)
 
     class Schema(Base.Schema):
         name: str
@@ -678,7 +678,7 @@ class ResultParticipantInfo:
             return ResultParticipantInfo(team, generator=generator, solver=solver, points=self.points)
 
 
-class ResultParticipant(BaseNoID, kw_only=True, unsafe_hash=True):
+class ResultParticipant(BaseNoID, unsafe_hash=True):
     result_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True)
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True, init=False)
     team: Mapped[Team] = relationship()
@@ -691,9 +691,8 @@ class ResultParticipant(BaseNoID, kw_only=True, unsafe_hash=True):
     solver: Mapped[Program] = relationship(foreign_keys=[sol_id])
 
 
-class MatchResult(WithFiles, kw_only=True, unsafe_hash=True):
+class MatchResult(WithFiles, unsafe_hash=True):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), init=False)
-    logs: Mapped[DbFile | None] = mapped_column(default=None)
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"), init=False)
     status: Mapped[str]
     time: Mapped[datetime]
@@ -703,6 +702,7 @@ class MatchResult(WithFiles, kw_only=True, unsafe_hash=True):
     schedule: Mapped[Schedule] = relationship()
     config: Mapped[Config] = relationship()
     problem: Mapped[Problem] = relationship()
+    logs: Mapped[DbFile | None] = mapped_column(default=None)
 
     Status = Literal["complete", "failed", "running"]
 
