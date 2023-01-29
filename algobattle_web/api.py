@@ -1,6 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime
-from typing import Any, Callable, Tuple
+from typing import Any, Callable
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute, get_typed_return_annotation, Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
@@ -17,7 +17,6 @@ from algobattle_web.models import (
     Schedule,
     Team,
     User,
-    UserSettings,
 )
 from algobattle_web.util import unwrap
 from algobattle_web.dependencies import curr_user
@@ -230,7 +229,7 @@ class EditTeamMember(BaseSchema):
     user: ID
 
 
-@admin.post("/team/add_member", response_model=Tuple[Team.Schema, User.Schema])
+@admin.post("/team/add_member", response_model=tuple[Team.Schema, User.Schema])
 async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember) -> tuple[Team, User]:
     user = User.get(db, info.user)
     team = Team.get(db, info.team)
@@ -241,7 +240,7 @@ async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember
     return team, user
 
 
-@admin.post("/team/remove_member", response_model=Tuple[Team.Schema, User.Schema])
+@admin.post("/team/remove_member", response_model=tuple[Team.Schema, User.Schema])
 async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMember) -> tuple[Team, User]:
     user = User.get(db, info.user)
     team = Team.get(db, info.team)
