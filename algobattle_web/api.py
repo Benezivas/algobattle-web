@@ -1,8 +1,8 @@
 "Module specifying the json api actions."
-from __future__ import annotations
 from datetime import datetime
 from typing import Any, Tuple
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
+from fastapi.responses import FileResponse
 from algobattle_web.battle import run_match
 from algobattle_web.database import get_db, Session, ID
 from algobattle_web.models import (
@@ -43,7 +43,7 @@ class CreateUser(BaseSchema):
 
 
 @admin.post("/user/create", response_model=User.Schema)
-async def create_user(*, db: Session = Depends(get_db), user: CreateUser):
+async def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
     return User.create(db, user.email, user.name, user.is_admin)
 
 
@@ -55,7 +55,7 @@ class EditUser(BaseSchema):
 
 
 @admin.post("/user/edit", response_model=User.Schema)
-async def edit_user(*, db: Session = Depends(get_db), edit: EditUser):
+async def edit_user(*, db: Session = Depends(get_db), edit: EditUser) -> User:
     user = User.get(db, edit.id)
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -68,7 +68,7 @@ class DeleteUser(BaseSchema):
 
 
 @admin.post("/user/delete")
-async def delete_user(*, db: Session = Depends(get_db), user_schema: DeleteUser):
+async def delete_user(*, db: Session = Depends(get_db), user_schema: DeleteUser) -> bool:
     user = User.get(db, user_schema.id)
     if user is None:
         return False
@@ -83,7 +83,7 @@ class EditSelf(BaseSchema):
 
 
 @router.post("/user/edit_self", response_model=User.Schema)
-async def edit_self(*, db: Session = Depends(get_db), user=Depends(curr_user), edit: EditSelf):
+async def edit_self(*, db: Session = Depends(get_db), user=Depends(curr_user), edit: EditSelf) -> User:
     user = User.get(db, user.id)
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -96,7 +96,7 @@ class EditSettings(BaseSchema):
 
 
 @router.post("/user/edit_settings", response_model=UserSettings.Schema)
-async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings):
+async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
     print(settings)
     if settings.selected_team is not None:
         team = Team.get(db, settings.selected_team)
@@ -117,7 +117,7 @@ class CreateContext(BaseSchema):
 
 
 @admin.post("/context/create", response_model=Context.Schema)
-async def create_context(*, db: Session = Depends(get_db), context: CreateContext):
+async def create_context(*, db: Session = Depends(get_db), context: CreateContext) -> Context:
     return Context.create(db, context.name)
 
 
@@ -127,7 +127,7 @@ class EditContext(BaseSchema):
 
 
 @admin.post("/context/edit", response_model=Context.Schema)
-async def edit_context(*, db: Session = Depends(get_db), edit: EditContext):
+async def edit_context(*, db: Session = Depends(get_db), edit: EditContext) -> Context:
     context = Context.get(db, edit.id)
     if context is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -140,7 +140,7 @@ class DeleteContext(BaseSchema):
 
 
 @admin.post("/context/delete")
-async def delete_context(*, db: Session = Depends(get_db), context_schema: DeleteContext):
+async def delete_context(*, db: Session = Depends(get_db), context_schema: DeleteContext) -> bool:
     context = Context.get(db, context_schema.id)
     if context is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -159,7 +159,7 @@ class CreateTeam(BaseSchema):
 
 
 @admin.post("/team/create", response_model=Team.Schema)
-async def create_team(*, db: Session = Depends(get_db), team: CreateTeam):
+async def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
     context = Context.get(db, team.context)
     if context is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -173,7 +173,7 @@ class EditTeam(BaseSchema):
 
 
 @admin.post("/team/edit", response_model=Team.Schema)
-async def edit_team(*, db: Session = Depends(get_db), edit: EditTeam):
+async def edit_team(*, db: Session = Depends(get_db), edit: EditTeam) -> Team:
     team = Team.get(db, edit.id)
     if team is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -188,7 +188,7 @@ class DeleteTeam(BaseSchema):
 
 
 @admin.post("/team/delete")
-async def delete_team(*, db: Session = Depends(get_db), team_schema: DeleteTeam):
+async def delete_team(*, db: Session = Depends(get_db), team_schema: DeleteTeam) -> bool:
     team = Team.get(db, team_schema.id)
     if team is None:
         return False
@@ -203,7 +203,7 @@ class MemberEditTeam(BaseSchema):
 
 
 @router.post("/team/member_edit", response_model=Team.Schema)
-async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), edit: MemberEditTeam):
+async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), edit: MemberEditTeam) -> Team:
     team = Team.get(db, edit.id)
     if team is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -219,7 +219,7 @@ class EditTeamMember(BaseSchema):
 
 
 @admin.post("/team/add_member", response_model=Tuple[Team.Schema, User.Schema])
-async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember):
+async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember) -> tuple[Team, User]:
     user = User.get(db, info.user)
     team = Team.get(db, info.team)
     if user is None or team is None:
@@ -230,7 +230,7 @@ async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember
 
 
 @admin.post("/team/remove_member", response_model=Tuple[Team.Schema, User.Schema])
-async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMember):
+async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMember) -> tuple[Team, User]:
     user = User.get(db, info.user)
     team = Team.get(db, info.team)
     if user is None or team is None:
@@ -246,12 +246,12 @@ async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMem
 
 
 @admin.post("/config/add", response_model=Config.Schema)
-async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File()):
+async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File()) -> Config:
     return Config.create(db, name, file)
 
 
 @router.get("/config/getfile/{id}")
-async def get_config(*, db: Session = Depends(get_db), id: ID):
+async def get_config(*, db: Session = Depends(get_db), id: ID) -> FileResponse:
     config = Config.get(db, id)
     if config is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -270,7 +270,7 @@ async def edit_config(
     id: ID = Form(),
     name: str | None = Form(default=None),
     file: UploadFile | None = File(default=None),
-):
+) -> Config:
     config = Config.get(db, id)
     if config is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -282,7 +282,7 @@ async def edit_config(
 
 
 @admin.post("/config/delete/{id}")
-async def delete_config(*, db: Session = Depends(get_db), id: ID):
+async def delete_config(*, db: Session = Depends(get_db), id: ID) -> bool:
     config = Config.get(db, id)
     if config is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -305,7 +305,7 @@ class ProblemCreate(BaseSchema):
 
 
 @admin.post("/problem/create", response_model=Problem.Schema)
-async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate = Depends(ProblemCreate.from_form())):
+async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate = Depends(ProblemCreate.from_form())) -> Problem:
     config = Config.get(db, problem.config)
     if config is None:
         raise HTTPException(400)
@@ -314,7 +314,7 @@ async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate =
 
 
 @router.get("/problem/getfile/{id}")
-async def get_problemfile(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID):
+async def get_problemfile(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     problem = Problem.get(db, id)
     if problem is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -324,7 +324,7 @@ async def get_problemfile(*, db: Session = Depends(get_db), user: User = Depends
 
 
 @router.get("/problem/getdesc/{id}")
-async def get_problem(*, db: Session = Depends(get_db), id: ID):
+async def get_problem(*, db: Session = Depends(get_db), id: ID) -> FileResponse:
     problem = Problem.get(db, id)
     if problem is None or problem.description is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -342,7 +342,7 @@ class ProblemEdit(BaseSchema):
 
 
 @admin.post("/problem/edit", response_model=Problem.Schema)
-async def edit_problem(*, db: Session = Depends(get_db), edit: ProblemEdit = Depends(ProblemEdit.from_form())):
+async def edit_problem(*, db: Session = Depends(get_db), edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
     problem = Problem.get(db, edit.id)
     if problem is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -355,7 +355,7 @@ async def edit_problem(*, db: Session = Depends(get_db), edit: ProblemEdit = Dep
 
 
 @admin.post("/problem/delete/{id}")
-async def delete_problem(*, db: Session = Depends(get_db), id: ID):
+async def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
     problem = Problem.get(db, id)
     if problem is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -381,7 +381,7 @@ async def add_program(
     db: Session = Depends(get_db),
     user: User = Depends(curr_user),
     program: ProgramCreate = Depends(ProgramCreate.from_form()),
-):
+) -> Program:
     if user.settings.selected_team is None:
         raise HTTPException(400)
     args = program.dict()
@@ -392,7 +392,7 @@ async def add_program(
 
 
 @router.get("/program/getfile/{id}")
-async def get_program_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID):
+async def get_program_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     program = db.get(Program, id)
     if program is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -411,7 +411,7 @@ class ProgramEdit(BaseSchema):
 @router.post("/program/edit_own", response_model=Program.Schema)
 async def edit_own_program(
     *, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: ProgramEdit = Depends(ProgramEdit.from_form())
-):
+) -> Program:
     program = Program.get(db, edit.id)
     if program is None or user.settings.selected_team != program.team or program.locked:
         raise HTTPException(400)
@@ -430,7 +430,7 @@ class ProgramEditAdmin(ProgramEdit):
 
 
 @admin.post("/program/edit", response_model=Program.Schema)
-async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEditAdmin = Depends(ProgramEditAdmin.from_form())):
+async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEditAdmin = Depends(ProgramEditAdmin.from_form())) -> Program:
     program = Program.get(db, edit.id)
     if program is None:
         raise HTTPException(400)
@@ -445,7 +445,7 @@ async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEditAdmin 
 
 
 @admin.post("/program/delete/{id}")
-async def delete_program(*, db: Session = Depends(get_db), id: ID):
+async def delete_program(*, db: Session = Depends(get_db), id: ID) -> bool:
     program = Program.get(db, id)
     if program is None:
         raise HTTPException(400)
@@ -466,7 +466,7 @@ class DocsUpload(BaseSchema):
 @router.post("/documentation/upload", response_model=Documentation.Schema)
 async def upload_docs(
     db: Session = Depends(get_db), user: User = Depends(curr_user), data: DocsUpload = Depends(DocsUpload.from_form())
-):
+) -> Documentation:
     if user.settings.selected_team is None:
         raise HTTPException(400)
     problem = Problem.get(db, data.problem)
@@ -481,7 +481,7 @@ async def upload_docs(
 
 
 @router.get("/documentation/getfile/{id}")
-async def get_docs_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID):
+async def get_docs_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     docs = db.get(Documentation, id)
     if docs is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
@@ -491,7 +491,7 @@ async def get_docs_file(*, db: Session = Depends(get_db), user: User = Depends(c
 
 
 @router.post("/documentation/delete/{id}")
-async def delete_docs(*, db: Session = Depends(get_db), id: ID):
+async def delete_docs(*, db: Session = Depends(get_db), id: ID) -> bool:
     docs = db.get(Documentation, id)
     if docs is None:
         raise HTTPException(400)
@@ -514,7 +514,7 @@ class ScheduleCreate(BaseSchema):
 
 
 @admin.post("/schedule/create", response_model=Schedule.Schema)
-def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate, background_tasks: BackgroundTasks):
+def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate, background_tasks: BackgroundTasks) -> Schedule:
     problem = unwrap(Problem.get(db, data.problem))
 
     if data.config is None:
@@ -542,7 +542,7 @@ class ScheduleEdit(BaseSchema):
 
 
 @admin.post("/schedule/update", response_model=Schedule.Schema)
-def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit):
+def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> Schedule:
     schedule = unwrap(Schedule.get(db, edit.id))
 
     if isinstance(edit.problem, NoEdit):
@@ -562,14 +562,14 @@ def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit):
 
 
 @admin.post("/schedule/add_team", response_model=Schedule.Schema)
-def add_team(*, db: Session = Depends(get_db), id: ID, participant: ParticipantInfo.Schema):
+def add_team(*, db: Session = Depends(get_db), id: ID, participant: ParticipantInfo.Schema) -> Schedule:
     schedule = unwrap(Schedule.get(db, id))
     schedule.update(db, add=[participant.into_obj(db)])
     return schedule
 
 
 @admin.post("/schedule/remove_team", response_model=Schedule.Schema)
-def remove_team(*, db: Session = Depends(get_db), id: ID, team: ID):
+def remove_team(*, db: Session = Depends(get_db), id: ID, team: ID) -> Schedule:
     schedule = unwrap(Schedule.get(db, id))
     team_obj = unwrap(Team.get(db, team))
     schedule.update(db, remove=[team_obj])
@@ -577,7 +577,7 @@ def remove_team(*, db: Session = Depends(get_db), id: ID, team: ID):
 
 
 @admin.post("/schedule/delete/{id}")
-def delete_schedule(*, db: Session = Depends(get_db), id: ID):
+def delete_schedule(*, db: Session = Depends(get_db), id: ID) -> bool:
     unwrap(Schedule.get(db, id)).delete(db)
     return True
 
@@ -587,7 +587,7 @@ def delete_schedule(*, db: Session = Depends(get_db), id: ID):
 # *******************************************************************************
 
 @router.get("/result/logs/{id}")
-async def get_match_logs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID):
+async def get_match_logs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     result = unwrap(db.get(MatchResult, id))
     if user.is_admin or set(user.teams).intersection(p.team for p in result.participants):
         return unwrap(result.logs).response()
@@ -596,7 +596,7 @@ async def get_match_logs(*, db: Session = Depends(get_db), user: User = Depends(
 
 
 @admin.post("/result/delete/{id}")
-def delete_result(*, db: Session = Depends(get_db), id: ID):
+def delete_result(*, db: Session = Depends(get_db), id: ID) -> bool:
     unwrap(MatchResult.get(db, id)).delete(db)
     return True
 
