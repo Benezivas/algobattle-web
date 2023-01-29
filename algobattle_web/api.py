@@ -1,7 +1,8 @@
 "Module specifying the json api actions."
 from datetime import datetime
-from typing import Any, Tuple
+from typing import Any, Callable, Tuple
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
+from fastapi.routing import APIRoute, get_typed_return_annotation, Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
 from algobattle_web.battle import run_match
 from algobattle_web.database import get_db, Session, ID
@@ -28,8 +29,19 @@ def check_if_admin(user: User = Depends(curr_user)):
         raise HTTPException(status.HTTP_403_FORBIDDEN)
 
 
-router = APIRouter(prefix="/api", tags=["api"])
-admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)])
+class SchemaRoute(APIRoute):
+    """Route that defaults to using the `Schema` entry of the returned object as a response_model."""
+
+    def __init__(self, path: str, endpoint: Callable[..., Any], *, response_model: Any = Default(None), **kwargs) -> None:
+        if isinstance(response_model, DefaultPlaceholder):
+            return_annotation = get_typed_return_annotation(endpoint)
+            if hasattr(return_annotation, "Schema"):
+                response_model = return_annotation.Schema
+        super().__init__(path, endpoint, response_model=response_model, **kwargs)
+
+
+router = APIRouter(prefix="/api", tags=["api"], route_class=SchemaRoute)
+admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)], route_class=SchemaRoute)
 
 # *******************************************************************************
 # * User
@@ -42,7 +54,7 @@ class CreateUser(BaseSchema):
     is_admin: bool = False
 
 
-@admin.post("/user/create", response_model=User.Schema)
+@admin.post("/user/create")
 async def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
     return User.create(db, user.email, user.name, user.is_admin)
 
@@ -54,7 +66,7 @@ class EditUser(BaseSchema):
     is_admin: bool | None = None
 
 
-@admin.post("/user/edit", response_model=User.Schema)
+@admin.post("/user/edit")
 async def edit_user(*, db: Session = Depends(get_db), edit: EditUser) -> User:
     user = User.get(db, edit.id)
     if user is None:
@@ -82,7 +94,7 @@ class EditSelf(BaseSchema):
     email: str | None = None
 
 
-@router.post("/user/edit_self", response_model=User.Schema)
+@router.post("/user/edit_self")
 async def edit_self(*, db: Session = Depends(get_db), user=Depends(curr_user), edit: EditSelf) -> User:
     user = User.get(db, user.id)
     if user is None:
@@ -95,7 +107,7 @@ class EditSettings(BaseSchema):
     selected_team: ID | None
 
 
-@router.post("/user/edit_settings", response_model=UserSettings.Schema)
+@router.post("/user/edit_settings")
 async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
     print(settings)
     if settings.selected_team is not None:
@@ -116,7 +128,7 @@ class CreateContext(BaseSchema):
     name: str
 
 
-@admin.post("/context/create", response_model=Context.Schema)
+@admin.post("/context/create")
 async def create_context(*, db: Session = Depends(get_db), context: CreateContext) -> Context:
     return Context.create(db, context.name)
 
@@ -126,7 +138,7 @@ class EditContext(BaseSchema):
     name: str | None
 
 
-@admin.post("/context/edit", response_model=Context.Schema)
+@admin.post("/context/edit")
 async def edit_context(*, db: Session = Depends(get_db), edit: EditContext) -> Context:
     context = Context.get(db, edit.id)
     if context is None:
@@ -158,7 +170,7 @@ class CreateTeam(BaseSchema):
     context: ID
 
 
-@admin.post("/team/create", response_model=Team.Schema)
+@admin.post("/team/create")
 async def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
     context = Context.get(db, team.context)
     if context is None:
@@ -172,7 +184,7 @@ class EditTeam(BaseSchema):
     context: ID | str | Context.Schema
 
 
-@admin.post("/team/edit", response_model=Team.Schema)
+@admin.post("/team/edit")
 async def edit_team(*, db: Session = Depends(get_db), edit: EditTeam) -> Team:
     team = Team.get(db, edit.id)
     if team is None:
@@ -202,7 +214,7 @@ class MemberEditTeam(BaseSchema):
     name: str
 
 
-@router.post("/team/member_edit", response_model=Team.Schema)
+@router.post("/team/member_edit")
 async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), edit: MemberEditTeam) -> Team:
     team = Team.get(db, edit.id)
     if team is None:
@@ -245,7 +257,7 @@ async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMem
 # *******************************************************************************
 
 
-@admin.post("/config/add", response_model=Config.Schema)
+@admin.post("/config/add")
 async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File()) -> Config:
     return Config.create(db, name, file)
 
@@ -263,7 +275,7 @@ class ConfigEdit(BaseSchema):
     name: str | None
 
 
-@admin.post("/config/edit", response_model=Config.Schema)
+@admin.post("/config/edit")
 async def edit_config(
     *,
     db: Session = Depends(get_db),
@@ -304,7 +316,7 @@ class ProblemCreate(BaseSchema):
     description: UploadFile | None = None
 
 
-@admin.post("/problem/create", response_model=Problem.Schema)
+@admin.post("/problem/create")
 async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate = Depends(ProblemCreate.from_form())) -> Problem:
     config = Config.get(db, problem.config)
     if config is None:
@@ -341,7 +353,7 @@ class ProblemEdit(BaseSchema):
     desc: UploadFile | None = None
 
 
-@admin.post("/problem/edit", response_model=Problem.Schema)
+@admin.post("/problem/edit")
 async def edit_problem(*, db: Session = Depends(get_db), edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
     problem = Problem.get(db, edit.id)
     if problem is None:
@@ -375,7 +387,7 @@ class ProgramCreate(BaseSchema):
     problem: ID
 
 
-@router.post("/program/create", response_model=Program.Schema)
+@router.post("/program/create")
 async def add_program(
     *,
     db: Session = Depends(get_db),
@@ -408,7 +420,7 @@ class ProgramEdit(BaseSchema):
     problem: ID | None = None
 
 
-@router.post("/program/edit_own", response_model=Program.Schema)
+@router.post("/program/edit_own")
 async def edit_own_program(
     *, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: ProgramEdit = Depends(ProgramEdit.from_form())
 ) -> Program:
@@ -429,7 +441,7 @@ class ProgramEditAdmin(ProgramEdit):
     locked: bool | None = None
 
 
-@admin.post("/program/edit", response_model=Program.Schema)
+@admin.post("/program/edit")
 async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEditAdmin = Depends(ProgramEditAdmin.from_form())) -> Program:
     program = Program.get(db, edit.id)
     if program is None:
@@ -463,7 +475,7 @@ class DocsUpload(BaseSchema):
     file: UploadFile
 
 
-@router.post("/documentation/upload", response_model=Documentation.Schema)
+@router.post("/documentation/upload")
 async def upload_docs(
     db: Session = Depends(get_db), user: User = Depends(curr_user), data: DocsUpload = Depends(DocsUpload.from_form())
 ) -> Documentation:
@@ -513,7 +525,7 @@ class ScheduleCreate(BaseSchema):
     points: int = 0
 
 
-@admin.post("/schedule/create", response_model=Schedule.Schema)
+@admin.post("/schedule/create")
 def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate, background_tasks: BackgroundTasks) -> Schedule:
     problem = unwrap(Problem.get(db, data.problem))
 
@@ -541,7 +553,7 @@ class ScheduleEdit(BaseSchema):
     points: int | NoEdit = NoEdit()
 
 
-@admin.post("/schedule/update", response_model=Schedule.Schema)
+@admin.post("/schedule/update")
 def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> Schedule:
     schedule = unwrap(Schedule.get(db, edit.id))
 
@@ -561,14 +573,14 @@ def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> Sched
     return schedule
 
 
-@admin.post("/schedule/add_team", response_model=Schedule.Schema)
+@admin.post("/schedule/add_team")
 def add_team(*, db: Session = Depends(get_db), id: ID, participant: ParticipantInfo.Schema) -> Schedule:
     schedule = unwrap(Schedule.get(db, id))
     schedule.update(db, add=[participant.into_obj(db)])
     return schedule
 
 
-@admin.post("/schedule/remove_team", response_model=Schedule.Schema)
+@admin.post("/schedule/remove_team")
 def remove_team(*, db: Session = Depends(get_db), id: ID, team: ID) -> Schedule:
     schedule = unwrap(Schedule.get(db, id))
     team_obj = unwrap(Team.get(db, team))
