@@ -2,7 +2,9 @@
 from datetime import datetime
 from typing import Any, Callable
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
-from fastapi.routing import APIRoute, get_typed_return_annotation, Default, DefaultPlaceholder
+from fastapi.routing import APIRoute
+from fastapi.dependencies.utils import get_typed_return_annotation
+from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
 from algobattle_web.battle import run_match
 from algobattle_web.database import get_db, Session, ID
