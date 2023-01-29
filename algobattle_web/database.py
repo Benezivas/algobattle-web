@@ -5,7 +5,7 @@ from datetime import datetime
 import functools
 import json
 from pathlib import Path
-from typing import Annotated, Any, AsyncIterable, Callable, Concatenate, ParamSpec, Sequence, Type, TypeVar, cast
+from typing import Annotated, Any, AsyncIterable, Callable, Concatenate, ParamSpec, Self, Sequence, Type, TypeVar, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime, select
@@ -136,6 +136,9 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
         """Get all database entries of this type."""
         return db.scalars(select(cls)).unique().all()
 
+    def as_schema(self) -> Any:
+        """Converts the database object into a pydantic schema."""
+        return self.Schema.from_orm(self)
 
 
 class Base(BaseNoID, kw_only=True, unsafe_hash=True):
