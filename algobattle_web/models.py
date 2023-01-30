@@ -398,12 +398,11 @@ class Program(WithFiles, unsafe_hash=True):
 
 
 class Documentation(WithFiles, unsafe_hash=True):
+    team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
+    problem: Mapped[Problem] = relationship(lazy="joined")
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
     file: Mapped[DbFile]
-
-    team: Mapped[Team] = relationship(lazy="joined")
-    problem: Mapped[Problem] = relationship(lazy="joined")
 
     def __post_init__(self, db: Session) -> None:
         if self.get(db, self.team, self.problem) is not None:
