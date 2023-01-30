@@ -202,18 +202,6 @@ class Team(Base, unsafe_hash=True):
                 raise ValueError("If the team is given by its name, you have to specify a context!")
             return db.query(cls).filter(cls.name == identifier, cls.context_id == context.id).first()
 
-    def add_member(self, db: Session, user: User):
-        if user in self.members:
-            return
-        self.members.append(user)
-        db.commit()
-
-    def remove_member(self, db: Session, user: User):
-        if user not in self.members:
-            return
-        self.members.remove(user)
-        db.commit()
-
 
 class Config(Base, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
