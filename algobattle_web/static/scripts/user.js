@@ -10,7 +10,7 @@ const store = reactive({
 const app = createApp({
     methods: {
         async edit_data(event) {
-            var response = await send_request("user/edit_self", {
+            var response = await send_request("user/self/edit", {
                 name: this.store.user.name,
                 email: this.store.user.email,
             })
@@ -23,7 +23,7 @@ const app = createApp({
             this.editing = !this.editing
         },
         async submit_settings(event) {
-            var response = await send_request("user/edit_settings", {
+            var response = await send_request("user/self/settings", {
                 selected_team: this.store.settings.selected_team,
             })
             if (response) {
