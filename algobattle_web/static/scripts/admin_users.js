@@ -1,4 +1,5 @@
 import { createApp, reactive } from "vue"
+import { send_request } from "base"
 
 const store = reactive({
     curr_row: {},
@@ -6,22 +7,11 @@ const store = reactive({
     teams: teams_input,
 })
 
-async function send_request(action, content) {
-    var response = await fetch("/api/user/" + action, {
-        "method": "POST",
-        "headers": {"Content-type": "application/json"},
-        "body": JSON.stringify(content),
-    })
-    if (response.ok) {
-        return response.json()
-    }
-}
-
 
 async function create_user(event) {
     var fields = event.currentTarget.elements
 
-    var response = await send_request("create", {
+    var response = await send_request("user/create", {
         name: fields.name.value,
         email: fields.email.value,
         is_admin: fields.is_admin.checked,
@@ -38,8 +28,7 @@ async function create_user(event) {
 async function edit_user(event) {
     var user = store.curr_row.user
 
-    var response = await send_request("edit", {
-        id: user.id,
+    var response = await send_request(`user/${user.id}/edit`, {
         name: user.name,
         email: user.email,
         is_admin: user.is_admin,
@@ -56,9 +45,7 @@ async function edit_user(event) {
 async function delete_user(event) {
     var user = store.curr_row.user
 
-    var response = await send_request("delete", {
-        id: user.id
-    })
+    var response = await send_request(`user/${user.id}/delete`)
     if (response) {
         store.curr_row = {}
         delete store.users[user.id]
