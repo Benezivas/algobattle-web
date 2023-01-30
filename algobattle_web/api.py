@@ -1,6 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
@@ -161,90 +161,59 @@ class CreateTeam(BaseSchema):
 
 @admin.post("/team/create")
 @autocommit
-async def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
-    context = Context.get(db, team.context)
-    if context is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
+    context = unwrap(Context.get(db, team.context))
     return Team(db, team.name, context)
 
 
 class EditTeam(BaseSchema):
-    id: ID
     name: str | None = None
-    context: ID | str | Context.Schema
+    context: ID | None = None
+    members: list[tuple[Literal["add", "remove"], ID]] | None = None
 
 
-@admin.post("/team/edit")
+@admin.post("/team/{id}/edit")
 @autocommit
-async def edit_team(*, db: Session = Depends(get_db), edit: EditTeam) -> Team:
-    team = Team.get(db, edit.id)
-    if team is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    if isinstance(edit.context, Context.Schema):
-        edit.context = edit.context.id
-    team.update(db, edit.name, edit.context)
+def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
+    team = unwrap(Team.get(db, id))
+    if edit.name is not None:
+        team.name = edit.name
+    if edit.context is not None:
+        team.context_id = edit.context
+    if edit.members is not None:
+        for action, user_id in edit.members:
+            user = unwrap(db.get(User, user_id))
+            match action:
+                case "add":
+                    if user in team.members:
+                        raise HTTPException(400)
+                    team.members.append(user)
+                case "remove":
+                    if user not in team.members:
+                        raise HTTPException(400)
+                    team.members.remove(user)
     return team
 
 
-class DeleteTeam(BaseSchema):
-    id: ID
-
-
-@admin.post("/team/delete")
+@admin.post("/team/{id}/delete")
 @autocommit
-async def delete_team(*, db: Session = Depends(get_db), team_schema: DeleteTeam) -> bool:
-    team = Team.get(db, team_schema.id)
-    if team is None:
-        return False
-    else:
-        team.delete(db)
-        return True
+def delete_team(*, db: Session = Depends(get_db), id: ID) -> bool:
+    team = unwrap(Team.get(db, id))
+    db.delete(team)
+    return True
 
 
 class MemberEditTeam(BaseSchema):
-    id: ID
-    name: str
+    name: str | None = None
 
 
-@router.post("/team/member_edit")
+@router.post("/team/self/edit")
 @autocommit
-async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), edit: MemberEditTeam) -> Team:
-    team = Team.get(db, edit.id)
-    if team is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    if not any(team.id == t.id for t in curr.teams):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED)
-    team.update(db, name=edit.name)
+def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: MemberEditTeam) -> Team:
+    team = unwrap(user.settings.selected_team)
+    if edit.name is not None:
+        team.name = edit.name
     return team
-
-
-class EditTeamMember(BaseSchema):
-    team: ID
-    user: ID
-
-
-@admin.post("/team/add_member", response_model=tuple[Team.Schema, User.Schema])
-@autocommit
-async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember) -> tuple[Team, User]:
-    user = User.get(db, info.user)
-    team = Team.get(db, info.team)
-    if user is None or team is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-
-    team.add_member(db, user)
-    return team, user
-
-
-@admin.post("/team/remove_member", response_model=tuple[Team.Schema, User.Schema])
-@autocommit
-async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMember) -> tuple[Team, User]:
-    user = User.get(db, info.user)
-    team = Team.get(db, info.team)
-    if user is None or team is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-
-    team.remove_member(db, user)
-    return team, user
 
 
 # *******************************************************************************

@@ -1,4 +1,5 @@
 import { createApp, reactive } from "vue"
+import { send_request } from "base"
 
 
 const store = reactive({
@@ -8,18 +9,6 @@ const store = reactive({
     curr_row: {},
 })
 
-
-
-async function send_request(action, content) {
-    var response = await fetch("/api/" + action, {
-        "method": "POST",
-        "headers": {"Content-type": "application/json"},
-        "body": JSON.stringify(content),
-    })
-    if (response.ok) {
-        return response.json()
-    }
-}
 
 async function create_team(event) {
     var fields = event.currentTarget.elements
@@ -38,8 +27,7 @@ async function edit_team(event) {
     var fields = event.currentTarget.elements
     var team = store.curr_row.team
 
-    var response = await send_request("team/edit", {
-        id: team.id,
+    var response = await send_request(`team/${team.id}/edit`, {
         name: fields.name.value ? fields.name.value : undefined,
         context: fields.context.value != team.context ? fields.context.value : undefined,
     })
@@ -54,9 +42,7 @@ async function edit_team(event) {
 async function delete_team(event) {
     var team = store.curr_row.team
 
-    var response = await send_request("team/delete", {
-        id: team.id,
-    })
+    var response = await send_request(`team/${team.id}/delete`)
     if (response) {
         store.curr_row.editing = false
         store.curr_row = {}
@@ -65,28 +51,12 @@ async function delete_team(event) {
 }
 
 
-async function add_member(event) {
-    var response = await send_request("team/add_member", {
-        team: this.edit_team_member_team,
-        user: this.edit_team_member_user,
+async function change_member(event, action) {
+    var response = await send_request(`team/${this.edit_team_member_team}/edit`, {
+        members: [[action, this.edit_team_member_user]],
     })
     if (response) {
-        var [team, user] = response
-        store.teams[team.id] = team
-        store.users[user.id] = user
-    }
-}
-
-
-async function remove_member(event) {
-    var response = await send_request("team/remove_member", {
-        team: this.edit_team_member_team,
-        user: this.edit_team_member_user,
-    })
-    if (response) {
-        var [team, user] = response
-        store.teams[team.id] = team
-        store.users[user.id] = user
+        store.teams[response.id] = response
     }
 }
 
@@ -146,8 +116,7 @@ const app = createApp({
     methods: {
         create_team,
         edit_team,
-        add_member,
-        remove_member,
+        change_member,
         create_context,
         edit_context,
     },
