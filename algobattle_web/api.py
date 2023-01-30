@@ -7,7 +7,7 @@ from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
 from algobattle_web.battle import run_match
-from algobattle_web.database import get_db, Session, ID
+from algobattle_web.database import DbFile, autocommit, get_db, Session, ID
 from algobattle_web.models import (
     Config,
     Context,
@@ -56,8 +56,9 @@ class CreateUser(BaseSchema):
 
 
 @admin.post("/user/create")
+@autocommit
 async def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
-    return User.create(db, user.email, user.name, user.is_admin)
+    return User(db=db, email=user.email, name=user.name, is_admin=user.is_admin)
 
 
 class EditUser(BaseSchema):
@@ -68,6 +69,7 @@ class EditUser(BaseSchema):
 
 
 @admin.post("/user/edit")
+@autocommit
 async def edit_user(*, db: Session = Depends(get_db), edit: EditUser) -> User:
     user = User.get(db, edit.id)
     if user is None:
@@ -81,6 +83,7 @@ class DeleteUser(BaseSchema):
 
 
 @admin.post("/user/delete")
+@autocommit
 async def delete_user(*, db: Session = Depends(get_db), user_schema: DeleteUser) -> bool:
     user = User.get(db, user_schema.id)
     if user is None:
@@ -96,6 +99,7 @@ class EditSelf(BaseSchema):
 
 
 @router.post("/user/edit_self")
+@autocommit
 async def edit_self(*, db: Session = Depends(get_db), user=Depends(curr_user), edit: EditSelf) -> User:
     user = User.get(db, user.id)
     if user is None:
@@ -109,6 +113,7 @@ class EditSettings(BaseSchema):
 
 
 @router.post("/user/edit_settings")
+@autocommit
 async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
     print(settings)
     if settings.selected_team is not None:
@@ -130,8 +135,9 @@ class CreateContext(BaseSchema):
 
 
 @admin.post("/context/create")
+@autocommit
 async def create_context(*, db: Session = Depends(get_db), context: CreateContext) -> Context:
-    return Context.create(db, context.name)
+    return Context(db, context.name)
 
 
 class EditContext(BaseSchema):
@@ -140,6 +146,7 @@ class EditContext(BaseSchema):
 
 
 @admin.post("/context/edit")
+@autocommit
 async def edit_context(*, db: Session = Depends(get_db), edit: EditContext) -> Context:
     context = Context.get(db, edit.id)
     if context is None:
@@ -153,6 +160,7 @@ class DeleteContext(BaseSchema):
 
 
 @admin.post("/context/delete")
+@autocommit
 async def delete_context(*, db: Session = Depends(get_db), context_schema: DeleteContext) -> bool:
     context = Context.get(db, context_schema.id)
     if context is None:
@@ -172,11 +180,12 @@ class CreateTeam(BaseSchema):
 
 
 @admin.post("/team/create")
+@autocommit
 async def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
     context = Context.get(db, team.context)
     if context is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    return Team.create(db, team.name, context)
+    return Team(db, team.name, context)
 
 
 class EditTeam(BaseSchema):
@@ -186,6 +195,7 @@ class EditTeam(BaseSchema):
 
 
 @admin.post("/team/edit")
+@autocommit
 async def edit_team(*, db: Session = Depends(get_db), edit: EditTeam) -> Team:
     team = Team.get(db, edit.id)
     if team is None:
@@ -201,6 +211,7 @@ class DeleteTeam(BaseSchema):
 
 
 @admin.post("/team/delete")
+@autocommit
 async def delete_team(*, db: Session = Depends(get_db), team_schema: DeleteTeam) -> bool:
     team = Team.get(db, team_schema.id)
     if team is None:
@@ -216,6 +227,7 @@ class MemberEditTeam(BaseSchema):
 
 
 @router.post("/team/member_edit")
+@autocommit
 async def member_edit_team(*, db: Session = Depends(get_db), curr: User = Depends(curr_user), edit: MemberEditTeam) -> Team:
     team = Team.get(db, edit.id)
     if team is None:
@@ -232,6 +244,7 @@ class EditTeamMember(BaseSchema):
 
 
 @admin.post("/team/add_member", response_model=tuple[Team.Schema, User.Schema])
+@autocommit
 async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember) -> tuple[Team, User]:
     user = User.get(db, info.user)
     team = Team.get(db, info.team)
@@ -243,6 +256,7 @@ async def add_team_member(*, db: Session = Depends(get_db), info: EditTeamMember
 
 
 @admin.post("/team/remove_member", response_model=tuple[Team.Schema, User.Schema])
+@autocommit
 async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMember) -> tuple[Team, User]:
     user = User.get(db, info.user)
     team = Team.get(db, info.team)
@@ -259,11 +273,14 @@ async def remove_team_member(*, db: Session = Depends(get_db), info: EditTeamMem
 
 
 @admin.post("/config/add")
+@autocommit
 async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File()) -> Config:
-    return Config.create(db, name, file)
+    db_file = DbFile.create_from(file)
+    return Config(db, name, db_file)
 
 
 @router.get("/config/getfile/{id}")
+@autocommit
 async def get_config(*, db: Session = Depends(get_db), id: ID) -> FileResponse:
     config = Config.get(db, id)
     if config is None:
@@ -277,6 +294,7 @@ class ConfigEdit(BaseSchema):
 
 
 @admin.post("/config/edit")
+@autocommit
 async def edit_config(
     *,
     db: Session = Depends(get_db),
@@ -295,6 +313,7 @@ async def edit_config(
 
 
 @admin.post("/config/delete/{id}")
+@autocommit
 async def delete_config(*, db: Session = Depends(get_db), id: ID) -> bool:
     config = Config.get(db, id)
     if config is None:
@@ -318,15 +337,17 @@ class ProblemCreate(BaseSchema):
 
 
 @admin.post("/problem/create")
+@autocommit
 async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate = Depends(ProblemCreate.from_form())) -> Problem:
     config = Config.get(db, problem.config)
     if config is None:
         raise HTTPException(400)
     args: dict[str, Any] = problem.dict() | {"config": config}
-    return Problem.create(db, **args)
+    return Problem(db, **args)
 
 
 @router.get("/problem/getfile/{id}")
+@autocommit
 async def get_problemfile(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     problem = Problem.get(db, id)
     if problem is None:
@@ -337,6 +358,7 @@ async def get_problemfile(*, db: Session = Depends(get_db), user: User = Depends
 
 
 @router.get("/problem/getdesc/{id}")
+@autocommit
 async def get_problem(*, db: Session = Depends(get_db), id: ID) -> FileResponse:
     problem = Problem.get(db, id)
     if problem is None or problem.description is None:
@@ -355,6 +377,7 @@ class ProblemEdit(BaseSchema):
 
 
 @admin.post("/problem/edit")
+@autocommit
 async def edit_problem(*, db: Session = Depends(get_db), edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
     problem = Problem.get(db, edit.id)
     if problem is None:
@@ -368,6 +391,7 @@ async def edit_problem(*, db: Session = Depends(get_db), edit: ProblemEdit = Dep
 
 
 @admin.post("/problem/delete/{id}")
+@autocommit
 async def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
     problem = Problem.get(db, id)
     if problem is None:
@@ -389,6 +413,7 @@ class ProgramCreate(BaseSchema):
 
 
 @router.post("/program/create")
+@autocommit
 async def add_program(
     *,
     db: Session = Depends(get_db),
@@ -401,10 +426,11 @@ async def add_program(
     args["problem"] = Problem.get(db, program.problem)
     if args["problem"] is None:
         raise HTTPException(400)
-    return Program.create(db, team=user.settings.selected_team, **args)
+    return Program(db, team=user.settings.selected_team, **args)
 
 
 @router.get("/program/getfile/{id}")
+@autocommit
 async def get_program_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     program = db.get(Program, id)
     if program is None:
@@ -422,6 +448,7 @@ class ProgramEdit(BaseSchema):
 
 
 @router.post("/program/edit_own")
+@autocommit
 async def edit_own_program(
     *, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: ProgramEdit = Depends(ProgramEdit.from_form())
 ) -> Program:
@@ -443,6 +470,7 @@ class ProgramEditAdmin(ProgramEdit):
 
 
 @admin.post("/program/edit")
+@autocommit
 async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEditAdmin = Depends(ProgramEditAdmin.from_form())) -> Program:
     program = Program.get(db, edit.id)
     if program is None:
@@ -458,6 +486,7 @@ async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEditAdmin 
 
 
 @admin.post("/program/delete/{id}")
+@autocommit
 async def delete_program(*, db: Session = Depends(get_db), id: ID) -> bool:
     program = Program.get(db, id)
     if program is None:
@@ -477,6 +506,7 @@ class DocsUpload(BaseSchema):
 
 
 @router.post("/documentation/upload")
+@autocommit
 async def upload_docs(
     db: Session = Depends(get_db), user: User = Depends(curr_user), data: DocsUpload = Depends(DocsUpload.from_form())
 ) -> Documentation:
@@ -487,13 +517,15 @@ async def upload_docs(
         raise HTTPException(400)
     docs = Documentation.get(db, user.settings.selected_team, problem)
     if docs is None:
-        return Documentation.create(db, user.settings.selected_team, problem, data.file)
+        file = DbFile.create_from(data.file)
+        return Documentation(db, user.settings.selected_team, problem, file)
     else:
         docs.update(db, data.file)
         return docs
 
 
 @router.get("/documentation/getfile/{id}")
+@autocommit
 async def get_docs_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     docs = db.get(Documentation, id)
     if docs is None:
@@ -504,6 +536,7 @@ async def get_docs_file(*, db: Session = Depends(get_db), user: User = Depends(c
 
 
 @router.post("/documentation/delete/{id}")
+@autocommit
 async def delete_docs(*, db: Session = Depends(get_db), id: ID) -> bool:
     docs = db.get(Documentation, id)
     if docs is None:
@@ -527,6 +560,7 @@ class ScheduleCreate(BaseSchema):
 
 
 @admin.post("/schedule/create")
+@autocommit
 def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate, background_tasks: BackgroundTasks) -> Schedule:
     problem = unwrap(Problem.get(db, data.problem))
 
@@ -555,6 +589,7 @@ class ScheduleEdit(BaseSchema):
 
 
 @admin.post("/schedule/update")
+@autocommit
 def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> Schedule:
     schedule = unwrap(Schedule.get(db, edit.id))
 
@@ -575,6 +610,7 @@ def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> Sched
 
 
 @admin.post("/schedule/add_team")
+@autocommit
 def add_team(*, db: Session = Depends(get_db), id: ID, participant: ParticipantInfo.Schema) -> Schedule:
     schedule = unwrap(Schedule.get(db, id))
     schedule.update(db, add=[participant.into_obj(db)])
@@ -582,6 +618,7 @@ def add_team(*, db: Session = Depends(get_db), id: ID, participant: ParticipantI
 
 
 @admin.post("/schedule/remove_team")
+@autocommit
 def remove_team(*, db: Session = Depends(get_db), id: ID, team: ID) -> Schedule:
     schedule = unwrap(Schedule.get(db, id))
     team_obj = unwrap(Team.get(db, team))
@@ -590,6 +627,7 @@ def remove_team(*, db: Session = Depends(get_db), id: ID, team: ID) -> Schedule:
 
 
 @admin.post("/schedule/delete/{id}")
+@autocommit
 def delete_schedule(*, db: Session = Depends(get_db), id: ID) -> bool:
     unwrap(Schedule.get(db, id)).delete(db)
     return True
@@ -600,6 +638,7 @@ def delete_schedule(*, db: Session = Depends(get_db), id: ID) -> bool:
 # *******************************************************************************
 
 @router.get("/result/logs/{id}")
+@autocommit
 async def get_match_logs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     result = unwrap(db.get(MatchResult, id))
     if user.is_admin or set(user.teams).intersection(p.team for p in result.participants):
@@ -609,6 +648,7 @@ async def get_match_logs(*, db: Session = Depends(get_db), user: User = Depends(
 
 
 @admin.post("/result/delete/{id}")
+@autocommit
 def delete_result(*, db: Session = Depends(get_db), id: ID) -> bool:
     unwrap(MatchResult.get(db, id)).delete(db)
     return True
