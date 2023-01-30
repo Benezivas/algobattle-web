@@ -89,7 +89,7 @@ class EditSelf(BaseSchema):
     email: str | None = None
 
 
-@router.post("/user/edit_self")
+@router.post("/user/self/edit")
 @autocommit
 async def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSelf) -> User:
     for key, val in edit.dict(exclude_unset=True):
@@ -101,7 +101,7 @@ class EditSettings(BaseSchema):
     selected_team: ID | None = None
 
 
-@router.post("/user/edit_settings")
+@router.post("/user/self/settings")
 @autocommit
 async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
     updates = settings.dict(exclude_unset=True)
