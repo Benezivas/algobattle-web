@@ -56,7 +56,7 @@ class User(Base, unsafe_hash=True):
     is_admin: Mapped[bool] = mapped_column(default=False)
 
     teams: Mapped[list["Team"]] = relationship(secondary=team_members, back_populates="members", lazy="joined", init=False)
-    settings: Mapped["UserSettings"] = relationship(back_populates="user", init=False)
+    settings: Mapped["UserSettings"] = relationship(back_populates="user", init=False, cascade="all, delete")
 
     def __post_init__(self, db: Session) -> None:
         UserSettings(db, self.id)
