@@ -1,4 +1,5 @@
 import { createApp, reactive } from "vue"
+import { send_request, send_form } from "base"
 
 
 const store = reactive({
@@ -7,33 +8,11 @@ const store = reactive({
 })
 
 
-
-async function send_request(action, content) {
-    var response = await fetch("/api/" + action, {
-        "method": "POST",
-        "headers": {"Content-type": "application/json"},
-        "body": JSON.stringify(content),
-    })
-    if (response.ok) {
-        return response.json()
-    }
-}
-
-async function send_form(endpoint, content) {
-    var response = await fetch("/api/" + endpoint, {
-        "method": "POST",
-        "body": content,
-    })
-    if (response.ok) {
-        return response
-    }
-}
-
 async function create_config(event) {
     var fields = event.currentTarget.elements
 
     const payload = new FormData(event.currentTarget)
-    var response = await send_form("config/add", payload)
+    var response = await send_form("config/create", payload)
     if (response) {
         response = await response.json()
         store.configs[response.id] = response
@@ -43,8 +22,7 @@ async function create_config(event) {
 
 async function edit_config(event) {
     const payload = new FormData(event.currentTarget)
-    payload.append("id", store.curr_row.config.id)
-    var response = await send_form("config/edit", payload)
+    var response = await send_form(`config/${store.curr_row.config.id}/edit`, payload)
     if (response) {
         response = await response.json()
         store.configs[response.id] = response
@@ -56,7 +34,7 @@ async function edit_config(event) {
 async function delete_config(event) {
     var config = store.curr_row.config
 
-    var response = await send_request("config/delete/" + config.id)
+    var response = await send_request(`config/${config.id}/delete/`)
     if (response) {
         store.curr_row.editing = false
         store.curr_row = {}

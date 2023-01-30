@@ -223,19 +223,17 @@ def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr
 # *******************************************************************************
 
 
-@admin.post("/config/add")
+@admin.post("/config/create")
 @autocommit
-async def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File()) -> Config:
+def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File()) -> Config:
     db_file = DbFile.create_from(file)
     return Config(db, name, db_file)
 
 
-@router.get("/config/getfile/{id}")
+@router.get("/config/{id}/file")
 @autocommit
-async def get_config(*, db: Session = Depends(get_db), id: ID) -> FileResponse:
-    config = Config.get(db, id)
-    if config is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+def get_config(*, db: Session = Depends(get_db), id: ID) -> FileResponse:
+    config = unwrap(Config.get(db, id))
     return config.file.response()
 
 
@@ -244,32 +242,28 @@ class ConfigEdit(BaseSchema):
     name: str | None
 
 
-@admin.post("/config/edit")
+@admin.post("/config/{id}/edit")
 @autocommit
-async def edit_config(
+def edit_config(
     *,
     db: Session = Depends(get_db),
-    id: ID = Form(),
+    id: ID,
     name: str | None = Form(default=None),
     file: UploadFile | None = File(default=None),
 ) -> Config:
-    config = Config.get(db, id)
-    if config is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    if file is None:
-        config.update(db, name)
-    else:
-        config.update(db, name, file)
+    config = unwrap(Config.get(db, id))
+    if name is not None:
+        config.name = name
+    if file is not None:
+        config.file.attach(file)
     return config
 
 
-@admin.post("/config/delete/{id}")
+@admin.post("/config/{id}/delete")
 @autocommit
-async def delete_config(*, db: Session = Depends(get_db), id: ID) -> bool:
-    config = Config.get(db, id)
-    if config is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    config.delete(db)
+def delete_config(*, db: Session = Depends(get_db), id: ID) -> bool:
+    config = unwrap(Config.get(db, id))
+    db.delete(config)
     return True
 
 
