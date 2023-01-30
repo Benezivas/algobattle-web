@@ -164,12 +164,6 @@ class Context(Base, unsafe_hash=True):
         else:
             return db.scalars(select(cls).filter(cls.name == identifier)).first()
 
-    def delete(self, db: Session):
-        if self.teams:
-            raise ResourceNeeded
-        db.delete(self)
-        db.commit()
-
 
 class Team(Base, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
