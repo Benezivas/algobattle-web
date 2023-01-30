@@ -58,6 +58,10 @@ class User(Base, unsafe_hash=True):
     teams: Mapped[list["Team"]] = relationship(secondary=team_members, back_populates="members", lazy="joined", init=False)
     settings: Mapped["UserSettings"] = relationship(back_populates="user", init=False)
 
+    def __post_init__(self, db: Session) -> None:
+        UserSettings(db, self.id)
+        super().__post_init__(db)
+
     class Schema(Base.Schema):
         name: str
         email: str
@@ -82,18 +86,6 @@ class User(Base, unsafe_hash=True):
             return super().get(db, identifier)
         else:
             return db.scalars(select(cls).filter(cls.email == identifier)).first()
-
-    @classmethod
-    def create(cls, db: Session, email: str, name: str, is_admin: bool = False) -> Self:
-        """Creates a new user, raises `EmailTaken` if the email is already in use."""
-        if cls.get(db, email) is not None:
-            raise ValueTaken(email)
-        new_user = cls(email=email, name=name, is_admin=is_admin)
-        db.add(new_user)
-        db.commit()
-        db.add(UserSettings(user_id=new_user.id))
-        db.commit()
-        return new_user
 
     def update(self, db: Session, email: str | None = None, name: str | None = None, is_admin: bool | None = None) -> Self:
         if email:
@@ -187,15 +179,6 @@ class Context(Base, unsafe_hash=True):
         else:
             return db.scalars(select(cls).filter(cls.name == identifier)).first()
 
-    @classmethod
-    def create(cls, db: Session, name: str) -> Self:
-        if cls.get(db, name) is not None:
-            raise ValueTaken(name)
-        context = Context(name=name)
-        db.add(context)
-        db.commit()
-        return context
-
     def update(self, db: Session, name: str | None) -> Self:
         if name is not None:
             self.name = name
@@ -210,7 +193,7 @@ class Context(Base, unsafe_hash=True):
 
 
 class Team(Base, unsafe_hash=True):
-    name: Mapped[str]
+    name: Mapped[str] = mapped_column(unique=True)
     context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
 
     context: Mapped[Context] = relationship(back_populates="teams", uselist=False, lazy="joined")
@@ -246,15 +229,6 @@ class Team(Base, unsafe_hash=True):
                 raise ValueError("If the team is given by its name, you have to specify a context!")
             return db.query(cls).filter(cls.name == identifier, cls.context_id == context.id).first()
 
-    @classmethod
-    def create(cls, db: Session, name: str, context: Context) -> Self:
-        if cls.get(db, name, context) is not None:
-            raise ValueTaken(name)
-        team = cls(name=name, context=context)
-        db.add(team)
-        db.commit()
-        return team
-
     def update(self, db: Session, name: str | None = None, context: str | ID | Context | None = None):
         if name is not None:
             self.name = name
@@ -287,18 +261,6 @@ class Config(WithFiles, unsafe_hash=True):
         name: str
 
     @classmethod
-    def create(cls, db: Session, name: str, file: BinaryIO | UploadFile):
-        if cls.get(db, name) is not None:
-            raise ValueTaken(name)
-        with StoreManager(db):
-            db_file = DbFile()
-            db_file.attach(file)
-            config = cls(name=name, file=db_file)
-            db.add(config)
-            db.commit()
-        return config
-
-    @classmethod
     def get(cls, db: Session, identifier: ID | str) -> Self | None:
         """Queries the database for the config with the given id or name."""
         if isinstance(identifier, UUID):
@@ -324,7 +286,6 @@ class Problem(WithFiles, unsafe_hash=True):
     end: Mapped[datetime | None] = mapped_column(default=None)
     description: Mapped[DbFile | None] = mapped_column(default=None)
 
-
     class Schema(Base.Schema):
         name: str
         file: DbFile.Schema
@@ -332,30 +293,6 @@ class Problem(WithFiles, unsafe_hash=True):
         start: datetime | None
         end: datetime | None
         description: DbFile.Schema | None
-
-    @classmethod
-    def create(
-        cls,
-        db: Session,
-        name: str,
-        file: BinaryIO | UploadFile,
-        config: Config,
-        start: datetime | None = None,
-        end: datetime | None = None,
-        description: BinaryIO | UploadFile | None = None,
-    ):
-        if cls.get(db, name) is not None:
-            raise ValueTaken(name)
-        with StoreManager(db):
-            db_file = DbFile.create_from(file)
-            if description is not None:
-                desc_file = DbFile.create_from(description)
-            else:
-                desc_file = None
-            problem = cls(name=name, file=db_file, config=config, start=start, end=end, description=desc_file)
-            db.add(problem)
-            db.commit()
-        return problem
 
     @classmethod
     def get(cls, db: Session, identifier: ID | str) -> Self | None:
@@ -434,18 +371,6 @@ class Program(WithFiles, unsafe_hash=True):
         problem: ObjID
         locked: bool
 
-    @classmethod
-    @with_store_manager
-    def create(
-        cls, db: Session, name: str, team: Team, role: "Program.Role", file: BinaryIO | UploadFile, problem: Problem
-    ) -> Self:
-        db_file = DbFile.create_from(file)
-        program = cls(name=name, team=team, role=role, file=db_file, problem=problem)
-        db.add(program)
-        db.commit()
-        return program
-
-
     @with_store_manager
     def update(
         self,
@@ -480,21 +405,15 @@ class Documentation(WithFiles, unsafe_hash=True):
     team: Mapped[Team] = relationship(lazy="joined")
     problem: Mapped[Problem] = relationship(lazy="joined")
 
+    def __post_init__(self, db: Session) -> None:
+        if self.get(db, self.team, self.problem) is not None:
+            raise ValueTaken("team/problem")
+        return super().__post_init__(db)
+
     class Schema(Base.Schema):
         team: ObjID
         problem: ObjID
         file: DbFile.Schema
-
-    @classmethod
-    @with_store_manager
-    def create(cls, db: Session, team: Team, problem: Problem, file: BinaryIO | UploadFile) -> Self:
-        if cls.get(db, team, problem) is not None:
-            raise ValueTaken("team/problem")
-        db_file = DbFile.create_from(file)
-        docs = cls(team=team, problem=problem, file=db_file)
-        db.add(docs)
-        db.commit()
-        return docs
 
     @overload
     @classmethod
@@ -608,12 +527,9 @@ class Schedule(Base, unsafe_hash=True):
     ) -> Self:
         if config is None:
             config = problem.config
-        schedule = cls(time=time, problem=problem, config=config, name=name, points=points)
-        db.add(schedule)
-        db.commit()
+        schedule = cls(db, time=time, problem=problem, config=config, name=name, points=points)
         for info in participants:
-            db.add(ScheduleParticipant(schedule_id=schedule.id, team=info.team, generator=info.generator, solver=info.solver))
-        db.commit()
+            db.add(ScheduleParticipant(db, schedule_id=schedule.id, team=info.team, generator=info.generator, solver=info.solver))
         return schedule
 
     def update(
@@ -645,7 +561,7 @@ class Schedule(Base, unsafe_hash=True):
         if add is not None:
             for info in add:
                 self.participants.append(
-                    ScheduleParticipant(schedule_id=self.id, team=info.team, generator=info.generator, solver=info.solver)
+                    ScheduleParticipant(db, schedule_id=self.id, team=info.team, generator=info.generator, solver=info.solver)
                 )
         if remove is not None:
             for info in self.participants:
@@ -724,10 +640,7 @@ class MatchResult(WithFiles, unsafe_hash=True):
             log_file = DbFile.create_from(logs)
         else:
             log_file = None
-        result = cls(schedule=schedule, logs=log_file, config=config, status=status, time=datetime.now(), problem=schedule.problem)
-        db.add(result)
-        db.commit()
+        result = cls(db, schedule=schedule, logs=log_file, config=config, status=status, time=datetime.now(), problem=schedule.problem)
         for participant in participants:
-            db.add(ResultParticipant(result_id=result.id, team=participant.team, points=participant.points, generator=participant.generator, solver=participant.solver))
-        db.commit()
+            db.add(ResultParticipant(db, result_id=result.id, team=participant.team, points=participant.points, generator=participant.generator, solver=participant.solver))
         return result
