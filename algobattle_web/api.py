@@ -129,31 +129,23 @@ async def create_context(*, db: Session = Depends(get_db), context: CreateContex
 
 
 class EditContext(BaseSchema):
-    id: ID
-    name: str | None
+    name: str | None = None
 
 
-@admin.post("/context/edit")
+@admin.post("/context/{id}/edit")
 @autocommit
-async def edit_context(*, db: Session = Depends(get_db), edit: EditContext) -> Context:
-    context = Context.get(db, edit.id)
-    if context is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    context.update(db, name=edit.name)
+async def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditContext) -> Context:
+    context = unwrap(Context.get(db, id))
+    if data.name is not None:
+        context.name = data.name
     return context
 
 
-class DeleteContext(BaseSchema):
-    id: ID
-
-
-@admin.post("/context/delete")
+@admin.post("/context/{id}/delete")
 @autocommit
-async def delete_context(*, db: Session = Depends(get_db), context_schema: DeleteContext) -> bool:
-    context = Context.get(db, context_schema.id)
-    if context is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    context.delete(db)
+async def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
+    context = unwrap(Context.get(db, id))
+    db.delete(context)
     return True
 
 

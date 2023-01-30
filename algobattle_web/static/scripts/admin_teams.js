@@ -108,8 +108,7 @@ async function edit_context(event) {
     var fields = event.currentTarget.elements
     var context = store.curr_row.context
 
-    var response = await send_request("context/edit", {
-        id: context.id,
+    var response = await send_request(`context/${context.id}/edit`, {
         name: fields.name.value,
     })
     if (response) {
@@ -123,9 +122,7 @@ async function edit_context(event) {
 async function delete_context(event) {
     var context = store.curr_row.context
 
-    var response = await send_request("context/delete", {
-        id: context.id,
-    })
+    var response = await send_request(`context/${context.id}delete`)
     if (response) {
         store.curr_row = {}
         delete store.contexts[context.id]
