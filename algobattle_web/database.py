@@ -162,10 +162,6 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
     def __tablename__(cls):
         return cls.__name__.lower() + "s"
 
-    def delete(self, db: Session):
-        db.delete(self)
-        db.commit()
-
     def encode(self) -> dict[str, Any]:
         return jsonable_encoder(self.Schema.from_orm(self))
 
@@ -190,10 +186,3 @@ class Base(BaseNoID, unsafe_hash=True):
     def get(cls: Type[T], db: Session, identifier: ID) -> T | None:
         """Queries the database for the object with the given id."""
         return db.query(cls).filter(cls.id == identifier).first()   # type: ignore
-
-class WithFiles(Base):
-    __abstract__ = True
-
-    def delete(self, db: Session):
-        with StoreManager(db):
-            return super().delete(db)

@@ -10,12 +10,11 @@ from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum, select
 from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, composite
-from sqlalchemy_media import StoreManager
 from fastapi import UploadFile
 from uuid import UUID
 
 from algobattle_web.config import SECRET_KEY, ALGORITHM
-from algobattle_web.database import Base, Session, DbFile, ID, with_store_manager, WithFiles, BaseNoID
+from algobattle_web.database import Base, Session, DbFile, ID, with_store_manager, BaseNoID
 from algobattle_web.base_classes import BaseSchema, NoEdit, ObjID
 from algobattle_web.util import unwrap
 
@@ -222,7 +221,7 @@ class Team(Base, unsafe_hash=True):
         db.commit()
 
 
-class Config(WithFiles, unsafe_hash=True):
+class Config(Base, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
 
@@ -238,7 +237,7 @@ class Config(WithFiles, unsafe_hash=True):
             return db.query(cls).filter(cls.name == identifier).first()
 
 
-class Problem(WithFiles, unsafe_hash=True):
+class Problem(Base, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
     config: Mapped[Config] = relationship(uselist=False, lazy="joined")
@@ -282,7 +281,7 @@ class _Program_Role(Enum):
     solver = "solver"
 
 
-class Program(WithFiles, unsafe_hash=True):
+class Program(Base, unsafe_hash=True):
     name: Mapped[str]
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
@@ -306,7 +305,7 @@ class Program(WithFiles, unsafe_hash=True):
         locked: bool
 
 
-class Documentation(WithFiles, unsafe_hash=True):
+class Documentation(Base, unsafe_hash=True):
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
@@ -413,7 +412,7 @@ class Schedule(Base, unsafe_hash=True):
     name: Mapped[str] = mapped_column(default="")
     points: Mapped[int] = mapped_column(default=0)
 
-    participants: Mapped[list[ScheduleParticipant]] = relationship(init=False)
+    participants: Mapped[list[ScheduleParticipant]] = relationship(init=False, cascade="all, delete")
 
     class Schema(Base.Schema):
         name: str
@@ -468,13 +467,8 @@ class Schedule(Base, unsafe_hash=True):
         if remove is not None:
             for info in self.participants:
                 if info.team in remove:
-                    info.delete(db)
+                    db.delete(info)
         db.commit()
-
-    def delete(self, db: Session):
-        for participant in self.participants:
-            participant.delete(db)
-        return super().delete(db)
 
 @dataclass
 class ResultParticipantInfo:
@@ -509,7 +503,7 @@ class ResultParticipant(BaseNoID, unsafe_hash=True):
     solver: Mapped[Program] = relationship(foreign_keys=[sol_id])
 
 
-class MatchResult(WithFiles, unsafe_hash=True):
+class MatchResult(Base, unsafe_hash=True):
     schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), init=False)
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"), init=False)
     status: Mapped[str]
