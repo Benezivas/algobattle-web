@@ -33,6 +33,36 @@ async def get_db() -> AsyncIterable[Session]:
         yield db
 
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def autocommit(fn: Callable[P, R]) -> Callable[P, R]:
+    """Automatically commits the database transaction."""
+    if iscoroutinefunction(fn):
+        async def inner_async(*args: P.args, **kwargs: P.kwargs) -> R:
+            db = kwargs["db"]
+            assert isinstance(db, Session)
+            with StoreManager(db):
+                res = await fn(*args, **kwargs)
+                db.commit()
+                return res
+        inner_async.__annotations__ = fn.__annotations__
+        inner_async.__signature__ = signature(fn)
+        return cast(Callable[P, R], inner_async)
+    else:
+        def inner(*args: P.args, **kwargs: P.kwargs) -> R:
+            db = kwargs["db"]
+            assert isinstance(db, Session)
+            with StoreManager(db):
+                res = fn(*args, **kwargs)
+                db.commit()
+                return res
+        inner.__annotations__ = fn.__annotations__
+        inner.__signature__ = signature(fn)
+        return inner
+
+
 class Json(TypeDecorator[Any]):
     impl = Unicode
 
