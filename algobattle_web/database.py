@@ -1,11 +1,13 @@
 "Module specifying the login page."
 from __future__ import annotations
 from abc import ABC
+from dataclasses import InitVar, dataclass
 from datetime import datetime
 import functools
+from inspect import iscoroutinefunction, signature
 import json
 from pathlib import Path
-from typing import Annotated, Any, AsyncIterable, Callable, Concatenate, ParamSpec, Self, Sequence, Type, TypeVar, cast
+from typing import Annotated, Any, AsyncIterable, Callable, Concatenate, ParamSpec, Sequence, Type, TypeVar, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime, select
@@ -22,7 +24,7 @@ from algobattle_web.config import SQLALCHEMY_DATABASE_URL, STORAGE_PATH
 ID = Annotated[UUID, mapped_column(default=uuid4)]
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(autoflush=False, bind=engine)
 StoreManager.register("fs", functools.partial(FileSystemStore, STORAGE_PATH, ""), True)
 
 
@@ -107,6 +109,7 @@ def with_store_manager(func: Callable[Concatenate[Any, Session, P], T]) -> Calla
     return inner
 
 
+@dataclass
 class BaseNoID(MappedAsDataclass, DeclarativeBase):
     registry = registry(
         type_annotation_map={
@@ -115,6 +118,11 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
             DbFile: Json,
         }
     )
+
+    db: InitVar[Session]
+
+    def __post_init__(self, db: Session) -> None:
+        db.add(self)
 
     class Schema(BaseSchema, ABC):
         pass
@@ -141,7 +149,7 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
         return self.Schema.from_orm(self)
 
 
-class Base(BaseNoID, kw_only=True, unsafe_hash=True):
+class Base(BaseNoID, unsafe_hash=True):
     __abstract__ = True
     id: Mapped[ID] = mapped_column(default_factory=uuid4, primary_key=True, init=False)
 
