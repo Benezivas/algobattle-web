@@ -188,6 +188,8 @@ def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
                     if user in team.members:
                         raise HTTPException(400)
                     team.members.append(user)
+                    if len(user.teams) == 1:
+                        user.settings.selected_team = team
                 case "remove":
                     if user not in team.members:
                         raise HTTPException(400)
