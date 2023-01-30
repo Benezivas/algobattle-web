@@ -87,20 +87,6 @@ class User(Base, unsafe_hash=True):
         else:
             return db.scalars(select(cls).filter(cls.email == identifier)).first()
 
-    def update(self, db: Session, email: str | None = None, name: str | None = None, is_admin: bool | None = None) -> Self:
-        if email:
-            email_user = self.get(db, email)
-            if email_user is not None and email_user != self:
-                raise ValueTaken(email)
-            else:
-                self.email = email
-        if name:
-            self.name = name
-        if is_admin is not None:
-            self.is_admin = is_admin
-        db.commit()
-        return self
-
     def cookie(self) -> dict[str, Any]:
         payload = {
             "type": "user",
@@ -179,12 +165,6 @@ class Context(Base, unsafe_hash=True):
         else:
             return db.scalars(select(cls).filter(cls.name == identifier)).first()
 
-    def update(self, db: Session, name: str | None) -> Self:
-        if name is not None:
-            self.name = name
-            db.commit()
-        return self
-
     def delete(self, db: Session):
         if self.teams:
             raise ResourceNeeded
@@ -229,17 +209,6 @@ class Team(Base, unsafe_hash=True):
                 raise ValueError("If the team is given by its name, you have to specify a context!")
             return db.query(cls).filter(cls.name == identifier, cls.context_id == context.id).first()
 
-    def update(self, db: Session, name: str | None = None, context: str | ID | Context | None = None):
-        if name is not None:
-            self.name = name
-        if context is not None:
-            if isinstance(context, (str, ID)):
-                context = Context.get(db, context)
-                if context is None:
-                    raise ValueError
-            self.context_id = context.id
-        db.commit()
-
     def add_member(self, db: Session, user: User):
         if user in self.members:
             return
@@ -268,14 +237,6 @@ class Config(WithFiles, unsafe_hash=True):
         else:
             return db.query(cls).filter(cls.name == identifier).first()
 
-    def update(self, db: Session, name: str | None = None, file: BinaryIO | UploadFile | None = None):
-        with StoreManager(db):
-            if name is not None:
-                self.name = name
-            if file is not None:
-                self.file.attach(file)
-            db.commit()
-
 
 class Problem(WithFiles, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
@@ -301,33 +262,6 @@ class Problem(WithFiles, unsafe_hash=True):
             return super().get(db, identifier)
         else:
             return db.query(cls).filter(cls.name == identifier).first()
-
-    def update(
-        self,
-        db: Session,
-        name: str | None,
-        file: BinaryIO | UploadFile | None = None,
-        config: Config | None = None,
-        start: datetime | None = None,
-        end: datetime | None = None,
-        desc: BinaryIO | UploadFile | None = None,
-    ):
-        with StoreManager(db):
-            if name:
-                self.name = name
-            if file is not None:
-                self.file.attach(file)
-            if config is not None:
-                self.config_id = config.id
-            if start is not None:
-                self.start = start
-            if end is not None:
-                self.end = end
-            if desc is not None:
-                if self.description is None:
-                    self.description = DbFile()
-                self.description.attach(desc)
-            db.commit()
 
     def visible_to(self, user: User) -> bool:
         if user.is_admin or self.start is None:
@@ -371,31 +305,6 @@ class Program(WithFiles, unsafe_hash=True):
         problem: ObjID
         locked: bool
 
-    @with_store_manager
-    def update(
-        self,
-        db: Session,
-        name: str | None = None,
-        team: Team | None = None,
-        role: "Program.Role | None" = None,
-        file: BinaryIO | UploadFile | None = None,
-        problem: Problem | None = None,
-        locked: bool | None = None,
-    ):
-        if name is not None:
-            self.name = name
-        if team is not None:
-            self.team = team
-        if role is not None:
-            self.role = role
-        if file is not None:
-            self.file.attach(file)
-        if problem is not None:
-            self.problem = problem
-        if locked is not None:
-            self.locked = locked
-        db.commit()
-
 
 class Documentation(WithFiles, unsafe_hash=True):
     team: Mapped[Team] = relationship(lazy="joined")
@@ -435,12 +344,6 @@ class Documentation(WithFiles, unsafe_hash=True):
             if problem is None:
                 raise TypeError
             return db.query(cls).filter(cls.team_id == identifier.id, cls.problem_id == problem.id).first()
-
-    @with_store_manager
-    def update(self, db: Session, file: BinaryIO | UploadFile | None):
-        if file is not None:
-            self.file.attach(file)
-            db.commit()
 
 
 ProgramSource = Literal["team_spec", "program"]
