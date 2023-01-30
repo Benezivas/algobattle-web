@@ -1,10 +1,13 @@
 
 export async function send_request(action, content) {
-    var response = await fetch("/api/" + action, {
+    var _content = {
         "method": "POST",
-        "headers": {"Content-type": "application/json"},
-        "body": JSON.stringify(content),
-    })
+    }
+    if (content != undefined) {
+        _content.headers = {"Content-type": "application/json"}
+        _content.body = JSON.stringify(content)
+    }
+    var response = await fetch("/api/" + action, _content)
     if (response.ok) {
         return response.json()
     }
