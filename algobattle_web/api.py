@@ -71,7 +71,7 @@ class EditUser(BaseSchema):
 @autocommit
 async def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     user = unwrap(User.get(db, id))
-    for key, val in edit.dict(exclude_unset=True):
+    for key, val in edit.dict(exclude_unset=True).items():
         setattr(user, key, val)
     return user
 
@@ -92,7 +92,7 @@ class EditSelf(BaseSchema):
 @router.post("/user/self/edit")
 @autocommit
 async def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSelf) -> User:
-    for key, val in edit.dict(exclude_unset=True):
+    for key, val in edit.dict(exclude_unset=True).items():
         setattr(user, key, val)
     return user
 
