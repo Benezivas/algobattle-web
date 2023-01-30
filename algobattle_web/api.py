@@ -530,11 +530,11 @@ def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate, back
 
 class ScheduleEdit(BaseSchema):
     id: ID
-    name: str | NoEdit = NoEdit()
-    time: datetime | NoEdit = NoEdit()
-    problem: ID | NoEdit = NoEdit()
-    config: ID | None | NoEdit = NoEdit()
-    points: int | NoEdit = NoEdit()
+    name: str | None = None
+    time: datetime | None = None
+    problem: ID | None = None
+    config: ID | None | None = None
+    points: int | None = None
 
 
 @admin.post("/schedule/update")
@@ -542,13 +542,13 @@ class ScheduleEdit(BaseSchema):
 def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> Schedule:
     schedule = unwrap(Schedule.get(db, edit.id))
 
-    if isinstance(edit.problem, NoEdit):
-        problem = NoEdit()
+    if edit.problem is None:
+        problem = None
     else:
         problem = unwrap(Problem.get(db, edit.problem))
 
-    if isinstance(edit.config, NoEdit):
-        config = NoEdit()
+    if edit.config is None:
+        config = None
     elif edit.config is None:
         config = None
     else:
