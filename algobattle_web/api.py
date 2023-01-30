@@ -62,35 +62,26 @@ async def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> Use
 
 
 class EditUser(BaseSchema):
-    id: ID
     name: str | None = None
     email: str | None = None
     is_admin: bool | None = None
 
 
-@admin.post("/user/edit")
+@admin.post("/user/{id}/edit")
 @autocommit
-async def edit_user(*, db: Session = Depends(get_db), edit: EditUser) -> User:
-    user = User.get(db, edit.id)
-    if user is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    user.update(db, edit.email, edit.name, edit.is_admin)
+async def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
+    user = unwrap(User.get(db, id))
+    for key, val in edit.dict(exclude_unset=True):
+        setattr(user, key, val)
     return user
 
 
-class DeleteUser(BaseSchema):
-    id: ID
-
-
-@admin.post("/user/delete")
+@admin.post("/user/{id}/delete")
 @autocommit
-async def delete_user(*, db: Session = Depends(get_db), user_schema: DeleteUser) -> bool:
-    user = User.get(db, user_schema.id)
-    if user is None:
-        return False
-    else:
-        user.delete(db)
-        return True
+async def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
+    user = unwrap(User.get(db, id))
+    db.delete(user)
+    return True
 
 
 class EditSelf(BaseSchema):
@@ -100,28 +91,25 @@ class EditSelf(BaseSchema):
 
 @router.post("/user/edit_self")
 @autocommit
-async def edit_self(*, db: Session = Depends(get_db), user=Depends(curr_user), edit: EditSelf) -> User:
-    user = User.get(db, user.id)
-    if user is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    user.update(db, edit.email, edit.name)
+async def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSelf) -> User:
+    for key, val in edit.dict(exclude_unset=True):
+        setattr(user, key, val)
     return user
 
 
 class EditSettings(BaseSchema):
-    selected_team: ID | None
+    selected_team: ID | None = None
 
 
 @router.post("/user/edit_settings")
 @autocommit
 async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
-    print(settings)
-    if settings.selected_team is not None:
-        team = Team.get(db, settings.selected_team)
-        if team is None or team not in user.teams:
+    updates = settings.dict(exclude_unset=True)
+    if "selected_team" in "updates":
+        team = unwrap(Team.get(db, updates["selected_team"]))
+        if team not in user.teams:
             raise HTTPException(status.HTTP_400_BAD_REQUEST)
         user.settings.selected_team = team
-    db.commit()
     return user
 
 
