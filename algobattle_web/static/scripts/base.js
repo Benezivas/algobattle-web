@@ -33,7 +33,6 @@ export function fmt_date(date) {
 
 export function remove_unchanged(payload, object) {
     for (const [key, val] of payload.entries()) {
-        console.log(key, val, object[key])
         if (val == object[key] || val == undefined) {
             payload.delete(key)
         }
