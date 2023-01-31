@@ -12,7 +12,6 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import create_engine, TypeDecorator, Unicode, DateTime, select
 from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase, registry, mapped_column, Mapped, MappedAsDataclass
-from sqlalchemy_utils import UUIDType
 from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable
 from starlette.datastructures import UploadFile
 from fastapi.responses import FileResponse
@@ -153,7 +152,6 @@ def with_store_manager(func: Callable[Concatenate[Any, Session, P], T]) -> Calla
 class BaseNoID(MappedAsDataclass, DeclarativeBase):
     registry = registry(
         type_annotation_map={
-            UUID: UUIDType,
             datetime: DateTime,
             DbFile: Json,
         }

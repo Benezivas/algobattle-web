@@ -25,7 +25,6 @@ dependencies = [
     "python-jose[cryptography]",
     "python-multipart",
     "sqlalchemy >= 2.0.0b1",
-    "SQLALchemy-Utils",
     "sqlalchemy-media",
 ]
 
