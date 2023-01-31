@@ -118,7 +118,7 @@ class DbFile(SqlFile):
     
     def response(self) -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
-        return FileResponse(Path(STORAGE_PATH) / self.path, filename=self.original_filename)
+        return FileResponse(Path(STORAGE_PATH) / self.path, filename=self.original_filename, content_disposition_type="inline")
     
     class Schema(BaseSchema, ABC):
         name: str
