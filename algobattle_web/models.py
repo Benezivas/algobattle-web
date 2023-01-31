@@ -6,13 +6,14 @@ from typing import Any, BinaryIO, Literal, Mapping, Self, cast, overload
 from enum import Enum
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey, Column, Enum as SqlEnum, select
+from sqlalchemy import Table, ForeignKey, Column, select, String
 from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, composite
 from fastapi import UploadFile
 from uuid import UUID
 
+from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import Base, Session, DbFile, ID, with_store_manager, BaseNoID
 from algobattle_web.base_classes import BaseSchema, NoEdit, ObjID
@@ -258,33 +259,27 @@ class Problem(Base, unsafe_hash=True):
             return or_(cls.start.is_(None), cls.start < datetime.now())
 
 
-class _Program_Role(Enum):
-    generator = "generator"
-    solver = "solver"
-
-
 class Program(Base, unsafe_hash=True):
     name: Mapped[str]
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
-    role: Mapped[_Program_Role] = mapped_column(SqlEnum(_Program_Role))
+    role: Mapped[ProgramRole] = mapped_column("role", String)
     file: Mapped[DbFile]
     problem: Mapped[Problem] = relationship(lazy="joined")
     problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"), init=False)
-    creation_time: Mapped[datetime] = mapped_column(default=datetime.now)
-    locked: Mapped[bool] = mapped_column(default=False)
+    creation_time: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+    user_editable: Mapped[bool] = mapped_column(default=True)
 
-
-    Role = _Program_Role
+    Role = ProgramRole
 
     class Schema(Base.Schema):
         name: str
         team: ObjID
-        role: _Program_Role
+        role: ProgramRole
         file: DbFile.Schema
         creation_time: datetime
         problem: ObjID
-        locked: bool
+        user_editable: bool
 
 
 class Documentation(Base, unsafe_hash=True):
