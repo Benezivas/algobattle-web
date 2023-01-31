@@ -103,8 +103,18 @@ class DbFile(SqlFile):
         )
 
     @classmethod
-    def create_from(cls, *args, **kwargs) -> DbFile:
-        return cast(DbFile, super().create_from(*args, **kwargs))
+    def create_from(    # type: ignore
+        cls,
+        attachable: Attachable | UploadFile,
+        content_type: str | None = None,
+        original_filename: str | None = None,
+        extension: str | None = None,
+        store_id: str | None = None,
+        overwrite: bool = False,
+        suppress_pre_process: bool = False,
+        suppress_validation: bool = False,
+        **kwargs,
+    ) -> DbFile: ...
     
     def response(self) -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
