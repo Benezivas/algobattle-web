@@ -1,6 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime
-from typing import Any, Callable, Literal, cast
+from typing import Any, Callable, Literal
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
@@ -85,8 +85,8 @@ async def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 
 class EditSelf(BaseSchema):
-    name: str | None = None
-    email: str | None = None
+    name: str | Missing = missing
+    email: str | Missing = missing
 
 
 @router.post("/user/self/edit")
@@ -98,7 +98,7 @@ async def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_
 
 
 class EditSettings(BaseSchema):
-    selected_team: ID | None = None
+    selected_team: ID | Missing = missing
 
 
 @router.post("/user/self/settings")
@@ -129,14 +129,14 @@ async def create_context(*, db: Session = Depends(get_db), context: CreateContex
 
 
 class EditContext(BaseSchema):
-    name: str | None = None
+    name: str | Missing = missing
 
 
 @admin.post("/context/{id}/edit")
 @autocommit
 async def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditContext) -> Context:
     context = unwrap(Context.get(db, id))
-    if data.name is not None:
+    if present(data.name):
         context.name = data.name
     return context
 
@@ -167,20 +167,20 @@ def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
 
 
 class EditTeam(BaseSchema):
-    name: str | None = None
-    context: ID | None = None
-    members: list[tuple[Literal["add", "remove"], ID]] | None = None
+    name: str | Missing = missing
+    context: ID | Missing = missing
+    members: list[tuple[Literal["add", "remove"], ID]] | Missing = missing
 
 
 @admin.post("/team/{id}/edit")
 @autocommit
 def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
     team = unwrap(Team.get(db, id))
-    if edit.name is not None:
+    if present(edit.name):
         team.name = edit.name
-    if edit.context is not None:
+    if present(edit.context):
         team.context_id = edit.context
-    if edit.members is not None:
+    if present(edit.members):
         for action, user_id in edit.members:
             user = unwrap(db.get(User, user_id))
             match action:
@@ -239,7 +239,7 @@ def get_config(*, db: Session = Depends(get_db), id: ID) -> FileResponse:
 
 class ConfigEdit(BaseSchema):
     id: ID
-    name: str | None
+    name: str | Missing = missing
 
 
 @admin.post("/config/{id}/edit")
@@ -248,13 +248,13 @@ def edit_config(
     *,
     db: Session = Depends(get_db),
     id: ID,
-    name: str | None = Form(default=None),
-    file: UploadFile | None = File(default=None),
+    name: str | Missing = Form(default=missing),
+    file: UploadFile | Missing = File(default=missing),
 ) -> Config:
     config = unwrap(Config.get(db, id))
-    if name is not None:
+    if present(name):
         config.name = name
-    if file is not None:
+    if present(file):
         config.file.attach(file)
     return config
 
