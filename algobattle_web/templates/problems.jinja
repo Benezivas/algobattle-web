@@ -30,7 +30,7 @@
               <td>File</td>
               <td>
                 <input v-if="editing" class="e-em form-control form-control-sm" name="file" type="file">
-                <a v-else role="button" class="btn btn-primary btn-sm" :href="'/api/problem/getfile/'+problem.id" data-bs-toggle="tooltip" title="Download config file">${problem.file.name} <i class="bi bi-file-earmark-arrow-down"></i></a>
+                <a v-else role="button" class="btn btn-primary btn-sm" :href="`/api/problem/${problem.id}/file`" data-bs-toggle="tooltip" title="Download config file">${problem.file.name} <i class="bi bi-file-earmark-arrow-down"></i></a>
               </td>
             </tr>
             <tr>
@@ -62,7 +62,7 @@
               <td>Description</td>
               <td>
                 <input v-if="editing" class="e-em form-control form-control-sm" name="description" type="file">
-                <a v-else role="button" class="btn btn-primary btn-sm" :href="'/api/problem/getdesc/'+problem.id" data-bs-toggle="tooltip" title="Download config file">
+                <a v-else role="button" class="btn btn-primary btn-sm" :href="`/api/problem/${problem.id}/description`" data-bs-toggle="tooltip" title="Download config file">
                   ${problem.description.name} <i class="bi bi-file-earmark-arrow-down"></i>
                 </a>
               </td>

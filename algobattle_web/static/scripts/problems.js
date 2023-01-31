@@ -1,5 +1,5 @@
 import { createApp, reactive } from "vue"
-import { send_form, send_request, fmt_date } from "base"
+import { send_form, send_request, fmt_date, remove_unchanged } from "base"
 
 
 const store = reactive({
@@ -45,21 +45,21 @@ app.component("Problem", {
             this.editing = !this.editing
         },
         async delete_problem() {
-            var response = await send_request("problem/delete/" + this.problem.id)
+            var response = await send_request(`problem/${this.problem.id}/delete`)
             if (response) {
                 delete store.problems[this.problem.id]
             }
         },
         async edit(event) {
             const payload = new FormData(event.currentTarget)
-            payload.append("id", this.problem.id)
             if (payload.get("description").size == 0) {
                 payload.delete("description")
             }
             if (payload.get("file").size == 0) {
                 payload.delete("file")
             }
-            var response = await send_form("problem/edit", payload)
+            remove_unchanged(payload, this.problem)
+            var response = await send_form(`problem/${this.problem.id}/edit`, payload)
             if (response) {
                 response = await response.json()
                 store.problems[response.id] = response

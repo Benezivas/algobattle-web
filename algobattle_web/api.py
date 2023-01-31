@@ -1,6 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, cast
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
@@ -22,7 +22,7 @@ from algobattle_web.models import (
 )
 from algobattle_web.util import unwrap
 from algobattle_web.dependencies import curr_user
-from algobattle_web.base_classes import BaseSchema, NoEdit
+from algobattle_web.base_classes import BaseSchema, Missing, missing, present
 
 
 def check_if_admin(user: User = Depends(curr_user)):
@@ -284,64 +284,69 @@ class ProblemCreate(BaseSchema):
 @admin.post("/problem/create")
 @autocommit
 async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate = Depends(ProblemCreate.from_form())) -> Problem:
-    config = Config.get(db, problem.config)
-    if config is None:
-        raise HTTPException(400)
-    args: dict[str, Any] = problem.dict() | {"config": config}
-    return Problem(db, **args)
+    config = unwrap(Config.get(db, problem.config))
+    file = DbFile.create_from(problem.file)
+    if problem.description is not None:
+        desc = DbFile.create_from(problem.description)
+    else:
+        desc = None
+    return Problem(db, problem.name, file, config, problem.start, problem.end, desc)
 
 
-@router.get("/problem/getfile/{id}")
+@router.get("/problem/{id}/file")
 @autocommit
 async def get_problemfile(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
-    problem = Problem.get(db, id)
-    if problem is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    problem = unwrap(Problem.get(db, id))
     if not problem.visible_to(user):
         raise HTTPException(401)
     return problem.file.response()
 
 
-@router.get("/problem/getdesc/{id}")
+@router.get("/problem/{id}/description")
 @autocommit
-async def get_problem(*, db: Session = Depends(get_db), id: ID) -> FileResponse:
-    problem = Problem.get(db, id)
-    if problem is None or problem.description is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    return problem.description.response()
+async def get_problem(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
+    problem = unwrap(Problem.get(db, id))
+    if not problem.visible_to(user):
+        raise HTTPException(401)
+    return unwrap(problem.description).response()
 
 
 class ProblemEdit(BaseSchema):
-    id: ID
-    name: str | None
-    file: UploadFile | None = None
-    config: ID | None = None
-    start: datetime | None = None
-    end: datetime | None = None
-    desc: UploadFile | None = None
+    name: str | Missing = missing
+    file: UploadFile | Missing = missing
+    config: ID | Missing = missing
+    start: datetime | None | Missing = missing
+    end: datetime | None | Missing = missing
+    description: UploadFile | None | Missing = missing
 
 
-@admin.post("/problem/edit")
+@admin.post("/problem/{id}/edit")
 @autocommit
-async def edit_problem(*, db: Session = Depends(get_db), edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
-    problem = Problem.get(db, edit.id)
-    if problem is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    args = edit.dict()
-    del args["id"]
-    if edit.config is not None:
-        args["config"] = Config.get(db, edit.config)
-    problem.update(db, **args)
+async def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
+    problem = unwrap(db.get(Problem, id))
+    for key in ("name", "start", "end"):
+        val = getattr(edit, key)
+        if present(val):
+            setattr(problem, key, val)
+    if present(edit.file):
+        problem.file.attach(edit.file)
+    if present(edit.description):
+        if edit.description is None:
+            problem.description = None
+        elif problem.description is None:
+            problem.description = DbFile.create_from(edit.description)
+        else:
+            problem.description.attach(edit.description)
+    if present(edit.config):
+        problem.config_id = edit.config
     return problem
 
 
-@admin.post("/problem/delete/{id}")
+@admin.post("/problem/{id}/delete")
 @autocommit
 async def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
-    problem = Problem.get(db, id)
-    if problem is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
-    problem.delete(db)
+    problem = unwrap(db.get(Problem, id))
+    db.delete(problem)
     return True
 
 
