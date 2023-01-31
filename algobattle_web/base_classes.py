@@ -1,7 +1,7 @@
 """Module for base classes that can be imported everywhere else."""
 from __future__ import annotations
 from inspect import Parameter, Signature, signature
-from typing import Any
+from typing import Any, ClassVar, Never, Self, TypeGuard, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -35,7 +35,7 @@ class BaseSchema(BaseModel):
         """Constructs a a function that can be used as a dependency for parsing this schema from form data."""
 
         def builder(**kwargs):
-            return cls(**kwargs)
+            return cls(**{key: val for key, val in kwargs.items() if present(val)})
 
         new_sig = []
         for param in signature(cls).parameters.values():
@@ -49,6 +49,26 @@ class BaseSchema(BaseModel):
 
         builder.__signature__ = Signature(new_sig)
         return builder
+
+
+class Missing(BaseSchema):
+    """Marker class for fields that weren't present in the parsed json."""
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls._validate
+
+    @classmethod
+    def _validate(cls, obj: Any) -> Never:
+        raise ValueError
+
+
+missing = Missing()
+
+
+T = TypeVar("T")
+def present(_obj: T | Missing) -> TypeGuard[T]:
+    return not isinstance(_obj, Missing)
 
 
 class ObjID(UUID):
