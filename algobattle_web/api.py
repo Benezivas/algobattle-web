@@ -429,48 +429,36 @@ def delete_program(*, db: Session = Depends(get_db), id: ID) -> bool:
 # *******************************************************************************
 
 
-class DocsUpload(BaseSchema):
-    problem: ID
-    file: UploadFile
-
-
-@router.post("/documentation/upload")
+@router.post("/documentation/{problem_id}/upload")
 @autocommit
-async def upload_docs(
-    db: Session = Depends(get_db), user: User = Depends(curr_user), data: DocsUpload = Depends(DocsUpload.from_form())
-) -> Documentation:
-    if user.settings.selected_team is None:
+async def upload_docs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), problem_id: ID, file: UploadFile = File()) -> Documentation:
+    team = unwrap(user.settings.selected_team)
+    problem = unwrap(db.get(Problem, problem_id))
+    if not problem.visible_to(user):
         raise HTTPException(400)
-    problem = Problem.get(db, data.problem)
-    if problem is None or not problem.visible_to(user):
-        raise HTTPException(400)
-    docs = Documentation.get(db, user.settings.selected_team, problem)
+    docs = Documentation.get(db, team, problem)
     if docs is None:
-        file = DbFile.create_from(data.file)
-        return Documentation(db, user.settings.selected_team, problem, file)
+        _file = DbFile.create_from(file)
+        return Documentation(db, team, problem, _file)
     else:
-        docs.update(db, data.file)
+        docs.file.attach(file)
         return docs
 
 
-@router.get("/documentation/getfile/{id}")
+@router.get("/documentation/{id}/file")
 @autocommit
 async def get_docs_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
-    docs = db.get(Documentation, id)
-    if docs is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+    docs = unwrap(db.get(Documentation, id))
     if not user.is_admin and docs.team not in user.teams:
         raise HTTPException(401)
     return docs.file.response()
 
 
-@router.post("/documentation/delete/{id}")
+@router.post("/documentation/{id}/delete")
 @autocommit
 async def delete_docs(*, db: Session = Depends(get_db), id: ID) -> bool:
-    docs = db.get(Documentation, id)
-    if docs is None:
-        raise HTTPException(400)
-    docs.delete(db)
+    docs = unwrap(db.get(Documentation, id))
+    db.delete(docs)
     return True
 
 
