@@ -408,22 +408,11 @@ def edit_own_program(
     return program
 
 
-class ProgramEditAdmin(ProgramEdit):
-    user_editable: bool | Missing = missing
-
-
-@admin.post("/program/{id}/edit")
+@admin.post("/program/{id}/user_editable")
 @autocommit
-def edit_program(*, db: Session = Depends(get_db), id: ID, edit: ProgramEditAdmin = Depends(ProgramEditAdmin.from_form())) -> Program:
+def edit_program(*, db: Session = Depends(get_db), id: ID, user_editable: bool) -> Program:
     program = unwrap(db.get(Program, id))
-    if present(edit.name):
-        program.name = edit.name
-    if present(edit.role):
-        program.role = cast(Program.Role, edit.role)
-    if present(edit.problem):
-        program.problem_id = edit.problem
-    if present(edit.user_editable):
-        program.user_editable = edit.user_editable
+    program.user_editable = user_editable
     return program
 
 

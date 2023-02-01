@@ -71,12 +71,12 @@
             <tr>
               <td>File</td>
               <td>
-                <a role="button" class="btn btn-primary btn-sm" :href="'/api/program/getfile/'+program.id" data-bs-toggle="tooltip" title="Download file">${program.file.name} <i class="bi bi-download"></i></a>
+                <a role="button" class="btn btn-primary btn-sm" :href="`/api/program/${problem.id}/file`" data-bs-toggle="tooltip" title="Download file">${program.file.name} <i class="bi bi-download"></i></a>
               </td>
             </tr>
           </tbody>
         </table>
-        <div v-if="store.user.is_admin || !problem.locked" class="btn-group btn-group-sm" role="group">
+        <div v-if="store.user.is_admin || problem.user_editable" class="btn-group btn-group-sm" role="group">
           <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete" v-if="editing" @click="remove"><i class="bi bi-trash"></i></button>
           <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
           <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" v-if="editing"><i class="bi bi-check2"></i></button>
@@ -112,7 +112,8 @@
                 <td>Role</td>
                 <td>
                   <select class="form-select form-select-sm w-em" name="role">
-                    <option v-for="role in store.roles" :value="role">${role}</option>
+                    <option value="generator">Generator</option>
+                    <option value="solver">Solver</option>
                   </select>
                 </td>
               </tr>

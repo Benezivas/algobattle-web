@@ -41,6 +41,7 @@ app.component("Program", {
         return {
             editing: false,
             store: store,
+            user_editable: false,
         }
     },
     methods: {
@@ -48,20 +49,24 @@ app.component("Program", {
             this.editing = !this.editing
         },
         async remove() {
-            var response = await send_request("program/delete/" + this.program.id)
+            var response = await send_request(`program/${this.program.id}/delete/`)
             if (response) {
                 delete store.programs[this.program.id]
             }
         },
         async edit(event) {
             const payload = new FormData(event.currentTarget)
-            payload.append("id", this.program.id)
-            const endpoint = store.user.is_admin ? "program/edit" : "program/edit_own"
-            var response = await send_form(endpoint, payload)
+            var response = await send_form(`program/${this.program.id}/edit`, payload)
             if (response) {
                 response = await response.json()
                 store.programs[response.id] = response
                 this.toggle_editing()
+            }
+        },
+        async set_user_editable(event) {
+            var response = await send_request(`program/${this.program.id}/user_editable`, this.user_editable)
+            if (response) {
+                store.programs[response.id] = response
             }
         },
         fmt_date
