@@ -16,7 +16,7 @@ from uuid import UUID
 from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.config import SECRET_KEY, ALGORITHM
 from algobattle_web.database import Base, Session, DbFile, ID, with_store_manager, BaseNoID
-from algobattle_web.base_classes import BaseSchema, NoEdit, ObjID
+from algobattle_web.base_classes import BaseSchema, ObjID
 from algobattle_web.util import unwrap
 
 
@@ -263,7 +263,7 @@ class Program(Base, unsafe_hash=True):
     name: Mapped[str]
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
-    role: Mapped[ProgramRole] = mapped_column("role", String)
+    role: Mapped[ProgramRole] = mapped_column(String)
     file: Mapped[DbFile]
     problem: Mapped[Problem] = relationship(lazy="joined")
     problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"), init=False)
@@ -410,42 +410,42 @@ class Schedule(Base, unsafe_hash=True):
             db.add(ScheduleParticipant(db, schedule_id=schedule.id, team=info.team, generator=info.generator, solver=info.solver))
         return schedule
 
-    def update(
-        self,
-        db: Session,
-        time: datetime | NoEdit = NoEdit(),
-        problem: Problem | NoEdit = NoEdit(),
-        config: Config | None | NoEdit = NoEdit(),
-        name: str | NoEdit = NoEdit(),
-        points: int | NoEdit = NoEdit(),
-        *,
-        add: list[ParticipantInfo] | None = None,
-        remove: list[Team] | None = None,
-    ):
-        if add is not None and remove is not None:
-            raise TypeError
-
-        if not isinstance(time, NoEdit):
-            self.time = time
-        if not isinstance(problem, NoEdit):
-            self.problem = problem
-        if not isinstance(config, NoEdit):
-            self.config = config
-        if not isinstance(name, NoEdit):
-            self.name = name
-        if not isinstance(points, NoEdit):
-            self.points = points
-        
-        if add is not None:
-            for info in add:
-                self.participants.append(
-                    ScheduleParticipant(db, schedule_id=self.id, team=info.team, generator=info.generator, solver=info.solver)
-                )
-        if remove is not None:
-            for info in self.participants:
-                if info.team in remove:
-                    db.delete(info)
-        db.commit()
+    #def update(
+    #    self,
+    #    db: Session,
+    #    time: datetime | NoEdit = NoEdit(),
+    #    problem: Problem | NoEdit = NoEdit(),
+    #    config: Config | None | NoEdit = NoEdit(),
+    #    name: str | NoEdit = NoEdit(),
+    #    points: int | NoEdit = NoEdit(),
+    #    *,
+    #    add: list[ParticipantInfo] | None = None,
+    #    remove: list[Team] | None = None,
+    #):
+    #    if add is not None and remove is not None:
+    #        raise TypeError
+#
+    #    if not isinstance(time, NoEdit):
+    #        self.time = time
+    #    if not isinstance(problem, NoEdit):
+    #        self.problem = problem
+    #    if not isinstance(config, NoEdit):
+    #        self.config = config
+    #    if not isinstance(name, NoEdit):
+    #        self.name = name
+    #    if not isinstance(points, NoEdit):
+    #        self.points = points
+    #    
+    #    if add is not None:
+    #        for info in add:
+    #            self.participants.append(
+    #                ScheduleParticipant(db, schedule_id=self.id, team=info.team, generator=info.generator, solver=info.solver)
+    #            )
+    #    if remove is not None:
+    #        for info in self.participants:
+    #            if info.team in remove:
+    #                db.delete(info)
+    #    db.commit()
 
 @dataclass
 class ResultParticipantInfo:
