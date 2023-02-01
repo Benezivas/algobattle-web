@@ -7,8 +7,12 @@ from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
 from algobattle_web.battle import run_match
-from algobattle_web.database import DbFile, autocommit, get_db, Session, ID
 from algobattle_web.models import (
+    DbFile,
+    autocommit,
+    get_db,
+    Session,
+    ID,
     Config,
     Context,
     Documentation,

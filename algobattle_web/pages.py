@@ -6,8 +6,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 
-from algobattle_web.database import Base, get_db, Session
 from algobattle_web.models import (
+    Base,
+    get_db,
+    Session,
     Config,
     Context,
     Documentation,
@@ -18,9 +20,10 @@ from algobattle_web.models import (
     Team,
     User,
     LoginError,
+    encode,
 )
 from algobattle_web.templates import templated, templates
-from algobattle_web.util import send_email, encode
+from algobattle_web.util import send_email
 from algobattle_web.dependencies import curr_user, curr_user_maybe
 
 router = APIRouter()

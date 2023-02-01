@@ -7,8 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
 from uvicorn import run
 
-from algobattle_web.database import Base, SessionLocal, engine
-from algobattle_web.models import User
+from algobattle_web.models import Base, SessionLocal, engine, User
 from algobattle_web.config import ADMIN_EMAIL
 from algobattle_web.api import router as api
 from algobattle_web.pages import router as pages

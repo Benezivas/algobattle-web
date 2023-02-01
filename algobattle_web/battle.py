@@ -11,8 +11,7 @@ from algobattle.match import Match
 from algobattle.util import TempDir
 from algobattle.problem import Problem
 from algobattle.cli import Config
-from algobattle_web.models import MatchResult, Program, ResultParticipantInfo, Schedule
-from algobattle_web.database import DbFile, Session
+from algobattle_web.models import MatchResult, Program, ResultParticipantInfo, Schedule, DbFile, Session
 from algobattle_web.config import STORAGE_PATH
 
 
