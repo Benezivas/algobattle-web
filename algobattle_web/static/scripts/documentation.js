@@ -16,8 +16,7 @@ const app = createApp({
     methods: {
         async upload(event) {
             const payload = new FormData(event.currentTarget)
-            payload.append("problem", store.curr_row.problem.id)
-            var response = await send_form("documentation/upload", payload)
+            var response = await send_form(`documentation/${store.curr_row.problem.id}/upload`, payload)
             if (response) {
                 response = await response.json()
                 store.docs[response.problem] = response
@@ -52,7 +51,7 @@ app.component("Problem", {
             }
         },
         async remove(doc) {
-            var response = await send_request("documentation/delete/" + doc.id)
+            var response = await send_request(`documentation/${doc.id}/delete/`)
             if (response) {
                 delete store.docs[this.problem.id][doc.team]
                 this.toggle_editing()
@@ -60,8 +59,7 @@ app.component("Problem", {
         },
         async upload(event) {
             const payload = new FormData(event.currentTarget)
-            payload.append("problem", this.problem.id)
-            var response = await send_form("documentation/upload", payload)
+            var response = await send_form(`documentation/${this.problem.id}/upload`, payload)
             if (response) {
                 response = await response.json()
                 store.docs[response.problem][response.team] = response
