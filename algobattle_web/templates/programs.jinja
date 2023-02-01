@@ -5,7 +5,6 @@
 <script>
   const programs = {{programs | tojson}}
   const problems = {{problems | tojson}}
-  const roles = {{ roles | tojson }}
   {% if user.is_admin %}
   const teams = {{ teams | tojson }}
   {% endif %}

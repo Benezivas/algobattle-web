@@ -107,7 +107,7 @@ async def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_
     else:
         params["programs"] = db.query(Program).filter(Program.team_id == user.settings.selected_team_id).all()
         params["problems"] = db.query(Problem).filter(Problem.visible_to_sql(user)).all()
-    return "programs.jinja", {"roles": [r.value for r in Program.Role]} | {k: encode(v) for k, v in params.items()}
+    return "programs.jinja", {k: encode(v) for k, v in params.items()}
 
 
 @router.get("/documentation")
@@ -145,10 +145,10 @@ def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user))
         programs = {
             team.id: {
                 "generators": {
-                    prog.id: prog.encode() for prog in progs if prog.team == team and prog.role == Program.Role.generator
+                    prog.id: prog.encode() for prog in progs if prog.team == team and prog.role == "generator"
                 },
                 "solvers": {
-                    prog.id: prog.encode() for prog in progs if prog.team == team and prog.role == Program.Role.solver
+                    prog.id: prog.encode() for prog in progs if prog.team == team and prog.role == "solver"
                 },
             }
             for team in teams

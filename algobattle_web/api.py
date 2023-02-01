@@ -1,6 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, cast
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
@@ -364,84 +364,74 @@ class ProgramCreate(BaseSchema):
 
 @router.post("/program/create")
 @autocommit
-async def add_program(
+def add_program(
     *,
     db: Session = Depends(get_db),
     user: User = Depends(curr_user),
-    program: ProgramCreate = Depends(ProgramCreate.from_form()),
+    data: ProgramCreate = Depends(ProgramCreate.from_form()),
 ) -> Program:
-    if user.settings.selected_team is None:
-        raise HTTPException(400)
-    args = program.dict()
-    args["problem"] = Problem.get(db, program.problem)
-    if args["problem"] is None:
-        raise HTTPException(400)
-    return Program(db, team=user.settings.selected_team, **args)
+    team = unwrap(user.settings.selected_team)
+    problem = unwrap(db.get(Problem, data.problem))
+    file = DbFile.create_from(data.file)
+    return Program(db, data.name, team, data.role, file, problem)
 
 
-@router.get("/program/getfile/{id}")
+@router.get("/program/{id}/file")
 @autocommit
-async def get_program_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
-    program = db.get(Program, id)
-    if program is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST)
+def get_program_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
+    program = unwrap(db.get(Program, id))
     if not user.is_admin and program.team not in user.teams:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+        raise HTTPException(403)
     return program.file.response()
 
 
 class ProgramEdit(BaseSchema):
-    id: ID
-    name: str | None = None
-    role: Program.Role | None = None
-    problem: ID | None = None
+    name: str | Missing = missing
+    role: Program.Role | Missing = missing
+    problem: ID | Missing = missing
 
 
-@router.post("/program/edit_own")
+@router.post("/program/{id}/edit")
 @autocommit
-async def edit_own_program(
-    *, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: ProgramEdit = Depends(ProgramEdit.from_form())
+def edit_own_program(
+    *, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID, edit: ProgramEdit = Depends(ProgramEdit.from_form())
 ) -> Program:
-    program = Program.get(db, edit.id)
-    if program is None or user.settings.selected_team != program.team or program.locked:
-        raise HTTPException(400)
-    if edit.problem is not None:
-        problem = Problem.get(db, edit.problem)
-        if problem is None:
-            raise HTTPException(400)
-    else:
-        problem = None
-    program.update(db, name=edit.name, role=edit.role, problem=problem)
+    program = unwrap(db.get(Program, id))
+    if not (program.user_editable and user.settings.selected_team == program.team):
+        raise HTTPException(403)
+    if present(edit.name):
+        program.name = edit.name
+    if present(edit.role):
+        program.role = cast(Program.Role, edit.role)
+    if present(edit.problem):
+        program.problem_id = edit.problem
     return program
 
 
 class ProgramEditAdmin(ProgramEdit):
-    locked: bool | None = None
+    user_editable: bool | Missing = missing
 
 
-@admin.post("/program/edit")
+@admin.post("/program/{id}/edit")
 @autocommit
-async def edit_program(*, db: Session = Depends(get_db), edit: ProgramEditAdmin = Depends(ProgramEditAdmin.from_form())) -> Program:
-    program = Program.get(db, edit.id)
-    if program is None:
-        raise HTTPException(400)
-    if edit.problem is not None:
-        problem = Problem.get(db, edit.problem)
-        if problem is None:
-            raise HTTPException(400)
-    else:
-        problem = None
-    program.update(db, name=edit.name, role=edit.role, problem=problem, locked=edit.locked)
+def edit_program(*, db: Session = Depends(get_db), id: ID, edit: ProgramEditAdmin = Depends(ProgramEditAdmin.from_form())) -> Program:
+    program = unwrap(db.get(Program, id))
+    if present(edit.name):
+        program.name = edit.name
+    if present(edit.role):
+        program.role = cast(Program.Role, edit.role)
+    if present(edit.problem):
+        program.problem_id = edit.problem
+    if present(edit.user_editable):
+        program.user_editable = edit.user_editable
     return program
 
 
-@admin.post("/program/delete/{id}")
+@router.post("/program/{id}/delete")
 @autocommit
-async def delete_program(*, db: Session = Depends(get_db), id: ID) -> bool:
-    program = Program.get(db, id)
-    if program is None:
-        raise HTTPException(400)
-    program.delete(db)
+def delete_program(*, db: Session = Depends(get_db), id: ID) -> bool:
+    program = unwrap(Program.get(db, id))
+    db.delete(program)
     return True
 
 
