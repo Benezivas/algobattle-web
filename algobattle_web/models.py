@@ -23,8 +23,7 @@ from fastapi.encoders import jsonable_encoder
 
 from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.config import SECRET_KEY, ALGORITHM, SQLALCHEMY_DATABASE_URL, STORAGE_PATH
-from algobattle_web.base_classes import BaseSchema, ObjID
-from algobattle_web.util import unwrap
+from algobattle_web.util import unwrap, BaseSchema, ObjID
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]

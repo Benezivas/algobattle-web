@@ -24,9 +24,8 @@ from algobattle_web.models import (
     Team,
     User,
 )
-from algobattle_web.util import unwrap
+from algobattle_web.util import unwrap, BaseSchema, Missing, missing, present
 from algobattle_web.dependencies import curr_user
-from algobattle_web.base_classes import BaseSchema, Missing, missing, present
 
 
 def check_if_admin(user: User = Depends(curr_user)):
