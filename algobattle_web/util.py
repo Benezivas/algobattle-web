@@ -1,5 +1,5 @@
 """Util functions."""
-from typing import Any, Never, TypeGuard, TypeVar
+from typing import Any, Never, Self, TypeGuard, TypeVar
 from inspect import Parameter, Signature, signature
 from uuid import UUID
 
@@ -12,10 +12,10 @@ class BaseSchema(BaseModel):
         orm_mode = True
 
     @classmethod
-    def from_form(cls):
+    def from_form(cls: type[Self]):
         """Constructs a a function that can be used as a dependency for parsing this schema from form data."""
 
-        def builder(**kwargs):
+        def builder(**kwargs) -> Self:
             return cls(**{key: val for key, val in kwargs.items() if present(val)})
 
         new_sig = []
