@@ -216,6 +216,7 @@ class MemberEditTeam(BaseSchema):
 @autocommit
 def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: MemberEditTeam) -> Team:
     team = unwrap(user.settings.selected_team)
+    team.assert_editable(user)
     if edit.name is not None:
         team.name = edit.name
     return team
@@ -235,8 +236,9 @@ def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: Uploa
 
 @router.get("/config/{id}/file")
 @autocommit
-def get_config(*, db: Session = Depends(get_db), id: ID) -> FileResponse:
+def get_config(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     config = unwrap(Config.get(db, id))
+    config.assert_visible(user)
     return config.file.response()
 
 
@@ -373,6 +375,7 @@ def add_program(
 ) -> Program:
     team = unwrap(user.settings.selected_team)
     problem = unwrap(db.get(Problem, data.problem))
+    problem.assert_visible(user)
     file = DbFile.create_from(data.file)
     return Program(db, data.name, team, data.role, file, problem)
 
@@ -381,8 +384,7 @@ def add_program(
 @autocommit
 def get_program_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     program = unwrap(db.get(Program, id))
-    if not user.is_admin and program.team not in user.teams:
-        raise HTTPException(403)
+    program.assert_visible(user)
     return program.file.response()
 
 
@@ -398,8 +400,7 @@ def edit_own_program(
     *, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID, edit: ProgramEdit = Depends(ProgramEdit.from_form())
 ) -> Program:
     program = unwrap(db.get(Program, id))
-    if not (program.user_editable and user.settings.selected_team == program.team):
-        raise HTTPException(403)
+    program.assert_editable(user)
     if present(edit.name):
         program.name = edit.name
     if present(edit.role):
@@ -419,8 +420,9 @@ def edit_program(*, db: Session = Depends(get_db), id: ID, user_editable: bool) 
 
 @router.post("/program/{id}/delete")
 @autocommit
-def delete_program(*, db: Session = Depends(get_db), id: ID) -> bool:
+def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), id: ID) -> bool:
     program = unwrap(Program.get(db, id))
+    program.assert_editable(user)
     db.delete(program)
     return True
 
@@ -435,7 +437,7 @@ def delete_program(*, db: Session = Depends(get_db), id: ID) -> bool:
 async def upload_docs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), problem_id: ID, file: UploadFile = File()) -> Documentation:
     team = unwrap(user.settings.selected_team)
     problem = unwrap(db.get(Problem, problem_id))
-    problem.assert_visible(user)
+    problem.assert_editable(user)
     docs = Documentation.get(db, team, problem)
     if docs is None:
         _file = DbFile.create_from(file)
@@ -449,15 +451,15 @@ async def upload_docs(*, db: Session = Depends(get_db), user: User = Depends(cur
 @autocommit
 async def get_docs_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     docs = unwrap(db.get(Documentation, id))
-    if not user.is_admin and docs.team not in user.teams:
-        raise HTTPException(401)
+    docs.assert_visible(user)
     return docs.file.response()
 
 
 @router.post("/documentation/{id}/delete")
 @autocommit
-async def delete_docs(*, db: Session = Depends(get_db), id: ID) -> bool:
+async def delete_docs(*, db: Session = Depends(get_db), user = Depends(curr_user), id: ID) -> bool:
     docs = unwrap(db.get(Documentation, id))
+    docs.assert_editable(user)
     db.delete(docs)
     return True
 
