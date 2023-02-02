@@ -16,7 +16,8 @@ const app = createApp({
     methods: {
         async upload(event) {
             const payload = new FormData(event.currentTarget)
-            var response = await send_form(`documentation/${store.curr_row.problem.id}/upload`, payload)
+            payload.append("problem_id", store.curr_row.problem.id)
+            var response = await send_form("documentation/upload", payload)
             if (response) {
                 response = await response.json()
                 store.docs[response.problem] = response

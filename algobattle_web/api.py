@@ -432,9 +432,9 @@ def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), 
 # *******************************************************************************
 
 
-@router.post("/documentation/{problem_id}/upload")
+@router.post("/documentation/upload")
 @autocommit
-async def upload_docs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), problem_id: ID, file: UploadFile = File()) -> Documentation:
+async def upload_docs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), problem_id: ID = Form(), file: UploadFile = File()) -> Documentation:
     team = unwrap(user.settings.selected_team)
     problem = unwrap(db.get(Problem, problem_id))
     problem.assert_editable(user)
