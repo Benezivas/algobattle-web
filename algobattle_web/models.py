@@ -39,6 +39,24 @@ async def get_db() -> AsyncIterable[Session]:
         yield db
 
 
+class ModelError(Exception):
+    pass
+
+
+@dataclass
+class ValueTaken(ModelError):
+    value: str
+
+
+@dataclass
+class ResourceNeeded(ModelError):
+    err: str | None = None
+
+
+class PermissionError(ModelError):
+    pass
+
+
 P = ParamSpec("P")
 R = TypeVar("R")
 
@@ -189,6 +207,34 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
         """Converts the database object into a pydantic schema."""
         return self.Schema.from_orm(self)
 
+    def visible(self, user: "User") -> bool:
+        """Checks wether this model is visible to a given user."""
+        return True
+
+    @classmethod
+    def visible_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
+        """Emits a sql filter expression that checks whether the model is visible to a given user."""
+        return sql_true
+
+    def assert_visible(self, user: "User") -> None:
+        """Asserts that this model is visible to a given user."""
+        if not self.visible(user):
+            raise PermissionError
+
+    def editable(self, user: "User") -> bool:
+        """Checks wether this model is editable by a given user."""
+        return True
+
+    @classmethod
+    def editable_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
+        """Emits a sql filter expression that checks whether the model is editable by a given user."""
+        return sql_true
+
+    def assert_editable(self, user: "User") -> None:
+        """Asserts that this model is editable by a given user."""
+        if not self.editable(user):
+            raise PermissionError
+
 
 class Base(BaseNoID, unsafe_hash=True):
     __abstract__ = True
@@ -206,21 +252,6 @@ class Base(BaseNoID, unsafe_hash=True):
 def encode(col: Collection[Base]) -> dict[ID, dict[str, Any]]:
     """Encodes a collection of database items into a jsonable container."""
     return jsonable_encoder({el.id: el.encode() for el in col})
-
-
-class ModelError(Exception):
-    pass
-
-
-@dataclass
-class ValueTaken(ModelError):
-    value: str
-
-
-@dataclass
-class ResourceNeeded(ModelError):
-    err: str | None = None
-
 
 team_members = Table(
     "team_members",
@@ -433,14 +464,14 @@ class Problem(Base, unsafe_hash=True):
         else:
             return db.query(cls).filter(cls.name == identifier).first()
 
-    def visible_to(self, user: User) -> bool:
+    def visible(self, user: User) -> bool:
         if user.is_admin or self.start is None:
             return True
         else:
             return self.start <= datetime.now()
 
     @classmethod
-    def visible_to_sql(cls, user: User) -> _ColumnExpressionArgument[bool]:
+    def visible_sql(cls, user: User) -> _ColumnExpressionArgument[bool]:
         if user.is_admin:
             return sql_true
         else:

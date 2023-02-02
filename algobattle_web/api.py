@@ -301,8 +301,7 @@ async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate =
 @autocommit
 async def get_problemfile(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     problem = unwrap(Problem.get(db, id))
-    if not problem.visible_to(user):
-        raise HTTPException(401)
+    problem.assert_visible(user)
     return problem.file.response()
 
 
@@ -310,8 +309,7 @@ async def get_problemfile(*, db: Session = Depends(get_db), user: User = Depends
 @autocommit
 async def get_problem(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     problem = unwrap(Problem.get(db, id))
-    if not problem.visible_to(user):
-        raise HTTPException(401)
+    problem.assert_visible(user)
     return unwrap(problem.description).response()
 
 
@@ -438,8 +436,7 @@ def delete_program(*, db: Session = Depends(get_db), id: ID) -> bool:
 async def upload_docs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), problem_id: ID, file: UploadFile = File()) -> Documentation:
     team = unwrap(user.settings.selected_team)
     problem = unwrap(db.get(Problem, problem_id))
-    if not problem.visible_to(user):
-        raise HTTPException(400)
+    problem.assert_visible(user)
     docs = Documentation.get(db, team, problem)
     if docs is None:
         _file = DbFile.create_from(file)

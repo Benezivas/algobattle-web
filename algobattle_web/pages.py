@@ -94,7 +94,7 @@ async def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_
         problems = db.query(Problem).all()
         configs = db.query(Config).all()
     else:
-        problems = db.query(Problem).filter(Problem.visible_to_sql(user)).all()
+        problems = db.query(Problem).filter(Problem.visible_sql(user)).all()
         configs = {p.config for p in problems}
     return "problems.jinja", {"problems": encode(problems), "configs": encode(configs)}
 
@@ -109,7 +109,7 @@ async def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_
         params["teams"] = db.query(Team).all()
     else:
         params["programs"] = db.query(Program).filter(Program.team_id == user.settings.selected_team_id).all()
-        params["problems"] = db.query(Problem).filter(Problem.visible_to_sql(user)).all()
+        params["problems"] = db.query(Problem).filter(Problem.visible_sql(user)).all()
     return "programs.jinja", {k: encode(v) for k, v in params.items()}
 
 
@@ -118,7 +118,7 @@ async def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_
 def docs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     if user.settings.selected_team is None:
         raise HTTPException(400)
-    problems = db.scalars(select(Problem).where(Problem.visible_to_sql(user))).all()
+    problems = db.scalars(select(Problem).where(Problem.visible_sql(user))).all()
     teams = db.scalars(select(Team)).unique().all() if user.is_admin else [user.settings.selected_team]
     docs = db.scalars(select(Documentation)).unique().all()
     if user.is_admin:
@@ -139,7 +139,7 @@ def docs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
 @router.get("/schedule")
 @templated
 def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
-    schedules = db.scalars(select(Schedule).join(Problem).where(Problem.visible_to_sql(user))).unique().all()
+    schedules = db.scalars(select(Schedule).join(Problem).where(Problem.visible_sql(user))).unique().all()
     if user.is_admin:
         problems = Problem.get_all(db)
         teams = Team.get_all(db)

@@ -1,13 +1,13 @@
 from __future__ import annotations
 from pathlib import Path
-from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
 from uvicorn import run
 
-from algobattle_web.models import Base, SessionLocal, engine, User
+from algobattle_web.models import Base, SessionLocal, engine, User, PermissionError
 from algobattle_web.config import ADMIN_EMAIL
 from algobattle_web.api import router as api
 from algobattle_web.pages import router as pages
@@ -34,6 +34,13 @@ async def err_handler(request: Request, e: RequestValidationError):
         })
     )
 
+@app.exception_handler(PermissionError)
+async def perm_err(e: PermissionError):
+    raise HTTPException(status.HTTP_403_FORBIDDEN)
+
+@app.exception_handler(ValueError)
+async def val_err(e: ValueError):
+    raise HTTPException(status.HTTP_400_BAD_REQUEST)
 
 app.include_router(api)
 app.include_router(pages)
