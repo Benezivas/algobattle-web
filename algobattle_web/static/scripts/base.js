@@ -38,3 +38,24 @@ export function remove_unchanged(payload, object) {
         }
     }
 }
+
+export function pick(obj, ...keys){
+    return Object.fromEntries(
+        keys
+        .filter(key => key in obj)
+        .map(key => [key, obj[key]])
+      );
+}
+
+export function inclusive_pick(obj, ...keys) {
+    return Object.fromEntries(
+    	    keys.map(key => [key, obj[key]])
+    )
+}
+
+export function omit(obj, ...keys) {
+    return Object.fromEntries(
+        Object.entries(obj)
+        .filter(([key]) => !keys.includes(key))
+    )
+}
