@@ -2,6 +2,7 @@ from __future__ import annotations
 from datetime import datetime
 import logging
 from pathlib import Path
+from time import sleep
 from zipfile import ZipFile
 from sqlalchemy import select
 from sqlalchemy_media import StoreManager
@@ -11,7 +12,7 @@ from algobattle.match import Match
 from algobattle.util import TempDir
 from algobattle.problem import Problem
 from algobattle.cli import Config
-from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, DbFile, Session
+from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, DbFile, Session, SessionLocal
 from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.util import unwrap
 
@@ -85,6 +86,33 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
                 participant.points = points[participant.team.name]
             db_result.status = "complete"
             logging.shutdown()
-            with StoreManager(db), open(logging_path, "rb") as logs:
+            with open(logging_path, "rb") as logs:
                 db_result.logs = DbFile.create_from(logs, original_filename=logs.name)
                 db.commit()
+
+
+def run_scheduled_matches():
+    time = datetime.now()
+    first = time - SERVER_CONFIG.match_execution_interval
+    with SessionLocal() as db, StoreManager(db):
+        scheduled_matches = db.scalars(select(ScheduledMatch).where(ScheduledMatch.time >= first, ScheduledMatch.time <= time)).unique().all()
+        if len(scheduled_matches) == 0:
+            return
+        # ! Temporary fix, come up with a better solution to this
+        if len(scheduled_matches) > 1:
+            print("matches are scheduled too close together, aborting their execution!")
+            return
+        try:
+            run_match(db, scheduled_matches[0])
+        except BaseException as e:
+            print(f"Exception occured when executing match:\n{e}")
+
+
+def main():
+    day = datetime.today()
+    next_exec = SERVER_CONFIG.match_execution_interval - (datetime.now() - day) % SERVER_CONFIG.match_execution_interval
+    sleep(next_exec.seconds)
+    while True:
+        run_scheduled_matches()
+        sleep(SERVER_CONFIG.match_execution_interval.seconds)
+

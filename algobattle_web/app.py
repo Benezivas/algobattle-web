@@ -1,5 +1,6 @@
-from __future__ import annotations
 from pathlib import Path
+from multiprocessing import Process
+
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError, HTTPException
 from fastapi.responses import JSONResponse
@@ -11,7 +12,7 @@ from algobattle_web.models import Base, SessionLocal, engine, User, PermissionEr
 from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.api import router as api
 from algobattle_web.pages import router as pages
-
+from algobattle_web.battle import main as battle_main
 
 
 Base.metadata.create_all(bind=engine)
@@ -50,4 +51,9 @@ app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), na
 
 def main():
     """Starts a basic webserver."""
-    run("algobattle_web:app")
+    match_runner = Process(target=battle_main)
+    try:
+        match_runner.start()
+        run("algobattle_web:app")
+    finally:
+        match_runner.terminate()

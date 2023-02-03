@@ -1,3 +1,4 @@
+from datetime import timedelta
 import tomllib
 from pathlib import Path
 from base64 import b64decode
@@ -12,9 +13,10 @@ class Config(BaseSchema):
     database_url: str
     admin_email: str
     storage_path: Path
+    match_execution_interval: timedelta = timedelta(minutes=5)
 
     @validator("secret_key")
-    def parse_b64(self, val) -> bytes:
+    def parse_b64(cls, val) -> bytes:
         return b64decode(val)
 
 

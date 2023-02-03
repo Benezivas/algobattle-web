@@ -497,16 +497,16 @@ def create_schedule(*, db: Session = Depends(get_db), data: ScheduledMatchCreate
 
 
 class ScheduleEdit(BaseSchema):
+    class Participant(BaseSchema):
+        generator: ID | None | Missing = missing
+        solver: ID | None | Missing = missing
+
     name: str | Missing = missing
     time: datetime | Missing = missing
     problem: ID | Missing = missing
     config: ID | None | Missing = missing
     points: float | Missing = missing
-    participants: dict[ID, "Participant" | None] | Missing = missing
-
-    class Participant(BaseSchema):
-        generator: ID | None | Missing = missing
-        solver: ID | None | Missing = missing
+    participants: dict[ID, Participant | None] | Missing = missing
 
 
 @admin.post("/match/schedule/{id}/edit")
