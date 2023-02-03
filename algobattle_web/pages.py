@@ -206,7 +206,7 @@ def users_get(
         name: str | None = None,
         email: str | None = None,
         is_admin: bool | None = None,
-        context: str | None = None,
+        context: ID | None = None,
         team: ID | None = None
     ):
     filters = []
@@ -218,8 +218,8 @@ def users_get(
     if is_admin is not None:
         filters.append(User.is_admin == is_admin)
     if context is not None:
-        context_id = unwrap(db.get(Context, context))
-        filters.append(Team.context_id == context_id)
+        _context = unwrap(db.get(Context, context))
+        filters.append(Team.context_id == _context.id)
     if team is not None:
         filters.append(Team.id == team)
         teams_filters.append(Team.id == team)
