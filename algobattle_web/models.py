@@ -590,7 +590,7 @@ class ScheduledMatch(Base, unsafe_hash=True):
 
 
 class ResultParticipant(BaseNoID, unsafe_hash=True):
-    match: Mapped["MatchResult"] = relationship(back_populates="participants")
+    match: Mapped["MatchResult"] = relationship(back_populates="participants", init=False)
     match_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True, init=False)
     team: Mapped[Team] = relationship()
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True, init=False)
@@ -613,7 +613,7 @@ class MatchResult(Base, unsafe_hash=True):
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"), init=False)
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id), init=False)
-    participants: Mapped[list[ResultParticipant]] = relationship()
+    participants: Mapped[set[ResultParticipant]] = relationship(default=set)
     logs: Mapped[DbFile | None] = mapped_column(default=None)
 
     Status = Literal["complete", "failed", "running"]
@@ -628,7 +628,7 @@ class MatchResult(Base, unsafe_hash=True):
 
         @validator("participants")
         def val_teams(cls, val):
-            if not isinstance(val, list):
+            if not isinstance(val, set):
                 raise ValueError
             out = {}
             for v in val:

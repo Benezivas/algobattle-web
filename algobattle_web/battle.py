@@ -11,8 +11,9 @@ from algobattle.match import Match
 from algobattle.util import TempDir
 from algobattle.problem import Problem
 from algobattle.cli import Config
-from algobattle_web.models import MatchResult, Program, ResultParticipantInfo, ScheduledMatch, DbFile, Session
+from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, DbFile, Session
 from algobattle_web.config import STORAGE_PATH
+from algobattle_web.util import unwrap
 
 
 def _extract_to(source: Path, target: Path) -> Path:
@@ -44,36 +45,34 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
     with TempDir() as folder:
         logger, logging_path = _setup_logging(folder, verbose=True, silent=True)
         if scheduled_match.config is None:
-            config_db = scheduled_match.problem.config
+            config = scheduled_match.problem.config
         else:
-            config_db = scheduled_match.config
+            config = scheduled_match.config
         problem_path = _extract_to(STORAGE_PATH / scheduled_match.problem.file.path, folder / "problem")
             
-        participants = []
-        team_infos = []
+        team_info: list[TeamInfo] = []
+        paricipants: set[ResultParticipant] = set()
         for participant in scheduled_match.participants:
-            if participant.generator.src == "team_spec":
-                gen = db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "generator")).unique().first()
+            if participant.generator is None:
+                gen = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "generator")).unique().first())
             else:
-                gen = participant.gen_prog
-            assert gen is not None
+                gen = participant.generator
             gen_path = _extract_to(STORAGE_PATH / gen.file.path, folder / participant.team.name / "generator")
             
-            if participant.solver.src == "team_spec":
-                sol = db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "solver")).unique().first()
+            if participant.solver is None:
+                sol = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "solver")).unique().first())
             else:
-                sol = participant.sol_prog
-            assert sol is not None
+                sol = participant.solver
             sol_path = _extract_to(STORAGE_PATH / sol.file.path, folder / participant.team.name / "solver")
 
-            participants.append(ResultParticipantInfo(participant.team, 0, generator=gen, solver=sol))
-            team_infos.append(TeamInfo(participant.team.name, generator=gen_path, solver=sol_path))
-        db_result = MatchResult.create(db, schedule=scheduled_match, config=config_db, status="running", participants=participants)
+            team_info.append(TeamInfo(participant.team.name, gen_path, sol_path))
+            paricipants.add(ResultParticipant(db, participant.team, gen, sol, 0))
+        db_result = MatchResult(db, "running", datetime.now(), config, scheduled_match.problem, paricipants)
         db.commit()
 
-        config = Config.from_file(Path(config_db.file.path))
+        config = Config.from_file(Path(config.file.path))
         problem = Problem.import_from_path(problem_path)
-        with TeamHandler.build(team_infos, problem, config.docker, config.execution.safe_build) as teams:
+        with TeamHandler.build(team_info, problem, config.docker, config.execution.safe_build) as teams:
             result = Match.run(config.match, config.battle_config, problem, teams)
             points = result.calculate_points()
             
