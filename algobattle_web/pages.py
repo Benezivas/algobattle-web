@@ -16,7 +16,7 @@ from algobattle_web.models import (
     MatchResult,
     Problem,
     Program,
-    Schedule,
+    ScheduledMatch,
     Team,
     User,
     LoginError,
@@ -139,7 +139,7 @@ def docs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
 @router.get("/schedule")
 @templated
 def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
-    schedules = db.scalars(select(Schedule).join(Problem).where(Problem.visible_sql(user))).unique().all()
+    schedules = db.scalars(select(ScheduledMatch).join(Problem).where(Problem.visible_sql(user))).unique().all()
     if user.is_admin:
         problems = Problem.get_all(db)
         teams = Team.get_all(db)
@@ -185,7 +185,7 @@ def results_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     return "results.jinja", {
         "results": encode(results),
         "teams": encode(teams),
-        "programs": encode(programs),
+        "programs": encode(p for p in programs if p is not None),
         "problems": encode(problems),
     }
 

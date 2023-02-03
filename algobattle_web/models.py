@@ -2,7 +2,7 @@
 from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
-from typing import Any, BinaryIO, Collection, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Callable, Concatenate, ParamSpec, Sequence, Type, TypeVar
+from typing import Any, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Callable, Concatenate, ParamSpec, Sequence, Type, TypeVar
 from enum import Enum
 from uuid import UUID, uuid4
 from functools import partial
@@ -15,15 +15,16 @@ from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Table, ForeignKey, Column, select, String, create_engine, TypeDecorator, Unicode, DateTime
 from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
-from sqlalchemy.orm import relationship, Mapped, mapped_column, composite, sessionmaker, Session, DeclarativeBase, registry, MappedAsDataclass
+from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, Session, DeclarativeBase, registry, MappedAsDataclass
 from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
 from fastapi.encoders import jsonable_encoder
+from pydantic import validator
 
 from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.config import SECRET_KEY, ALGORITHM, SQLALCHEMY_DATABASE_URL, STORAGE_PATH
-from algobattle_web.util import unwrap, BaseSchema, ObjID
+from algobattle_web.util import BaseSchema, ObjID
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
@@ -248,7 +249,7 @@ class Base(BaseNoID, unsafe_hash=True):
         return db.query(cls).filter(cls.id == identifier).first()   # type: ignore
 
 
-def encode(col: Collection[Base]) -> dict[ID, dict[str, Any]]:
+def encode(col: Iterable[Base]) -> dict[ID, dict[str, Any]]:
     """Encodes a collection of database items into a jsonable container."""
     return jsonable_encoder({el.id: el.encode() for el in col})
 
@@ -540,198 +541,101 @@ class Documentation(Base, unsafe_hash=True):
             return db.query(cls).filter(cls.team_id == identifier.id, cls.problem_id == problem.id).first()
 
 
-ProgramSource = Literal["team_spec", "program"]
-
-
-@dataclass(frozen=True, unsafe_hash=True)
-class ProgramSpec:
-    src: ProgramSource
-    program: ID | None = None
-
-    class Schema(BaseSchema):
-        src: ProgramSource
-        program: ObjID | None
-
-        def into_obj(self, db: Session) -> "ProgramSpec":
-            match self.src:
-                case "team_spec":
-                    return ProgramSpec("team_spec")
-                case "program":
-                    prog = unwrap(Program.get(db, unwrap(self.program)))
-                    return ProgramSpec("program", prog.id)
-                case _:
-                    raise ValueError
-
-
-@dataclass
-class ParticipantInfo:
-    team: Team
-    generator: ProgramSpec
-    solver: ProgramSpec
-
-    class Schema(BaseSchema):
-        team: ObjID
-        generator: ProgramSpec.Schema
-        solver: ProgramSpec.Schema
-
-        def into_obj(self, db: Session) -> "ParticipantInfo":
-            team = unwrap(Team.get(db, self.team))
-            generator = self.generator.into_obj(db)
-            solver = self.solver.into_obj(db)
-            return ParticipantInfo(team, generator=generator, solver=solver)
-
-
-class ScheduleParticipant(BaseNoID, unsafe_hash=True):
-    schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), primary_key=True)
+class MatchParticipant(BaseNoID, unsafe_hash=True):
+    match: Mapped["ScheduledMatch"] = relationship(back_populates="participants")
+    match_id: Mapped[ID] = mapped_column(ForeignKey("scheduledmatches.id"), primary_key=True, init=False)
+    team: Mapped[Team] = relationship()
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True, init=False)
-    team: Mapped[Team] = relationship(uselist=False)
+    generator_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"), init=False)
+    generator: Mapped[Program | None] = relationship(foreign_keys=[generator_id])
+    solver_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"), init=False)
+    solver: Mapped[Program | None] = relationship(foreign_keys=[solver_id])
 
-    gen_src: Mapped[str] = mapped_column(init=False)
-    gen_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"), init=False)
-    gen_prog: Mapped[Program | None] = relationship(foreign_keys=[gen_id], init=False)
-    generator: Mapped[ProgramSpec] = composite(ProgramSpec, gen_src, gen_id)
-
-    sol_src: Mapped[str] = mapped_column(init=False)
-    sol_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"), init=False)
-    sol_prog: Mapped[Program | None] = relationship(foreign_keys=[sol_id], init=False)
-    solver: Mapped[ProgramSpec] = composite(ProgramSpec, sol_src, sol_id)
+    class Schema(BaseNoID.Schema):
+        generator: ObjID | None
+        solver: ObjID | None
 
 
+class ScheduledMatch(Base, unsafe_hash=True):
+    __tablename__ = "scheduledmatches"  # type: ignore
 
-class Schedule(Base, unsafe_hash=True):
     time: Mapped[datetime]
-    problem: Mapped[Problem] = relationship(uselist=False)
+    problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
-    config: Mapped[Config | None] = relationship(uselist=False)
+    config: Mapped[Config | None] = relationship()
     config_id: Mapped[ID | None] = mapped_column(ForeignKey("configs.id"), init=False)
+    participants: Mapped[set[MatchParticipant]] = relationship(init=False, default=set, cascade="all, delete")
     name: Mapped[str] = mapped_column(default="")
-    points: Mapped[int] = mapped_column(default=0)
+    points: Mapped[float] = mapped_column(default=0)
 
-    participants: Mapped[list[ScheduleParticipant]] = relationship(init=False, cascade="all, delete")
 
     class Schema(Base.Schema):
         name: str
         time: datetime
         problem: ObjID
         config: ObjID | None
-        participants: list[ParticipantInfo.Schema]
-        points: int
-
-    @classmethod
-    def create(
-        cls, db: Session, time: datetime, problem: Problem, participants: list[ParticipantInfo], config: Config | None = None, name: str = "", points: int = 0
-    ) -> Self:
-        if config is None:
-            config = problem.config
-        schedule = cls(db, time=time, problem=problem, config=config, name=name, points=points)
-        for info in participants:
-            db.add(ScheduleParticipant(db, schedule_id=schedule.id, team=info.team, generator=info.generator, solver=info.solver))
-        return schedule
-
-    #def update(
-    #    self,
-    #    db: Session,
-    #    time: datetime | NoEdit = NoEdit(),
-    #    problem: Problem | NoEdit = NoEdit(),
-    #    config: Config | None | NoEdit = NoEdit(),
-    #    name: str | NoEdit = NoEdit(),
-    #    points: int | NoEdit = NoEdit(),
-    #    *,
-    #    add: list[ParticipantInfo] | None = None,
-    #    remove: list[Team] | None = None,
-    #):
-    #    if add is not None and remove is not None:
-    #        raise TypeError
-#
-    #    if not isinstance(time, NoEdit):
-    #        self.time = time
-    #    if not isinstance(problem, NoEdit):
-    #        self.problem = problem
-    #    if not isinstance(config, NoEdit):
-    #        self.config = config
-    #    if not isinstance(name, NoEdit):
-    #        self.name = name
-    #    if not isinstance(points, NoEdit):
-    #        self.points = points
-    #    
-    #    if add is not None:
-    #        for info in add:
-    #            self.participants.append(
-    #                ScheduleParticipant(db, schedule_id=self.id, team=info.team, generator=info.generator, solver=info.solver)
-    #            )
-    #    if remove is not None:
-    #        for info in self.participants:
-    #            if info.team in remove:
-    #                db.delete(info)
-    #    db.commit()
-
-@dataclass
-class ResultParticipantInfo:
-    team: Team
-    points: float
-    generator: Program
-    solver: Program
-
-    class Schema(BaseSchema):
-        team: ObjID
+        participants: dict[ObjID, MatchParticipant.Schema]
         points: float
-        generator: ObjID
-        solver: ObjID
 
-        def into_obj(self, db: Session) -> "ResultParticipantInfo":
-            team = unwrap(Team.get(db, self.team))
-            generator = unwrap(Program.get(db, self.generator))
-            solver = unwrap(Program.get(db, self.solver))
-            return ResultParticipantInfo(team, generator=generator, solver=solver, points=self.points)
+        @validator("participants")
+        def val_teams(cls, val):
+            if not isinstance(val, set):
+                raise ValueError
+            out = {}
+            for v in val:
+                if not isinstance(v, MatchParticipant):
+                    raise ValueError
+                out[v.team_id] = MatchParticipant.Schema.from_orm(val)
+            return out
 
 
 class ResultParticipant(BaseNoID, unsafe_hash=True):
-    result_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True)
-    team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True, init=False)
+    match: Mapped["MatchResult"] = relationship(back_populates="participants")
+    match_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True, init=False)
     team: Mapped[Team] = relationship()
+    team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True, init=False)
+    generator_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"), init=False)
+    generator: Mapped[Program | None] = relationship(foreign_keys=[generator_id])
+    solver_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"), init=False)
+    solver: Mapped[Program | None] = relationship(foreign_keys=[solver_id])
     points: Mapped[float]
 
-    gen_id: Mapped[ID] = mapped_column(ForeignKey("programs.id"), init=False)
-    generator: Mapped[Program] = relationship(foreign_keys=[gen_id])
-
-    sol_id: Mapped[ID] = mapped_column(ForeignKey("programs.id"), init=False)
-    solver: Mapped[Program] = relationship(foreign_keys=[sol_id])
+    class Schema(BaseNoID.Schema):
+        generator: ObjID
+        solver: ObjID
+        points: float
 
 
 class MatchResult(Base, unsafe_hash=True):
-    schedule_id: Mapped[ID] = mapped_column(ForeignKey("schedules.id"), init=False)
-    config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"), init=False)
     status: Mapped[str]
     time: Mapped[datetime]
-    problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id), init=False)
-
-    participants: Mapped[list[ResultParticipant]] = relationship(init=False)
-    schedule: Mapped[Schedule] = relationship()
     config: Mapped[Config] = relationship()
+    config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"), init=False)
     problem: Mapped[Problem] = relationship()
+    problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id), init=False)
+    participants: Mapped[list[ResultParticipant]] = relationship()
     logs: Mapped[DbFile | None] = mapped_column(default=None)
 
     Status = Literal["complete", "failed", "running"]
 
     class Schema(Base.Schema):
-        schedule: ObjID
-        logs: DbFile.Schema | None
-        config: ObjID
-        participants: list[ResultParticipantInfo.Schema]
-        status: str
+        status: "MatchResult.Status"
         time: datetime
+        config: ObjID
         problem: ObjID
+        participants: dict[ID, ResultParticipant.Schema]
+        logs: DbFile.Schema | None
 
-    @classmethod
-    @with_store_manager
-    def create(
-        cls, db: Session, *, schedule: Schedule, logs: BinaryIO | UploadFile | None = None, config: Config, status: "MatchResult.Status", participants: list[ResultParticipantInfo]
-    ) -> Self:
-        if logs is not None:
-            log_file = DbFile.create_from(logs)
-        else:
-            log_file = None
-        result = cls(db, schedule=schedule, logs=log_file, config=config, status=status, time=datetime.now(), problem=schedule.problem)
-        for participant in participants:
-            db.add(ResultParticipant(db, result_id=result.id, team=participant.team, points=participant.points, generator=participant.generator, solver=participant.solver))
-        return result
+        @validator("participants")
+        def val_teams(cls, val):
+            if not isinstance(val, list):
+                raise ValueError
+            out = {}
+            for v in val:
+                if not isinstance(v, ResultParticipant):
+                    raise ValueError
+                out[v.team_id] = ResultParticipant.Schema.from_orm(val)
+            return out
+
+    def visible(self, user: User) -> bool:
+        return user.is_admin or len(set(user.teams).intersection(p.team for p in self.participants)) != 0

@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from algobattle_web.battle import run_match
 from algobattle_web.models import (
     DbFile,
+    MatchParticipant,
     autocommit,
     get_db,
     Session,
@@ -17,10 +18,9 @@ from algobattle_web.models import (
     Context,
     Documentation,
     MatchResult,
-    ParticipantInfo,
     Problem,
     Program,
-    Schedule,
+    ScheduledMatch,
     Team,
     User,
 )
@@ -465,111 +465,105 @@ async def delete_docs(*, db: Session = Depends(get_db), user = Depends(curr_user
 
 
 # *******************************************************************************
-# * Schedule
+# * Match
 # *******************************************************************************
 
 
-class ScheduleCreate(BaseSchema):
+class ScheduledMatchCreate(BaseSchema):
     name: str = ""
     time: datetime
     problem: ID
     config: ID | None
-    participants: list[ParticipantInfo.Schema]
-    points: int = 0
+    participants: dict[ID, MatchParticipant.Schema]
+    points: float = 0
 
 
-@admin.post("/schedule/create")
+@admin.post("/match/schedule/create")
 @autocommit
-def create_schedule(*, db: Session = Depends(get_db), data: ScheduleCreate, background_tasks: BackgroundTasks) -> Schedule:
+def create_schedule(*, db: Session = Depends(get_db), data: ScheduledMatchCreate, background_tasks: BackgroundTasks) -> ScheduledMatch:
     problem = unwrap(Problem.get(db, data.problem))
+    config = unwrap(Config.get(db, data.config)) if data.config is not None else None
+    schedule = ScheduledMatch(db, data.time, problem, config, data.name, data.points)
+    for team_id, info in data.participants.items():
+        team = unwrap(db.get(Team, team_id))
+        gen = unwrap(db.get(Program, info.generator)) if info.generator is not None else None
+        sol = unwrap(db.get(Program, info.solver)) if info.solver is not None else None
+        schedule.participants.add(MatchParticipant(db, schedule, team, gen, sol))
 
-    if data.config is None:
-        config = None
-    else:
-        config = unwrap(Config.get(db, data.config))
-
-    participants = [info.into_obj(db) for info in data.participants]
-
-    schedule = Schedule.create(
-        db, name=data.name, time=data.time, points=data.points, problem=problem, config=config, participants=participants
-    )
+    #! Prototype
     if schedule.time <= datetime.now():
         background_tasks.add_task(run_match, db, schedule)
     return schedule
 
 
 class ScheduleEdit(BaseSchema):
-    id: ID
-    name: str | None = None
-    time: datetime | None = None
-    problem: ID | None = None
-    config: ID | None | None = None
-    points: int | None = None
+    name: str | Missing = missing
+    time: datetime | Missing = missing
+    problem: ID | Missing = missing
+    config: ID | None | Missing = missing
+    points: float | Missing = missing
+    participants: dict[ID, "Participant" | None] | Missing = missing
+
+    class Participant(BaseSchema):
+        generator: ID | None | Missing = missing
+        solver: ID | None | Missing = missing
 
 
-@admin.post("/schedule/update")
+@admin.post("/match/schedule/{id}/edit")
 @autocommit
-def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> Schedule:
-    schedule = unwrap(Schedule.get(db, edit.id))
-
-    if edit.problem is None:
-        problem = None
-    else:
-        problem = unwrap(Problem.get(db, edit.problem))
-
-    if edit.config is None:
-        config = None
-    elif edit.config is None:
-        config = None
-    else:
-        config = unwrap(Config.get(db, edit.config))
-
-    schedule.update(db, name=edit.name, time=edit.time, problem=problem, config=config, points=edit.points)
-    return schedule
-
-
-@admin.post("/schedule/add_team")
-@autocommit
-def add_team(*, db: Session = Depends(get_db), id: ID, participant: ParticipantInfo.Schema) -> Schedule:
-    schedule = unwrap(Schedule.get(db, id))
-    schedule.update(db, add=[participant.into_obj(db)])
-    return schedule
-
-
-@admin.post("/schedule/remove_team")
-@autocommit
-def remove_team(*, db: Session = Depends(get_db), id: ID, team: ID) -> Schedule:
-    schedule = unwrap(Schedule.get(db, id))
-    team_obj = unwrap(Team.get(db, team))
-    schedule.update(db, remove=[team_obj])
-    return schedule
+def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> ScheduledMatch:
+    match = unwrap(db.get(ScheduledMatch, id))
+    if present(edit.name):
+        match.name = edit.name
+    if present(edit.problem):
+        match.problem = unwrap(db.get(Problem, edit.problem))
+    if present(edit.config):
+        match.config = unwrap(db.get(Config, edit.config))
+    if present(edit.points):
+        match.points = edit.points
+    if present(edit.participants):
+        participants = {p.team: p for p in match.participants}
+        for team_id, info in edit.participants.items():
+            team = unwrap(db.get(Team, team_id))
+            if info is None:
+                if team not in participants:
+                    raise ValueError
+                match.participants.discard(participants[team])
+            elif team not in participants:
+                if not present(info.generator) or not present(info.solver):
+                    raise ValueError
+                gen = db.get(Program, info.generator) if info.generator is not None else None
+                sol = db.get(Program, info.solver) if info.solver is not None else None
+                match.participants.add(MatchParticipant(db, match, team, gen, sol))
+            else:
+                if present(info.generator):
+                    participants[team].generator = unwrap(db.get(Program, info.generator))
+                if present(info.solver):
+                    participants[team].solver = unwrap(db.get(Program, info.solver))
+    return match
 
 
-@admin.post("/schedule/delete/{id}")
+@admin.post("/match/schedule/{id}/delete")
 @autocommit
 def delete_schedule(*, db: Session = Depends(get_db), id: ID) -> bool:
-    unwrap(Schedule.get(db, id)).delete(db)
+    match = unwrap(ScheduledMatch.get(db, id))
+    db.delete(match)
     return True
 
 
-# *******************************************************************************
-# * Schedule
-# *******************************************************************************
-
-@router.get("/result/logs/{id}")
+@router.get("/match/result/{id}/logs")
 @autocommit
 async def get_match_logs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     result = unwrap(db.get(MatchResult, id))
-    if user.is_admin or set(user.teams).intersection(p.team for p in result.participants):
-        return unwrap(result.logs).response()
-    else:
-        raise HTTPException(401)
+    result.assert_visible(user)
+    return unwrap(result.logs).response()
 
 
-@admin.post("/result/delete/{id}")
+@admin.post("/match/result/{id}/delete")
 @autocommit
 def delete_result(*, db: Session = Depends(get_db), id: ID) -> bool:
-    unwrap(MatchResult.get(db, id)).delete(db)
+    result = unwrap(MatchResult.get(db, id))
+    db.delete(result)
     return True
 
 

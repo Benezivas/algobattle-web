@@ -11,7 +11,7 @@ from algobattle.match import Match
 from algobattle.util import TempDir
 from algobattle.problem import Problem
 from algobattle.cli import Config
-from algobattle_web.models import MatchResult, Program, ResultParticipantInfo, Schedule, DbFile, Session
+from algobattle_web.models import MatchResult, Program, ResultParticipantInfo, ScheduledMatch, DbFile, Session
 from algobattle_web.config import STORAGE_PATH
 
 
@@ -40,7 +40,7 @@ def _setup_logging(logging_path: Path, *, verbose: bool = True, silent: bool = F
     return logger, logging_path
 
 
-def run_match(db: Session, scheduled_match: Schedule):
+def run_match(db: Session, scheduled_match: ScheduledMatch):
     with TempDir() as folder:
         logger, logging_path = _setup_logging(folder, verbose=True, silent=True)
         if scheduled_match.config is None:
