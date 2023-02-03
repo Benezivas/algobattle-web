@@ -76,13 +76,15 @@
         </select>
         <label for="contextFilter" class="form-label mt-3">Context</label>
         <select class="form-select w-em" id="contextFilter" v-model="filter.context">
+          <option :value="null"></option>
           <option v-for="(context, id) in store.contexts" :value="id">${context.name}</option>
         </select>
         <label for="teamFilter" class="form-label mt-3">Team</label>
         <select class="form-select w-em" id="teamFilter" v-model="filter.team">
+          <option :value="null"></option>
           <option v-for="(team, id) in store.teams" :value="id">${team.name}</option>
         </select>
-        <button class="btn btn-primary mt-3">Apply</button>
+        <a class="btn btn-primary mt-3" :href="apply_filters" role="buttom">Apply</a>
       </div>
     </div>
   </div>

@@ -62,9 +62,30 @@ const app = createApp({
                 name: "",
                 email: "",
                 is_admin: null,
-                context: "",
-                team: "",
+                context: null,
+                team: null,
             },
+        }
+    },
+    computed: {
+        apply_filters() {
+            var filters = []
+            if (this.filter.name != "") {
+                filters.push(`name=${this.filter.name}`)
+            }
+            if (this.filter.email != "") {
+                filters.push(`email=${this.filter.email}`)
+            }
+            if (this.filter.is_admin != null) {
+                filters.push(`is_admin=${this.filter.is_admin}`)
+            }
+            if (this.filter.context != null) {
+                filters.push(`context=${this.filter.context}`)
+            }
+            if (this.filter.team != null) {
+                filters.push(`team=${this.filter.team}`)
+            }
+            return `/admin/users?${filters.join("&")}`
         }
     },
     methods: {
