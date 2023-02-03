@@ -8,7 +8,7 @@ from fastapi.encoders import jsonable_encoder
 from uvicorn import run
 
 from algobattle_web.models import Base, SessionLocal, engine, User, PermissionError
-from algobattle_web.config import ADMIN_EMAIL
+from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.api import router as api
 from algobattle_web.pages import router as pages
 
@@ -16,8 +16,8 @@ from algobattle_web.pages import router as pages
 
 Base.metadata.create_all(bind=engine)
 with SessionLocal() as db:
-    if User.get(db, ADMIN_EMAIL) is None:
-        User(db, email=ADMIN_EMAIL, name="Admin", is_admin=True)
+    if User.get(db, SERVER_CONFIG.admin_email) is None:
+        User(db, email=SERVER_CONFIG.admin_email, name="Admin", is_admin=True)
         db.commit()
 
 

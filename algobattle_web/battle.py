@@ -12,7 +12,7 @@ from algobattle.util import TempDir
 from algobattle.problem import Problem
 from algobattle.cli import Config
 from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, DbFile, Session
-from algobattle_web.config import STORAGE_PATH
+from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.util import unwrap
 
 
@@ -48,7 +48,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
             config = scheduled_match.problem.config
         else:
             config = scheduled_match.config
-        problem_path = _extract_to(STORAGE_PATH / scheduled_match.problem.file.path, folder / "problem")
+        problem_path = _extract_to(SERVER_CONFIG.storage_path / scheduled_match.problem.file.path, folder / "problem")
             
         team_info: list[TeamInfo] = []
         paricipants: set[ResultParticipant] = set()
@@ -57,13 +57,13 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
                 gen = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "generator")).unique().first())
             else:
                 gen = participant.generator
-            gen_path = _extract_to(STORAGE_PATH / gen.file.path, folder / participant.team.name / "generator")
+            gen_path = _extract_to(SERVER_CONFIG.storage_path / gen.file.path, folder / participant.team.name / "generator")
             
             if participant.solver is None:
                 sol = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "solver")).unique().first())
             else:
                 sol = participant.solver
-            sol_path = _extract_to(STORAGE_PATH / sol.file.path, folder / participant.team.name / "solver")
+            sol_path = _extract_to(SERVER_CONFIG.storage_path / sol.file.path, folder / participant.team.name / "solver")
 
             team_info.append(TeamInfo(participant.team.name, gen_path, sol_path))
             paricipants.add(ResultParticipant(db, participant.team, gen, sol, 0))

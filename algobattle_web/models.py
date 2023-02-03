@@ -23,15 +23,15 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import validator
 
 from algobattle.docker_util import Role as ProgramRole
-from algobattle_web.config import SECRET_KEY, ALGORITHM, SQLALCHEMY_DATABASE_URL, STORAGE_PATH
+from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.util import BaseSchema, ObjID
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(SERVER_CONFIG.database_url, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autoflush=False, bind=engine)
-StoreManager.register("fs", partial(FileSystemStore, STORAGE_PATH, ""), True)
+StoreManager.register("fs", partial(FileSystemStore, SERVER_CONFIG.storage_path, ""), True)
 
 
 async def get_db() -> AsyncIterable[Session]:
@@ -142,7 +142,7 @@ class DbFile(SqlFile):
     
     def response(self) -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
-        return FileResponse(Path(STORAGE_PATH) / self.path, filename=self.original_filename, content_disposition_type="inline")
+        return FileResponse(Path(SERVER_CONFIG.storage_path) / self.path, filename=self.original_filename, content_disposition_type="inline")
 
     class Schema(BaseSchema, ABC):
         name: str
@@ -313,14 +313,14 @@ class User(Base, unsafe_hash=True):
             "token_id": self.token_id.hex,
             "exp": datetime.now() + timedelta(weeks=4),
         }
-        return {"key": "user_token", "value": jwt.encode(payload, SECRET_KEY, ALGORITHM)}
+        return {"key": "user_token", "value": jwt.encode(payload, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)}
 
     @classmethod
     def decode_token(cls, db: Session, token: str | None) -> Self | None:
         if token is None:
             return
         try:
-            payload = jwt.decode(token, SECRET_KEY, ALGORITHM)
+            payload = jwt.decode(token, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)
             if payload["type"] == "user":
                 user_id = UUID(cast(str, payload["user_id"]))
                 token_id = UUID(cast(str, payload["token_id"]))
@@ -337,14 +337,14 @@ class User(Base, unsafe_hash=True):
             "email": email,
             "exp": datetime.now() + lifetime,
         }
-        return jwt.encode(payload, SECRET_KEY, ALGORITHM)
+        return jwt.encode(payload, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)
 
     @classmethod
     def decode_login_token(cls, db: Session, token: str | None) -> Self | LoginError:
         if token is None:
             return LoginError.NoToken
         try:
-            payload = jwt.decode(token, SECRET_KEY, ALGORITHM)
+            payload = jwt.decode(token, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)
             if payload["type"] == "login":
                 user = User.get(db, cast(str, payload["email"]))
                 if user is not None:
