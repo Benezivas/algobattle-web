@@ -7,6 +7,7 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 
 from algobattle_web.models import (
+    ID,
     Base,
     get_db,
     Session,
@@ -23,7 +24,7 @@ from algobattle_web.models import (
     encode,
 )
 from algobattle_web.templates import templated, templates
-from algobattle_web.util import send_email
+from algobattle_web.util import send_email, unwrap
 from algobattle_web.dependencies import curr_user, curr_user_maybe, check_if_admin
 
 router = APIRouter()
@@ -200,9 +201,30 @@ admin = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(check_i
 
 @admin.get("/users", response_class=HTMLResponse)
 @templated
-def users_get(db: Session = Depends(get_db)):
-    users = db.query(User).order_by(User.is_admin).all()[::-1]
-    teams = db.query(Team).all()
+def users_get(
+        db: Session = Depends(get_db),
+        name: str | None = None,
+        email: str | None = None,
+        is_admin: bool | None = None,
+        context: str | None = None,
+        team: ID | None = None
+    ):
+    filters = []
+    teams_filters = []
+    if name is not None:
+        filters.append(User.name.contains(name, autoescape=True))
+    if email is not None:
+        filters.append(User.email.contains(email, autoescape=True))
+    if is_admin is not None:
+        filters.append(User.is_admin == is_admin)
+    if context is not None:
+        context_id = unwrap(db.get(Context, context))
+        filters.append(Team.context_id == context_id)
+    if team is not None:
+        filters.append(Team.id == team)
+        teams_filters.append(Team.id == team)
+    users = db.scalars(select(User).join(User.teams).filter(*filters).order_by(User.is_admin.desc())).unique().all()
+    teams = db.scalars(select(Team).filter(*teams_filters)).unique().all()
     return "admin_users.jinja", {"users": encode(users), "teams": encode(teams)}
 
 
