@@ -9,19 +9,15 @@ const store = reactive({
 })
 
 
-async function create_user(event) {
-    var fields = event.currentTarget.elements
-
-    var response = await send_request("user/create", {
-        name: fields.name.value,
-        email: fields.email.value,
-        is_admin: fields.is_admin.checked,
-    })
+async function create_user() {
+    var response = await send_request("user/create", this.new_user)
     if (response) {
         store.users[response.id] = response
-        fields.name.value = ""
-        fields.email.value = ""
-        fields.is_admin.checked = false
+        this.new_user = {
+            name: null,
+            email: null,
+            is_admin: false,
+        }
     }
 }
 
@@ -64,6 +60,12 @@ const app = createApp({
                 is_admin: null,
                 context: null,
                 team: null,
+            },
+            editing_new: false,
+            new_user: {
+                name: null,
+                email: null,
+                is_admin: false,
             },
         }
     },

@@ -41,21 +41,41 @@
 
 <div class="col-8" id="app">
   <h3>Users</h3>
-  <form id="users-form" @submit.prevent="edit_user">
-    <table class="table" id="users">
-      <thead>
-        <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Email</th>
-          <th scope="col">Teams</th>
-          <th scope="col"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr is="vue:table-row" v-for="user in store.users" :user="user" :key="user.id"></tr>
-      </tbody>
-    </table>
-  </form>
+  <table class="table" id="users">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Email</th>
+        <th scope="col">Teams</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr is="vue:table-row" v-for="user in store.users" :user="user" :key="user.id"></tr>
+      <tr>
+        <td>
+          <div v-if="new_user.editing" class="input-group input-group-sm">
+            <input class="form-control" name="name" type="text" v-model="new_user.name" required="required">
+            <div class="input-group-append">
+              <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="new_user.is_admin">
+              <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
+            </div>
+          </div>
+        </td>
+        <td>
+          <input v-if="new_user.editing" class="form-control form-control-sm" name="email" type="email" v-model="new_user.email" required="required">
+        </td>
+        <td></td>
+        <td class="text-end">
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Add user" @click="new_user.editing = !new_user.editing"><i class="bi bi-plus-lg"></i></button>
+            <button type="button" class="btn btn-success" data-bs-toggle="tooltip" title="Create" @click="create_user" v-if="new_user.editing"><i class="bi bi-check2"></i></button>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
   <div class="accordion w-xs" id="filtersAccordion">
     <div class="accordion-item">
       <h2 class="accordion-header" id="filterHeading">
@@ -88,21 +108,6 @@
       </div>
     </div>
   </div>
-
-  <h3>Create new user</h3>
-  <form id="create-user" class="col-6" @submit.prevent="create_user">
-    <label for="name" class="form-label">name</label>
-    <div class="input-group">
-      <input class="form-control" name="name" type="text" required="required">
-      <div class="input-group-append">
-        <input type="checkbox" class="btn-check" id="set-admin" name="is_admin">
-        <label class="btn btn-outline-success" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label><br>
-      </div>
-    </div>
-    <label for="email" class="form-label">email</label>
-    <input class="form-control mb-3" name="email" type="email" required="required">
-    <button type="submit" class="btn btn-primary">Create</button>
-  </form>
 </div>
 
 
