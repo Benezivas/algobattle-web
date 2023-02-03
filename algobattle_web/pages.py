@@ -24,7 +24,7 @@ from algobattle_web.models import (
 )
 from algobattle_web.templates import templated, templates
 from algobattle_web.util import send_email
-from algobattle_web.dependencies import curr_user, curr_user_maybe
+from algobattle_web.dependencies import curr_user, curr_user_maybe, check_if_admin
 
 router = APIRouter()
 
@@ -193,11 +193,6 @@ def results_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
 # *******************************************************************************
 # * Admin
 # *******************************************************************************
-
-
-def check_if_admin(user: User = Depends(curr_user)):
-    if not user.is_admin:
-        raise HTTPException(status.HTTP_403_FORBIDDEN)
 
 
 admin = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(check_if_admin)])

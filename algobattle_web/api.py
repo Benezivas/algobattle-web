@@ -25,12 +25,7 @@ from algobattle_web.models import (
     User,
 )
 from algobattle_web.util import unwrap, BaseSchema, Missing, missing, present
-from algobattle_web.dependencies import curr_user
-
-
-def check_if_admin(user: User = Depends(curr_user)):
-    if not user.is_admin:
-        raise HTTPException(status.HTTP_403_FORBIDDEN)
+from algobattle_web.dependencies import curr_user, check_if_admin
 
 
 class SchemaRoute(APIRoute):

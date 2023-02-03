@@ -15,3 +15,8 @@ def curr_user(user: User | None = Depends(curr_user_maybe)) -> User:
         )
     else:
         return user
+
+
+def check_if_admin(user: User = Depends(curr_user)):
+    if not user.is_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN)
