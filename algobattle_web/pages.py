@@ -225,7 +225,8 @@ def users_get(
         teams_filters.append(Team.id == team)
     users = db.scalars(select(User).join(User.teams).filter(*filters).order_by(User.is_admin.desc())).unique().all()
     teams = db.scalars(select(Team).filter(*teams_filters)).unique().all()
-    return "admin_users.jinja", {"users": encode(users), "teams": encode(teams)}
+    contexts = db.scalars(select(Context)).unique().all()
+    return "admin_users.jinja", {"users": encode(users), "teams": encode(teams), "contexts": encode(contexts)}
 
 
 @admin.get("/teams", response_class=HTMLResponse)

@@ -3,8 +3,9 @@
 
 <script src="/static/scripts/admin_users.js" type="module"></script>
 <script>
-  var users_input = {{users | tojson}}
-  var teams_input = {{teams | tojson}}
+  const users_input = {{users | tojson}}
+  const teams_input = {{teams | tojson}}
+  const contexts_input = {{contexts | tojson}}
 </script>
 
 <script type="text/x-template" id="table_row">
@@ -55,6 +56,36 @@
       </tbody>
     </table>
   </form>
+  <div class="accordion w-xs" id="filtersAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="filterHeading">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#filters" aria-expanded="false" aria-controls="filters">
+          Filter
+        </button>
+      </h2>
+      <div id="filters" class="accordion-collapse collapse p-3" aria-labelledby="filterHeading" data-bs-parent="#filtersAccordion">
+        <label for="nameFilter" class="form-label">Name</label>
+        <input class="form-control w-em" id="nameFilter" type="text" v-model="filter.name">
+        <label for="emailFilter" class="form-label mt-3">Email</label>
+        <input class="form-control w-em" id="emailFilter" type="text" v-model="filter.email">
+        <label for="adminFilter" class="form-label mt-3">User type</label>
+        <select class="form-select w-em" id="adminFilter" aria-label="User type filter" v-model="filter.is_admin">
+          <option selected value="null">Any</option>
+          <option value="true">Admin</option>
+          <option value="false">Non Admin</option>
+        </select>
+        <label for="contextFilter" class="form-label mt-3">Context</label>
+        <select class="form-select w-em" id="contextFilter" v-model="filter.context">
+          <option v-for="(context, id) in store.contexts" :value="id">${context.name}</option>
+        </select>
+        <label for="teamFilter" class="form-label mt-3">Team</label>
+        <select class="form-select w-em" id="teamFilter" v-model="filter.team">
+          <option v-for="(team, id) in store.teams" :value="id">${team.name}</option>
+        </select>
+        <button class="btn btn-primary mt-3">Apply</button>
+      </div>
+    </div>
+  </div>
 
   <h3>Create new user</h3>
   <form id="create-user" class="col-6" @submit.prevent="create_user">

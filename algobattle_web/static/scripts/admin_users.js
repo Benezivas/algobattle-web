@@ -5,6 +5,7 @@ const store = reactive({
     curr_row: {},
     users: users_input,
     teams: teams_input,
+    contexts: contexts_input,
 })
 
 
@@ -57,6 +58,13 @@ const app = createApp({
     data() {
         return {
             store: store,
+            filter: {
+                name: "",
+                email: "",
+                is_admin: null,
+                context: "",
+                team: "",
+            },
         }
     },
     methods: {
