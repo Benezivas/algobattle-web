@@ -31,12 +31,12 @@ router = APIRouter()
 
 @router.get("/")
 @templated
-async def home_get():
+def home_get():
     return "home.jinja"
 
 
 @router.get("/login", response_class=HTMLResponse)
-async def login_get(
+def login_get(
     request: Request, db: Session = Depends(get_db), token: str | None = None, user: User | None = Depends(curr_user_maybe)
 ):
     res = User.decode_login_token(db, token)
@@ -57,7 +57,7 @@ async def login_get(
 
 
 @router.post("/login", response_class=HTMLResponse)
-async def login_post(request: Request, db: Session = Depends(get_db), email: str = Form()):
+def login_post(request: Request, db: Session = Depends(get_db), email: str = Form()):
     if User.get(db, email) is not None:
         token = User.login_token(email)
         send_email(email, f"{request.url_for('login_post')}?token={token}")
@@ -69,7 +69,7 @@ async def login_post(request: Request, db: Session = Depends(get_db), email: str
 
 
 @router.post("/logout")
-async def logout_post():
+def logout_post():
     response = RedirectResponse("/login", status_code=status.HTTP_302_FOUND)
     response.delete_cookie("user_token")
     return response
@@ -77,19 +77,19 @@ async def logout_post():
 
 @router.get("/user", response_class=HTMLResponse)
 @templated
-async def user_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
+def user_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     return "user.jinja", {"teams": encode(user.teams), "settings": user.settings.encode()}
 
 
 @router.get("/team")
 @templated
-async def team_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
+def team_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     return "team.jinja"
 
 
 @router.get("/problems")
 @templated
-async def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
+def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     if user.is_admin:
         problems = db.query(Problem).all()
         configs = db.query(Config).all()
@@ -101,7 +101,7 @@ async def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_
 
 @router.get("/programs")
 @templated
-async def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
+def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     params: dict[str, Collection[Base]] = {}
     if user.is_admin:
         params["programs"] = db.query(Program).all()
@@ -200,7 +200,7 @@ admin = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(check_i
 
 @admin.get("/users", response_class=HTMLResponse)
 @templated
-async def users_get(db: Session = Depends(get_db)):
+def users_get(db: Session = Depends(get_db)):
     users = db.query(User).order_by(User.is_admin).all()[::-1]
     teams = db.query(Team).all()
     return "admin_users.jinja", {"users": encode(users), "teams": encode(teams)}
@@ -208,7 +208,7 @@ async def users_get(db: Session = Depends(get_db)):
 
 @admin.get("/teams", response_class=HTMLResponse)
 @templated
-async def teams_get(db: Session = Depends(get_db)):
+def teams_get(db: Session = Depends(get_db)):
     teams = db.query(Team).all()
     contexts = db.query(Context).all()
     users = db.query(User).order_by(User.is_admin).all()[::-1]
@@ -217,7 +217,7 @@ async def teams_get(db: Session = Depends(get_db)):
 
 @admin.get("/configs")
 @templated
-async def config_get(db: Session = Depends(get_db)):
+def config_get(db: Session = Depends(get_db)):
     configs = db.query(Config).all()
     return "admin_configs.jinja", {"configs": encode(configs)}
 
