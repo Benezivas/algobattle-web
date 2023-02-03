@@ -1,53 +1,11 @@
 import { createApp, reactive } from "vue"
-import { send_request } from "base"
+import { send_request, pick } from "base"
 
 const store = reactive({
-    curr_row: {},
     users: users_input,
     teams: teams_input,
     contexts: contexts_input,
 })
-
-
-async function create_user() {
-    var response = await send_request("user/create", this.new_user)
-    if (response) {
-        store.users[response.id] = response
-        this.new_user = {
-            name: null,
-            email: null,
-            is_admin: false,
-        }
-    }
-}
-
-
-async function edit_user(event) {
-    var user = store.curr_row.user
-
-    var response = await send_request(`user/${user.id}/edit`, {
-        name: user.name,
-        email: user.email,
-        is_admin: user.is_admin,
-    })
-    if (response) {
-        user.name = response.name
-        user.email = response.email
-        user.is_admin = response.is_admin
-        store.curr_row.toggle_editing()
-    }
-}
-
-
-async function delete_user(event) {
-    var user = store.curr_row.user
-
-    var response = await send_request(`user/${user.id}/delete`)
-    if (response) {
-        store.curr_row = {}
-        delete store.users[user.id]
-    }
-}
 
 
 const app = createApp({
@@ -91,8 +49,17 @@ const app = createApp({
         }
     },
     methods: {
-        create_user,
-        edit_user,
+        async create_user() {
+            var response = await send_request("user/create", this.new_user)
+            if (response) {
+                store.users[response.id] = response
+                this.new_user = {
+                    name: null,
+                    email: null,
+                    is_admin: false,
+                }
+            }
+        },
     },
 })
 app.config.compilerOptions.delimiters = ["${", "}"]
@@ -107,17 +74,19 @@ app.component("TableRow", {
         }
     },
     methods: {
-        toggle_editing() {
-            if (this.editing) {
+        async edit_user(event) {
+            var response = await send_request(`user/${this.user.id}/edit`, pick(this.user, "name", "email", "is_admin"))
+            if (response) {
+                Object.assign(this.user, response)
                 this.editing = false
-                store.curr_row = {}
-            } else {
-                store.curr_row.editing = false
-                store.curr_row = this
-                this.editing = true
             }
         },
-        delete_user,
+        async delete_user(event) {
+            var response = await send_request(`user/${this.user.id}/delete`)
+            if (response) {
+                delete store.users[this.user.id]
+            }
+        },
     },
     computed: {
         teams_str() {
