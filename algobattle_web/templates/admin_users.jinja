@@ -9,10 +9,10 @@
 </script>
 
 <script type="text/x-template" id="table_row">
-  <tr :class="{'table-primary': user.id == '{{user.id}}'}">
+  <tr :class="{'table-info': user.id == '{{user.id}}'}">
     <td>
       <div v-if="editing" class="input-group input-group-sm">
-        <input class="form-control" name="name" type="text" v-model="user.name">
+        <input class="form-control w-es" name="name" type="text" v-model="user.name">
         <div class="input-group-append">
           <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="user.is_admin">
           <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
@@ -24,12 +24,12 @@
       </div>
     </td>
     <td>
-      <input v-if="editing" class="form-control form-control-sm" name="email" type="email" v-model="user.email">
+      <input v-if="editing" class="form-control form-control-sm w-es" name="email" type="email" v-model="user.email">
       <span v-else>${user.email}</span>
     </td>
     <td>
 			<div v-if="editing">
-				<span v-for="id in user.teams" class="badge rounded-pill" :class="{'text-bg-warning': !hover, 'text-bg-danger': hover}">
+				<span v-for="id in user.teams" class="badge rounded-pill m-1" :class="{'text-bg-warning': !hover, 'text-bg-danger': hover}">
           ${store.teams[id].name} <a @click.prevent="remove_team(id)" href="#" @mouseover="hover = true" @mouseleave="hover = false"><i class="bi bi-x-lg"></i></a>
         </span>
         <select class="form-select w-es m-1" v-model="new_team" @change="add_team">
@@ -52,7 +52,7 @@
 
 <div id="app">
   <h3>Users</h3>
-  <table class="table" id="users">
+  <table class="table table-hover" id="users">
     <thead>
       <tr>
         <th scope="col">Name</th>
@@ -66,7 +66,7 @@
       <tr>
         <td>
           <div v-if="new_user.editing" class="input-group input-group-sm">
-            <input class="form-control" name="name" type="text" v-model="new_user.name" required="required">
+            <input class="form-control w-em" name="name" type="text" v-model="new_user.name" required="required">
             <div class="input-group-append">
               <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="new_user.is_admin">
               <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
@@ -74,7 +74,7 @@
           </div>
         </td>
         <td>
-          <input v-if="new_user.editing" class="form-control form-control-sm" name="email" type="email" v-model="new_user.email" required="required">
+          <input v-if="new_user.editing" class="form-control form-control-sm w-em" name="email" type="email" v-model="new_user.email" required="required">
         </td>
         <td></td>
         <td class="text-end">
