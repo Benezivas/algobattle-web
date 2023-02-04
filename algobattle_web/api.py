@@ -60,9 +60,10 @@ async def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> Use
 
 
 class EditUser(BaseSchema):
-    name: str | None = None
-    email: str | None = None
-    is_admin: bool | None = None
+    name: str | Missing = missing
+    email: str | Missing = missing
+    is_admin: bool | Missing = missing
+    teams: dict[ID, bool] | Missing = missing
 
 
 @admin.post("/user/{id}/edit")
@@ -70,7 +71,17 @@ class EditUser(BaseSchema):
 async def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     user = unwrap(User.get(db, id))
     for key, val in edit.dict(exclude_unset=True).items():
-        setattr(user, key, val)
+        if key != "teams":
+            setattr(user, key, val)
+    if present(edit.teams):
+        for id, add in edit.teams.items():
+            team = unwrap(db.get(Team, id))
+            if add and team not in user.teams:
+                user.teams.append(team)
+            elif not add and team in user.teams:
+                user.teams.remove(team)
+            else:
+                raise ValueError
     return user
 
 

@@ -72,13 +72,17 @@ app.component("TableRow", {
         return {
             editing: false,
             store: store,
+            team_edit: {},
         }
     },
     methods: {
         async edit_user(event) {
-            var response = await send_request(`user/${this.user.id}/edit`, pick(this.user, "name", "email", "is_admin"))
+            var edit = pick(this.user, "name", "email", "is_admin")
+            edit.teams = this.team_edit
+            var response = await send_request(`user/${this.user.id}/edit`, edit)
             if (response) {
                 Object.assign(this.user, response)
+                this.team_edit = {}
                 this.editing = false
             }
         },
@@ -88,6 +92,11 @@ app.component("TableRow", {
                 delete store.users[this.user.id]
             }
         },
+        async remove_team(team) {
+            this.team_edit[team] = false
+            const index = this.user.teams.indexOf(team)
+            this.user.teams.splice(index, 1)
+        }
     },
     computed: {
         teams_str() {

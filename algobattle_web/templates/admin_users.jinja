@@ -27,7 +27,12 @@
       <input v-if="editing" class="form-control form-control-sm" name="email" type="email" v-model="user.email">
       <span v-else>${user.email}</span>
     </td>
-    <td><span>${teams_str}</span></td>
+    <td>
+			<div v-if="editing">
+				<span v-for="id in user.teams" class="badge text-bg-warning"> ${store.teams[id].name} <a @click.prevent="remove_team(id)" href="#"><i class="bi bi-x-lg"></i></a></span>
+			</div>
+      <span v-else>${teams_str}</span>
+    </td>
     <td class="text-end">
       <div class="btn-group btn-group-sm" role="group">
         <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete user" v-if="editing && user.id != '{{user.id}}'" @click="delete_user"><i class="bi bi-trash"></i></button>
