@@ -74,6 +74,7 @@ app.component("TableRow", {
             store: store,
             team_edit: {},
             new_team: {},
+            hover: false,
         }
     },
     methods: {
