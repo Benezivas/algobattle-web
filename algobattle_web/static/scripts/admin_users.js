@@ -1,5 +1,5 @@
 import { createApp, reactive } from "vue"
-import { send_request, pick } from "base"
+import { send_request, pick, queryParams } from "base"
 
 const store = reactive({
     users: users_input,
@@ -7,17 +7,18 @@ const store = reactive({
     contexts: contexts_input,
 })
 
-
+const params = queryParams()
 const app = createApp({
     data() {
         return {
             store: store,
+            has_params: Object.keys(params).length != 0,
             filter: {
-                name: "",
-                email: "",
-                is_admin: null,
-                context: null,
-                team: null,
+                name: params.name || "",
+                email: params.email || "",
+                is_admin: params.is_admin != null ? params.is_admin : null,
+                context: params.context || null,
+                team: params.team || null,
             },
             editing_new: false,
             new_user: {

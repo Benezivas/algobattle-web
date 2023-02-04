@@ -59,3 +59,8 @@ export function omit(obj, ...keys) {
         .filter(([key]) => !keys.includes(key))
     )
 }
+
+export function queryParams() {
+    const params = new URLSearchParams(window.location.search)
+    return Object.fromEntries(params.entries())
+}
