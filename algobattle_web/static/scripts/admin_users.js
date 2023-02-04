@@ -73,6 +73,7 @@ app.component("TableRow", {
             editing: false,
             store: store,
             team_edit: {},
+            new_team: {},
         }
     },
     methods: {
@@ -93,10 +94,27 @@ app.component("TableRow", {
             }
         },
         async remove_team(team) {
-            this.team_edit[team] = false
+            if (this.team_edit[team] == null) {
+                this.team_edit[team] = false
+            } else {
+                delete this.team_edit[team]
+            }
             const index = this.user.teams.indexOf(team)
             this.user.teams.splice(index, 1)
-        }
+        },
+        async add_team() {
+            const team = this.new_team
+            if (this.user.teams.includes(team)) {
+                return
+            }
+            if (this.team_edit[team] == null) {
+                this.team_edit[team] = true
+            } else {
+                delete this.team_edit[team]
+            }
+            this.user.teams.push(team)
+            this.new_team = null
+        },
     },
     computed: {
         teams_str() {

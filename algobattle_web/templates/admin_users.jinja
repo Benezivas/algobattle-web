@@ -30,6 +30,10 @@
     <td>
 			<div v-if="editing">
 				<span v-for="id in user.teams" class="badge text-bg-warning"> ${store.teams[id].name} <a @click.prevent="remove_team(id)" href="#"><i class="bi bi-x-lg"></i></a></span>
+        <select class="form-select w-es m-1" v-model="new_team" @change="add_team">
+          <option :value="null"></option>
+          <option v-for="(team, id) in store.teams" :value="id">${team.name}</option>
+        </select>
 			</div>
       <span v-else>${teams_str}</span>
     </td>
