@@ -29,7 +29,7 @@
     </td>
     <td>
 			<div v-if="editing">
-				<span v-for="id in user.teams" class="badge" :class="{'text-bg-warning': !hover, 'text-bg-danger': hover}">
+				<span v-for="id in user.teams" class="badge rounded-pill" :class="{'text-bg-warning': !hover, 'text-bg-danger': hover}">
           ${store.teams[id].name} <a @click.prevent="remove_team(id)" href="#" @mouseover="hover = true" @mouseleave="hover = false"><i class="bi bi-x-lg"></i></a>
         </span>
         <select class="form-select w-es m-1" v-model="new_team" @change="add_team">
