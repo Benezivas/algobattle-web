@@ -7,7 +7,7 @@
 {%- endmacro %}
 
 <!doctype html>
-<html data-bs-theme="dark" lang="en">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,7 +30,7 @@
   </head>
   <body>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
-    <nav class="navbar navbar-expand-md sticky-top bg-primary-subtle">
+    <nav class="navbar navbar-expand-md sticky-top bg-primary-subtle" data-bs-theme="dark">
       <div class="container-xxl">
         <a href="/" class="navbar-brand">
           <span class="fs-4">Algobattle</span>
@@ -55,7 +55,7 @@
           </ul>
 
           <div class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="bi bi-person-circle me-2"></i> <strong>{{user.name}}</strong>
             </a>
             <ul class="dropdown-menu">
