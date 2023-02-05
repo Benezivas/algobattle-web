@@ -220,9 +220,9 @@ def users_get(
     if context is not None:
         _context = unwrap(db.get(Context, context))
         filters.append(Team.context_id == _context.id)
+        teams_filters.append(Team.context_id == _context.id)
     if team is not None:
         filters.append(Team.id == team)
-        teams_filters.append(Team.id == team)
     users = db.scalars(select(User).join(User.teams, isouter=True).filter(*filters).order_by(User.is_admin.desc())).unique().all()
     teams = db.scalars(select(Team).filter(*teams_filters)).unique().all()
     contexts = db.scalars(select(Context)).unique().all()
