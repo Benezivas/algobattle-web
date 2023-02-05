@@ -145,20 +145,17 @@ app.component("EditWindow", {
             } else {
                 delete this.edit.teams[team.id]
             }
-            const index = this.teams.indexOf(team.id)
-            this.teams.splice(index, 1)
+            const index = this.display_teams.indexOf(team.id)
+            this.display_teams.splice(index, 1)
         },
         async add_team() {
             const team = this.new_team
-            if (this.teams.includes(team)) {
-                return
-            }
             if (this.edit.teams[team] == null) {
                 this.edit.teams[team] = true
             } else {
                 delete this.edit.teams[team]
             }
-            this.teams.push(team)
+            this.display_teams.push(team)
             this.new_team = null
         },
         async delete_user(event) {
