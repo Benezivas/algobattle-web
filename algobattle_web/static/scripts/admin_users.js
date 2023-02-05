@@ -6,12 +6,6 @@ const store = reactive({
     users: users_input,
     teams: teams_input,
     contexts: contexts_input,
-    edit: {
-        id: null,
-        edit: {},
-        teams: [],
-        new_team: null,
-    },
     new: {
         data: {
             name: null,
@@ -41,6 +35,9 @@ const app = createApp({
                 name: null,
                 email: null,
                 is_admin: false,
+            },
+            edit_user: {
+                teams: [],
             },
         }
     },
@@ -78,35 +75,6 @@ const app = createApp({
                 }
             }
         },
-        async delete_user(event) {
-            var response = await send_request(`user/${store.edit.id}/delete`)
-            if (response) {
-                delete store.users[this.user.id]
-            }
-        },
-        async edit_user(data) {
-            var response = await send_request(`user/${data.id}/edit`, data.edit)
-            if (response) {
-                Object.assign(store.users[data.id], response)
-                /* Doesnt actually work, but we need to do something like this
-                var modalEl = document.querySelector("#editModal")
-                var modal = bootstrap.Modal.getInstance(modalEl)
-                modal.toggle()*/
-            }
-        },
-        async add_team() {
-            const team = store.edit.new_team
-            if (store.edit.teams.includes(team)) {
-                return
-            }
-            if (store.edit.edit.teams[team] == null) {
-                store.edit.edit.teams[team] = true
-            } else {
-                delete store.edit.edit.teams[team]
-            }
-            store.edit.teams.push(team)
-            store.edit.new_team = null
-        },
         new_teams(teams) {
             return Object.entries(store.teams).filter(data => !teams.includes(data[0]))
         },
@@ -130,14 +98,6 @@ app.component("TableRow", {
             store: store,
         }
     },
-    methods: {
-        async open_edit(event) {
-            store.edit.id = this.user.id
-            store.edit.teams = [...this.user.teams]
-            store.edit.edit = pick(this.user, "name", "email", "is_admin")
-            store.edit.edit.teams = {}
-        },
-    },
     computed: {
         teams_str() {
             return this.user.teams.map(t => store.teams[t].name).join(", ")
@@ -150,19 +110,77 @@ app.component("HoverBadge", {
     props: ["team"],
     data() {
         return {
-            store: store,
             hover: false,
         }
     },
+})
+
+app.component("EditWindow", {
+    template: "#editWindow",
+    props: ["user"],
+    data() {
+        return {
+            store: store,
+            edit: {
+                name: this.user.name,
+                email: this.user.email,
+                is_admin: this.user.is_admin,
+                teams: {},
+            },
+            display_teams: [...this.user.teams],
+            new_team: null,
+        }
+    },
+    watch: {
+        user(new_user) {
+            this.edit = pick(new_user, "name", "email", "is_admin")
+            this.edit.teams = {}
+            this.display_teams = [...new_user.teams]
+        }
+    },
     methods: {
-        async remove() {
-            if (store.edit.edit.teams[this.team.id] == null) {
-                store.edit.edit.teams[this.team.id] = false
+        async remove_team(team) {
+            if (this.edit.teams[team.id] == undefined) {
+                this.edit.teams[team.id] = false
             } else {
-                delete store.edit.edit.teams[this.team.id]
+                delete this.edit.teams[team.id]
             }
-            const index = store.edit.teams.indexOf(this.team.id)
-            store.edit.teams.splice(index, 1)
+            const index = this.teams.indexOf(team.id)
+            this.teams.splice(index, 1)
+        },
+        async add_team() {
+            const team = this.new_team
+            if (this.teams.includes(team)) {
+                return
+            }
+            if (this.edit.teams[team] == null) {
+                this.edit.teams[team] = true
+            } else {
+                delete this.edit.teams[team]
+            }
+            this.teams.push(team)
+            this.new_team = null
+        },
+        async delete_user(event) {
+            var response = await send_request(`user/${this.user.id}/delete`)
+            if (response) {
+                delete store.users[this.user.id]
+            }
+        },
+        async submit_edit() {
+            var response = await send_request(`user/${this.user.id}/edit`, this.edit)
+            if (response) {
+                Object.assign(store.users[this.user.id], response)
+                /* Doesnt actually work, but we need to do something like this
+                var modalEl = document.querySelector("#editModal")
+                var modal = bootstrap.Modal.getInstance(modalEl)
+                modal.toggle()*/
+            }
+        },
+    },
+    computed: {
+        new_teams() {
+            return Object.entries(store.teams).filter(data => !this.display_teams.includes(data[0]))
         },
     },
 })

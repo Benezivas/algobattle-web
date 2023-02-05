@@ -17,7 +17,7 @@
     <td>${user.email}</td>
     <td>${teams_str}</td>
     <td class="text-end">
-      <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" title="Edit user" data-bs-target="#editModal" @click="open_edit"><i class="bi bi-pencil"></i></button>
+      <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" title="Edit user" data-bs-target="#editModal" @click="$emit('open_edit', user)"><i class="bi bi-pencil"></i></button>
     </td>
   </tr>
 </script>
@@ -25,10 +25,45 @@
 <script type="text/x-template" id="hoverBadge">
   <span class="badge rounded-pill m-1" :class="{'text-bg-warning': !hover, 'text-bg-danger': hover}">
     ${team.name}
-    <a @click.prevent="remove" href="#" @mouseover="hover = true" @mouseleave="hover = false"><i class="bi bi-x-lg"></i></a>
+    <a @click.prevent="$emit('remove_team', team)" href="#" @mouseover="hover = true" @mouseleave="hover = false"><i class="bi bi-x-lg"></i></a>
   </span>
 </script>
 
+<script type="text/x-template" id="editWindow">
+  <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="editModalLabel">Edit user</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <label for="name" class="form-label">Name</label>
+          <div class="input-group w-em input-group-sm mb-3" name="name">
+            <input class="form-control w-em" type="text" v-model="edit.name">
+            <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="edit.is_admin">
+            <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
+          </div>
+          <label for="email" class="form-label">Email</label>
+          <input class="form-control w-em form-control-sm mb-3" name="email" type="email" v-model="edit.email">
+          <label for="teams" class="form-label mb-0">Teams</label>
+          <div class="d-flex flex-row mb-1">
+            <hover-badge v-for="id in display_teams" :team="store.teams[id]" @remove_team="remove_team"></hover-badge>
+          </div>
+          <select class="form-select form-select-sm w-es m-1" v-model="new_team" @change="add_team">
+            <option :value="null" selected>Add team</option>
+            <option v-for="data in new_teams" :value="data[0]">${data[1].name}</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger me-auto" data-bs-toggle="tooltip" title="Delete user" v-if="user.id != '{{user.id}}'" @click="delete_user">Delete user</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
+          <button type="button" class="btn btn-primary" @click="submit_edit" data-bs-dismiss="modal">Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</script>
 
 <div id="app">
   <h3>Users</h3>
@@ -42,46 +77,13 @@
       </tr>
     </thead>
     <tbody>
-      <tr is="vue:table-row" v-for="user in store.users" :user="user" :key="user.id"></tr>
+      <tr is="vue:table-row" v-for="user in store.users" :user="user" :key="user.id" @open_edit="(u) => this.edit_user = u"></tr>
     </tbody>
   </table>
 
   <button type="button" class="btn btn-primary btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#createModal">Create new user</button>
 
-
-  <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h1 class="modal-title fs-5" id="editModalLabel">Edit user</h1>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <label for="name" class="form-label">Name</label>
-          <div class="input-group w-em input-group-sm mb-3" name="name">
-            <input class="form-control w-em" type="text" v-model="store.edit.edit.name">
-            <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="store.edit.edit.is_admin">
-            <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
-          </div>
-          <label for="email" class="form-label">Email</label>
-          <input class="form-control w-em form-control-sm mb-3" name="email" type="email" v-model="store.edit.edit.email">
-          <label for="teams" class="form-label mb-0">Teams</label>
-          <div class="d-flex flex-row mb-1">
-            <div is="vue:hover-badge" v-for="id in store.edit.teams" :team="store.teams[id]"></div>
-          </div>
-          <select class="form-select form-select-sm w-es m-1" v-model="store.edit.new_team" @change="add_team">
-            <option :value="null" selected>Add team</option>
-            <option v-for="data in new_teams(store.edit.teams)" :value="data[0]">${data[1].name}</option>
-          </select>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-danger me-auto" data-bs-toggle="tooltip" title="Delete user" v-if="store.edit.id != '{{user.id}}'" @click="delete_user">Delete user</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-          <button type="button" class="btn btn-primary" @click="edit_user(store.edit)" data-bs-dismiss="modal">Submit</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <edit-window :user="edit_user"></edit-window>
 
   <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
