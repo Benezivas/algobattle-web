@@ -1,20 +1,11 @@
 import { createApp, reactive } from "vue"
-import { send_request, pick, queryParams } from "base"
+import { send_request, pick, queryParams, omit } from "base"
 import "bootstrap"
 
 const store = reactive({
     users: users_input,
     teams: teams_input,
     contexts: contexts_input,
-    new: {
-        data: {
-            name: null,
-            email: null,
-            is_admin: false,
-            teams: [],
-        },
-        new_team: null,
-    }
 })
 
 const params = queryParams()
@@ -30,15 +21,10 @@ const app = createApp({
                 context: params.context || null,
                 team: params.team || null,
             },
-            editing_new: false,
-            new_user: {
-                name: null,
-                email: null,
-                is_admin: false,
-            },
-            edit_user: {
+            modal_user: {
                 teams: [],
             },
+            action: "edit",
         }
     },
     computed: {
@@ -63,29 +49,16 @@ const app = createApp({
         },
     },
     methods: {
-        async create_user(user) {
-            var response = await send_request("user/create", user)
-            if (response) {
-                store.users[response.id] = response
-                store.new.data = {
-                    name: null,
-                    email: null,
-                    is_admin: false,
+        set_props(action, user) {
+            this.action = action
+            if (action == "create") {
+                this.modal_user = {
                     teams: [],
                 }
+            } else {
+                this.modal_user = user
             }
-        },
-        new_teams(teams) {
-            return Object.entries(store.teams).filter(data => !teams.includes(data[0]))
-        },
-        user_create_add_team() {
-            const team = store.new.new_team
-            if (store.new.data.teams.includes(team)) {
-                return
-            }
-            store.new.data.teams.push(team)
-            store.new.new_team = null
-        },
+        }
     },
 })
 app.config.compilerOptions.delimiters = ["${", "}"]
@@ -115,13 +88,13 @@ app.component("HoverBadge", {
     },
 })
 
-app.component("EditWindow", {
-    template: "#editWindow",
-    props: ["user"],
+app.component("UserWindow", {
+    template: "#userWindow",
+    props: ["user", "action"],
     data() {
         return {
             store: store,
-            edit: {
+            data: {
                 name: this.user.name,
                 email: this.user.email,
                 is_admin: this.user.is_admin,
@@ -133,27 +106,27 @@ app.component("EditWindow", {
     },
     watch: {
         user(new_user) {
-            this.edit = pick(new_user, "name", "email", "is_admin")
-            this.edit.teams = {}
+            this.data = pick(new_user, "name", "email", "is_admin")
+            this.data.teams = {}
             this.display_teams = [...new_user.teams]
         }
     },
     methods: {
         async remove_team(team) {
-            if (this.edit.teams[team.id] == undefined) {
-                this.edit.teams[team.id] = false
+            if (this.data.teams[team.id] == undefined) {
+                this.data.teams[team.id] = false
             } else {
-                delete this.edit.teams[team.id]
+                delete this.data.teams[team.id]
             }
             const index = this.display_teams.indexOf(team.id)
             this.display_teams.splice(index, 1)
         },
         async add_team() {
             const team = this.new_team
-            if (this.edit.teams[team] == null) {
-                this.edit.teams[team] = true
+            if (this.data.teams[team] == null) {
+                this.data.teams[team] = true
             } else {
-                delete this.edit.teams[team]
+                delete this.data.teams[team]
             }
             this.display_teams.push(team)
             this.new_team = null
@@ -164,14 +137,23 @@ app.component("EditWindow", {
                 delete store.users[this.user.id]
             }
         },
-        async submit_edit() {
-            var response = await send_request(`user/${this.user.id}/edit`, this.edit)
-            if (response) {
-                Object.assign(store.users[this.user.id], response)
-                /* Doesnt actually work, but we need to do something like this
-                var modalEl = document.querySelector("#editModal")
-                var modal = bootstrap.Modal.getInstance(modalEl)
-                modal.toggle()*/
+        async submit_data() {
+            if (this.action == "edit") {
+                var response = await send_request(`user/${this.user.id}/edit`, this.data)
+                if (response) {
+                    Object.assign(store.users[this.user.id], response)
+                    /* Doesnt actually work, but we need to do something like this
+                    var modalEl = document.querySelector("#editModal")
+                    var modal = bootstrap.Modal.getInstance(modalEl)
+                    modal.toggle()*/
+                }
+            } else {
+                const processed = omit(this.data, "teams")
+                processed.teams = Object.keys(this.data.teams)
+                var response = await send_request("user/create", processed)
+                if (response) {
+                    store.users[response.id] = response
+                }
             }
         },
     },

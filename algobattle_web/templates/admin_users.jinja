@@ -17,7 +17,7 @@
     <td>${user.email}</td>
     <td>${teams_str}</td>
     <td class="text-end">
-      <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" title="Edit user" data-bs-target="#editModal" @click="$emit('open_edit', user)"><i class="bi bi-pencil"></i></button>
+      <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" title="Edit user" data-bs-target="#userModal" @click="$emit('open_edit', user)"><i class="bi bi-pencil"></i></button>
     </td>
   </tr>
 </script>
@@ -29,23 +29,26 @@
   </span>
 </script>
 
-<script type="text/x-template" id="editWindow">
-  <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+<script type="text/x-template" id="userWindow">
+  <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
+      <form class="modal-content">
         <div class="modal-header">
-          <h1 class="modal-title fs-5" id="editModalLabel">Edit user</h1>
+          <h1 class="modal-title fs-5" id="modalLabel">
+          <span v-if="action == 'edit'">Edit user</span>
+          <span v-else>Create new user</span>
+          </h1>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
           <div class="input-group w-em input-group-sm mb-3" name="name">
-            <input class="form-control w-em" type="text" v-model="edit.name">
-            <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="edit.is_admin">
+            <input class="form-control w-em" type="text" v-model="data.name" :required="action == 'create' ? 'required' : null">
+            <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="data.is_admin">
             <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
           </div>
           <label for="email" class="form-label">Email</label>
-          <input class="form-control w-em form-control-sm mb-3" name="email" type="email" v-model="edit.email">
+          <input class="form-control w-em form-control-sm mb-3" name="email" type="email" v-model="data.email" :required="action == 'create' ? 'required' : null">
           <label for="teams" class="form-label mb-0">Teams</label>
           <div class="d-flex flex-row mb-1">
             <hover-badge v-for="id in display_teams" :team="store.teams[id]" @remove_team="remove_team"></hover-badge>
@@ -56,11 +59,11 @@
           </select>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-danger me-auto" data-bs-toggle="tooltip" title="Delete user" v-if="user.id != '{{user.id}}'" @click="delete_user">Delete user</button>
+          <button type="button" class="btn btn-danger me-auto" data-bs-toggle="tooltip" title="Delete user" v-if="action == 'edit' && user.id != '{{user.id}}'" @click="delete_user">Delete user</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-          <button type="button" class="btn btn-primary" @click="submit_edit" data-bs-dismiss="modal">Submit</button>
+          <button type="button" class="btn btn-primary" @click="submit_data">Submit</button>
         </div>
-      </div>
+      </form>
     </div>
   </div>
 </script>
@@ -77,46 +80,13 @@
       </tr>
     </thead>
     <tbody>
-      <tr is="vue:table-row" v-for="user in store.users" :user="user" :key="user.id" @open_edit="(u) => this.edit_user = u"></tr>
+      <tr is="vue:table-row" v-for="user in store.users" :user="user" :key="user.id" @open_edit="(u) => set_props('edit', u)"></tr>
     </tbody>
   </table>
 
-  <button type="button" class="btn btn-primary btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#createModal">Create new user</button>
+  <button type="button" class="btn btn-primary btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#userModal" @click="set_props('create', null)">Create new user</button>
 
-  <edit-window :user="edit_user"></edit-window>
-
-  <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <form class="modal-content">
-        <div class="modal-header">
-          <h1 class="modal-title fs-5" id="createModalLabel">Create new user</h1>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <label for="name" class="form-label">Name</label>
-          <div class="input-group w-em input-group-sm mb-3" name="name">
-            <input class="form-control w-em" type="text" v-model="store.new.data.name" required="required">
-            <input type="checkbox" class="btn-check" name="is_admin" v-model="store.new.data.is_admin">
-            <label class="btn btn-outline-success btn-sm" for="is_admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
-          </div>
-          <label for="email" class="form-label">Email</label>
-          <input class="form-control w-em form-control-sm mb-3" name="email" type="email" v-model="store.new.data.email" required="required">
-          <label for="teams" class="form-label mb-0">Teams</label>
-          <div class="d-flex flex-row mb-1">
-            <div is="vue:hover-badge" v-for="id in store.new.data.teams" :team="store.teams[id]"></div>
-          </div>
-          <select class="form-select form-select-sm w-es m-1" v-model="store.new.new_team" @change="user_create_add_team">
-            <option :value="null" selected>Add team</option>
-            <option v-for="data in new_teams(store.new.data.teams)" :value="data[0]">${data[1].name}</option>
-          </select>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-          <button type="submit" class="btn btn-primary" @click.prevent="create_user(store.new.data)">Submit</button>
-        </div>
-      </form>
-    </div>
-  </div>
+  <user-window :user="modal_user" :action="action"></user-window>
 
   <div class="accordion w-xs" id="filtersAccordion">
     <div class="accordion-item">
