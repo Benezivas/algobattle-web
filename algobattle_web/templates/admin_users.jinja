@@ -11,42 +11,22 @@
 <script type="text/x-template" id="table_row">
   <tr :class="{'table-info': user.id == '{{user.id}}'}">
     <td>
-      <div v-if="editing" class="input-group input-group-sm">
-        <input class="form-control w-es" name="name" type="text" v-model="user.name">
-        <div class="input-group-append">
-          <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="user.is_admin">
-          <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
-        </div>
-      </div>
-      <div v-else>
-        <span>${user.name} </span>
-        <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success ms-1" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
-      </div>
+      ${user.name}
+      <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success ms-1" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
     </td>
-    <td>
-      <input v-if="editing" class="form-control form-control-sm w-es" name="email" type="email" v-model="user.email">
-      <span v-else>${user.email}</span>
-    </td>
-    <td>
-			<div v-if="editing">
-				<span v-for="id in user.teams" class="badge rounded-pill m-1" :class="{'text-bg-warning': !hover, 'text-bg-danger': hover}">
-          ${store.teams[id].name} <a @click.prevent="remove_team(id)" href="#" @mouseover="hover = true" @mouseleave="hover = false"><i class="bi bi-x-lg"></i></a>
-        </span>
-        <select class="form-select w-es m-1" v-model="new_team" @change="add_team">
-          <option :value="null" selected>Add team</option>
-          <option v-for="(team, id) in store.teams" :value="id">${team.name}</option>
-        </select>
-			</div>
-      <span v-else>${teams_str}</span>
-    </td>
+    <td>${user.email}</td>
+    <td>${teams_str}</td>
     <td class="text-end">
-      <div class="btn-group btn-group-sm" role="group">
-        <button type="button" class="btn btn-danger" data-bs-toggle="tooltip" title="Delete user" v-if="editing && user.id != '{{user.id}}'" @click="delete_user"><i class="bi bi-trash"></i></button>
-        <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Edit user" @click="editing = !editing"><i class="bi bi-pencil"></i></button>
-        <button type="button" class="btn btn-success" data-bs-toggle="tooltip" title="Submit edit" @click="edit_user" v-if="editing"><i class="bi bi-check2"></i></button>
-      </div>
+      <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" title="Edit user" data-bs-target="#editModal" @click="open_edit"><i class="bi bi-pencil"></i></button>
     </td>
   </tr>
+</script>
+
+<script type="text/x-template" id="hoverBadge">
+  <span class="badge rounded-pill m-1" :class="{'text-bg-warning': !hover, 'text-bg-danger': hover}">
+    ${team.name}
+    <a @click.prevent="remove" href="#" @mouseover="hover = true" @mouseleave="hover = false"><i class="bi bi-x-lg"></i></a>
+  </span>
 </script>
 
 
@@ -63,29 +43,78 @@
     </thead>
     <tbody>
       <tr is="vue:table-row" v-for="user in store.users" :user="user" :key="user.id"></tr>
-      <tr>
-        <td>
-          <div v-if="new_user.editing" class="input-group input-group-sm">
-            <input class="form-control w-em" name="name" type="text" v-model="new_user.name" required="required">
-            <div class="input-group-append">
-              <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="new_user.is_admin">
-              <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
-            </div>
-          </div>
-        </td>
-        <td>
-          <input v-if="new_user.editing" class="form-control form-control-sm w-em" name="email" type="email" v-model="new_user.email" required="required">
-        </td>
-        <td></td>
-        <td class="text-end">
-          <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-warning" data-bs-toggle="tooltip" title="Add user" @click="new_user.editing = !new_user.editing"><i class="bi bi-plus-lg"></i></button>
-            <button type="button" class="btn btn-success" data-bs-toggle="tooltip" title="Create" @click="create_user" v-if="new_user.editing"><i class="bi bi-check2"></i></button>
-          </div>
-        </td>
-      </tr>
     </tbody>
   </table>
+
+  <button type="button" class="btn btn-primary btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#createModal">Create new user</button>
+
+
+  <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="editModalLabel">Edit user</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <label for="name" class="form-label">Name</label>
+          <div class="input-group w-em input-group-sm mb-3" name="name">
+            <input class="form-control w-em" type="text" v-model="store.edit.edit.name">
+            <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="store.edit.edit.is_admin">
+            <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
+          </div>
+          <label for="email" class="form-label">Email</label>
+          <input class="form-control w-em form-control-sm mb-3" name="email" type="email" v-model="store.edit.edit.email">
+          <label for="teams" class="form-label mb-0">Teams</label>
+          <div class="d-flex flex-row mb-1">
+            <div is="vue:hover-badge" v-for="id in store.edit.teams" :team="store.teams[id]"></div>
+          </div>
+          <select class="form-select form-select-sm w-es m-1" v-model="store.edit.new_team" @change="add_team">
+            <option :value="null" selected>Add team</option>
+            <option v-for="data in new_teams(store.edit.teams)" :value="data[0]">${data[1].name}</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger me-auto" data-bs-toggle="tooltip" title="Delete user" v-if="store.edit.id != '{{user.id}}'" @click="delete_user">Delete user</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
+          <button type="button" class="btn btn-primary" @click="edit_user(store.edit)" data-bs-dismiss="modal">Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <form class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="createModalLabel">Create new user</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <label for="name" class="form-label">Name</label>
+          <div class="input-group w-em input-group-sm mb-3" name="name">
+            <input class="form-control w-em" type="text" v-model="store.new.data.name" required="required">
+            <input type="checkbox" class="btn-check" name="is_admin" v-model="store.new.data.is_admin">
+            <label class="btn btn-outline-success btn-sm" for="is_admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
+          </div>
+          <label for="email" class="form-label">Email</label>
+          <input class="form-control w-em form-control-sm mb-3" name="email" type="email" v-model="store.new.data.email" required="required">
+          <label for="teams" class="form-label mb-0">Teams</label>
+          <div class="d-flex flex-row mb-1">
+            <div is="vue:hover-badge" v-for="id in store.new.data.teams" :team="store.teams[id]"></div>
+          </div>
+          <select class="form-select form-select-sm w-es m-1" v-model="store.new.new_team" @change="user_create_add_team">
+            <option :value="null" selected>Add team</option>
+            <option v-for="data in new_teams(store.new.data.teams)" :value="data[0]">${data[1].name}</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
+          <button type="submit" class="btn btn-primary" @click.prevent="create_user(store.new.data)">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <div class="accordion w-xs" id="filtersAccordion">
     <div class="accordion-item">

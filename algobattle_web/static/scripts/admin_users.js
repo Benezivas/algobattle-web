@@ -1,10 +1,26 @@
 import { createApp, reactive } from "vue"
 import { send_request, pick, queryParams } from "base"
+import "bootstrap"
 
 const store = reactive({
     users: users_input,
     teams: teams_input,
     contexts: contexts_input,
+    edit: {
+        id: null,
+        edit: {},
+        teams: [],
+        new_team: null,
+    },
+    new: {
+        data: {
+            name: null,
+            email: null,
+            is_admin: false,
+            teams: [],
+        },
+        new_team: null,
+    }
 })
 
 const params = queryParams()
@@ -47,19 +63,60 @@ const app = createApp({
                 filters.push(`team=${this.filter.team}`)
             }
             return `/admin/users?${filters.join("&")}`
-        }
+        },
     },
     methods: {
-        async create_user() {
-            var response = await send_request("user/create", this.new_user)
+        async create_user(user) {
+            var response = await send_request("user/create", user)
             if (response) {
                 store.users[response.id] = response
-                this.new_user = {
+                store.new.data = {
                     name: null,
                     email: null,
                     is_admin: false,
+                    teams: [],
                 }
             }
+        },
+        async delete_user(event) {
+            var response = await send_request(`user/${store.edit.id}/delete`)
+            if (response) {
+                delete store.users[this.user.id]
+            }
+        },
+        async edit_user(data) {
+            var response = await send_request(`user/${data.id}/edit`, data.edit)
+            if (response) {
+                Object.assign(store.users[data.id], response)
+                /* Doesnt actually work, but we need to do something like this
+                var modalEl = document.querySelector("#editModal")
+                var modal = bootstrap.Modal.getInstance(modalEl)
+                modal.toggle()*/
+            }
+        },
+        async add_team() {
+            const team = store.edit.new_team
+            if (store.edit.teams.includes(team)) {
+                return
+            }
+            if (store.edit.edit.teams[team] == null) {
+                store.edit.edit.teams[team] = true
+            } else {
+                delete store.edit.edit.teams[team]
+            }
+            store.edit.teams.push(team)
+            store.edit.new_team = null
+        },
+        new_teams(teams) {
+            return Object.entries(store.teams).filter(data => !teams.includes(data[0]))
+        },
+        user_create_add_team() {
+            const team = store.new.new_team
+            if (store.new.data.teams.includes(team)) {
+                return
+            }
+            store.new.data.teams.push(team)
+            store.new.new_team = null
         },
     },
 })
@@ -70,58 +127,44 @@ app.component("TableRow", {
     props: ["user"],
     data() {
         return {
-            editing: false,
             store: store,
-            team_edit: {},
-            new_team: {},
-            hover: false,
         }
     },
     methods: {
-        async edit_user(event) {
-            var edit = pick(this.user, "name", "email", "is_admin")
-            edit.teams = this.team_edit
-            var response = await send_request(`user/${this.user.id}/edit`, edit)
-            if (response) {
-                Object.assign(this.user, response)
-                this.team_edit = {}
-                this.editing = false
-            }
-        },
-        async delete_user(event) {
-            var response = await send_request(`user/${this.user.id}/delete`)
-            if (response) {
-                delete store.users[this.user.id]
-            }
-        },
-        async remove_team(team) {
-            if (this.team_edit[team] == null) {
-                this.team_edit[team] = false
-            } else {
-                delete this.team_edit[team]
-            }
-            const index = this.user.teams.indexOf(team)
-            this.user.teams.splice(index, 1)
-        },
-        async add_team() {
-            const team = this.new_team
-            if (this.user.teams.includes(team)) {
-                return
-            }
-            if (this.team_edit[team] == null) {
-                this.team_edit[team] = true
-            } else {
-                delete this.team_edit[team]
-            }
-            this.user.teams.push(team)
-            this.new_team = null
+        async open_edit(event) {
+            store.edit.id = this.user.id
+            store.edit.teams = [...this.user.teams]
+            store.edit.edit = pick(this.user, "name", "email", "is_admin")
+            store.edit.edit.teams = {}
         },
     },
     computed: {
         teams_str() {
             return this.user.teams.map(t => store.teams[t].name).join(", ")
-        }
+        },
     }
+})
+
+app.component("HoverBadge", {
+    template: "#hoverBadge",
+    props: ["team"],
+    data() {
+        return {
+            store: store,
+            hover: false,
+        }
+    },
+    methods: {
+        async remove() {
+            if (store.edit.edit.teams[this.team.id] == null) {
+                store.edit.edit.teams[this.team.id] = false
+            } else {
+                delete store.edit.edit.teams[this.team.id]
+            }
+            const index = store.edit.teams.indexOf(this.team.id)
+            store.edit.teams.splice(index, 1)
+        },
+    },
 })
 
 

@@ -51,12 +51,14 @@ class CreateUser(BaseSchema):
     name: str
     email: str
     is_admin: bool = False
+    teams: list[ID] = []
 
 
 @admin.post("/user/create")
 @autocommit
 async def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
-    return User(db=db, email=user.email, name=user.name, is_admin=user.is_admin)
+    _teams = [unwrap(db.get(Team, id)) for id in user.teams]
+    return User(db=db, email=user.email, name=user.name, is_admin=user.is_admin, teams=_teams)
 
 
 class EditUser(BaseSchema):
