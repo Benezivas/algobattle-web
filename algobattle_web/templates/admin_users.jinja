@@ -17,7 +17,7 @@
     <td>${user.email}</td>
     <td>${teams_str}</td>
     <td class="text-end">
-      <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" title="Edit user" data-bs-target="#userModal" @click="$emit('open_edit', user)"><i class="bi bi-pencil"></i></button>
+      <button type="button" class="btn btn-warning btn-sm" title="Edit user" @click="$emit('open_edit', user)"><i class="bi bi-pencil"></i></button>
     </td>
   </tr>
 </script>
@@ -30,7 +30,7 @@
 </script>
 
 <script type="text/x-template" id="userWindow">
-  <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+  <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true" ref="user_modal">
     <div class="modal-dialog modal-dialog-centered">
       <form class="modal-content">
         <div class="modal-header">
@@ -84,9 +84,9 @@
     </tbody>
   </table>
 
-  <button type="button" class="btn btn-primary btn-sm mb-3" data-bs-toggle="modal" data-bs-target="#userModal" @click="set_props('create', null)">Create new user</button>
+  <button type="button" class="btn btn-primary btn-sm mb-3" @click="set_props('create', null)">Create new user</button>
 
-  <user-window :user="modal_user" :action="action"></user-window>
+  <user-window :user="modal_user" :action="action" :modal="modal"></user-window>
 
   <div class="accordion w-xs" id="filtersAccordion">
     <div class="accordion-item">

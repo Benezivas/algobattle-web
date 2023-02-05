@@ -25,6 +25,7 @@ const app = createApp({
                 teams: [],
             },
             action: "edit",
+            modal: null,
         }
     },
     computed: {
@@ -58,6 +59,8 @@ const app = createApp({
             } else {
                 this.modal_user = user
             }
+            this.modal = bootstrap.Modal.getOrCreateInstance("#userModal")
+            this.modal.toggle()
         }
     },
 })
@@ -90,7 +93,7 @@ app.component("HoverBadge", {
 
 app.component("UserWindow", {
     template: "#userWindow",
-    props: ["user", "action"],
+    props: ["user", "action", "modal"],
     data() {
         return {
             store: store,
@@ -142,10 +145,8 @@ app.component("UserWindow", {
                 var response = await send_request(`user/${this.user.id}/edit`, this.data)
                 if (response) {
                     Object.assign(store.users[this.user.id], response)
-                    /* Doesnt actually work, but we need to do something like this
-                    var modalEl = document.querySelector("#editModal")
-                    var modal = bootstrap.Modal.getInstance(modalEl)
-                    modal.toggle()*/
+                    // Doesnt actually work, but we need to do something like this
+                    this.modal.toggle()
                 }
             } else {
                 const processed = omit(this.data, "teams")
@@ -153,6 +154,7 @@ app.component("UserWindow", {
                 var response = await send_request("user/create", processed)
                 if (response) {
                     store.users[response.id] = response
+                    this.modal.toggle()
                 }
             }
         },
