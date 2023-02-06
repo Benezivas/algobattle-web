@@ -7,7 +7,7 @@ from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from algobattle_web.battle import run_match
 from algobattle_web.models import (
@@ -57,12 +57,22 @@ class UserFilter(BaseSchema):
     is_admin: bool | None = None
     context: ID | None = None
     team: ID | None = None
+    limit: int = 25
+    page: int = 1
 
 
-@admin.get("/user")
+class UserData(BaseSchema):
+    users: dict[ID, User.Schema]
+    teams: dict[ID, Team.Schema]
+    num_pages: int
+
+
+@admin.get("/user/all", response_model=UserData)
 @autocommit
 def get_users(*, db = Depends(get_db), filter: UserFilter):
     filters = []
+    where = []
+    teams_filters = []
     if filter.name is not None:
         filters.append(User.name.contains(filter.name, autoescape=True))
     if filter.email is not None:
@@ -71,11 +81,22 @@ def get_users(*, db = Depends(get_db), filter: UserFilter):
         filters.append(User.is_admin == filter.is_admin)
     if filter.context is not None:
         _context = unwrap(db.get(Context, filter.context))
-        filters.append(Team.context_id == _context.id)
+        where.append(User.teams.any(Team.context_id == _context.id))
+        teams_filters.append(Team.context_id == _context.id)
     if filter.team is not None:
-        filters.append(Team.id == filter.team)
-    users = db.scalars(select(User).join(User.teams, isouter=True).filter(*filters).order_by(User.is_admin.desc())).unique().all()
-    return encode(users)
+        where.append(User.teams.any(Team.id == filter.team))
+    page = max(filter.page - 1, 0)
+    users = db.scalars(
+        select(User)
+        .filter(*filters)
+        .where(*where)
+        .order_by(User.is_admin.desc())
+        .limit(filter.limit)
+        .offset(page * filter.limit)
+    ).unique().all()
+    users_count = db.scalar(select(func.count()).select_from(User).filter(*filters)) or 0
+    teams = [team for user in users for team in user.teams]
+    return {"users": encode(users), "teams": encode(teams), "num_pages": users_count // filter.limit + 1 }
 
 
 class CreateUser(BaseSchema):
