@@ -106,31 +106,56 @@
   </div>
 
   <div class="d-flex justify-content-end">
-    <div class="collapse w-em" id="filters" aria-labelledby="filterHeading">
+    <div class="collapse w-xs" id="filters" aria-labelledby="filterHeading">
       <div class="card card-body">
-        <label for="nameFilter" class="form-label">Name</label>
-        <input class="form-control w-em" id="nameFilter" type="text" v-model="filter.name">
-        <label for="emailFilter" class="form-label mt-3">Email</label>
-        <input class="form-control w-em" id="emailFilter" type="text" v-model="filter.email">
-        <label for="adminFilter" class="form-label mt-3">User type</label>
-        <select class="form-select w-em" id="adminFilter" aria-label="User type filter" v-model="filter.is_admin">
-          <option selected value="null">Any</option>
-          <option value="true">Admin</option>
-          <option value="false">Non Admin</option>
-        </select>
-        <label for="contextFilter" class="form-label mt-3">Context</label>
-        <select class="form-select w-em" id="contextFilter" v-model="filter.context">
-          <option :value="null"></option>
-          <option v-for="(context, id) in store.contexts" :value="id">${context.name}</option>
-        </select>
-        <label for="teamFilter" class="form-label mt-3">Team</label>
-        <select class="form-select w-em" id="teamFilter" v-model="filter.team">
-          <option :value="null"></option>
-          <option v-for="(team, id) in store.teams" :value="id">${team.name}</option>
-        </select>
-        <label for="limitFilter" class="form-label">Limit</label>
-        <input class="form-control w-em" id="limitFilter" type="number" min="1" max="200" step="1" v-model="filter.limit">
-        <a class="btn btn-primary mt-3" :href="apply_filters({{page}})" role="buttom">Apply</a>
+        <div class="row mb-3">
+          <div class="col">
+            <label for="nameFilter" class="form-label mb-1">Name</label>
+            <input class="form-control w-em" id="nameFilter" type="text" v-model="filter.name">
+          </div>
+          <div class="col">
+            <label for="emailFilter" class="form-label mb-1">Email</label>
+            <input class="form-control w-em" id="emailFilter" type="text" v-model="filter.email">
+          </div>
+        </div>
+        <div class="row mb-3">
+          <div class="col">
+            <label for="adminFilter" class="form-label mb-1">User type</label>
+            <select class="form-select w-em" id="adminFilter" aria-label="User type filter" v-model="filter.is_admin">
+              <option selected value="null">Any</option>
+              <option value="true">Admin</option>
+              <option value="false">Non Admin</option>
+            </select>
+          </div>
+          <div class="col">
+          </div>
+        </div>
+        <div class="row mb-3">
+          <div class="col">
+            <label for="contextFilter" class="form-label mb-1">Context</label>
+            <select class="form-select w-em" id="contextFilter" v-model="filter.context">
+              <option :value="null"></option>
+              <option v-for="(context, id) in store.contexts" :value="id">${context.name}</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="teamFilter" class="form-label mb-1">Team</label>
+            <select class="form-select w-em" id="teamFilter" v-model="filter.team">
+              <option :value="null"></option>
+              <option v-for="(team, id) in store.teams" :value="id">${team.name}</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="limitFilter" class="form-label mb-1">Limit</label>
+            <input class="form-control w-em" id="limitFilter" type="number" min="1" max="200" step="1" v-model="filter.limit">
+          </div>
+          <div class="col text-end align-self-end">
+            
+            <a class="btn btn-primary" :href="apply_filters({{page}})" role="button">Apply</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
