@@ -274,7 +274,7 @@ class User(Base, unsafe_hash=True):
     token_id: Mapped[ID] = mapped_column(init=False)
     is_admin: Mapped[bool] = mapped_column(default=False)
 
-    teams: Mapped[list["Team"]] = relationship(secondary=team_members, back_populates="members", lazy="joined", default=list)
+    teams: Mapped[list["Team"]] = relationship(secondary=team_members, back_populates="members", lazy="joined", default_factory=list)
     settings: Mapped["UserSettings"] = relationship(back_populates="user", init=False, cascade="all, delete")
 
     def __post_init__(self, db: Session) -> None:
