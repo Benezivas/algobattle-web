@@ -1,10 +1,9 @@
 "Module specifying the regular user pages."
-from __future__ import annotations
 from typing import Collection
 from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from algobattle_web.models import (
     ID,
@@ -207,9 +206,12 @@ def users_get(
         email: str | None = None,
         is_admin: bool | None = None,
         context: ID | None = None,
-        team: ID | None = None
+        team: ID | None = None,
+        page: int = 1,
+        limit: int = 50,
     ):
     filters = []
+    where = []
     teams_filters = []
     if name is not None:
         filters.append(User.name.contains(name, autoescape=True))
@@ -219,14 +221,23 @@ def users_get(
         filters.append(User.is_admin == is_admin)
     if context is not None:
         _context = unwrap(db.get(Context, context))
-        filters.append(Team.context_id == _context.id)
+        where.append(User.teams.any(Team.context_id == _context.id))
         teams_filters.append(Team.context_id == _context.id)
     if team is not None:
-        filters.append(Team.id == team)
-    users = db.scalars(select(User).join(User.teams, isouter=True).filter(*filters).order_by(User.is_admin.desc())).unique().all()
+        where.append(User.teams.any(Team.id == team))
+    page = max(page - 1, 0)
+    users = db.scalars(
+        select(User)
+        .filter(*filters)
+        .where(*where)
+        .order_by(User.is_admin.desc())
+        .limit(limit)
+        .offset(page * limit)
+    ).unique().all()
+    users_count = db.scalar(select(func.count()).select_from(User).filter(*filters)) or 0
     teams = db.scalars(select(Team).filter(*teams_filters)).unique().all()
     contexts = db.scalars(select(Context)).unique().all()
-    return "admin_users.jinja", {"users": encode(users), "teams": encode(teams), "contexts": encode(contexts)}
+    return "admin_users.jinja", {"users": encode(users), "teams": encode(teams), "contexts": encode(contexts), "page": page + 1, "max_page": users_count // limit + 1}
 
 
 @admin.get("/teams", response_class=HTMLResponse)

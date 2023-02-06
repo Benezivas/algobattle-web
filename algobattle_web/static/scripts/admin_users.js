@@ -12,13 +12,14 @@ const app = createApp({
     data() {
         return {
             store: store,
-            has_params: Object.keys(params).length != 0,
+            has_params: Object.keys(omit(params, "page", "limit")).length != 0,
             filter: {
                 name: params.name || "",
                 email: params.email || "",
                 is_admin: params.is_admin != null ? params.is_admin : null,
                 context: params.context || null,
                 team: params.team || null,
+                limit: params.limit || "",
             },
             modal_user: {
                 teams: [],
@@ -27,8 +28,20 @@ const app = createApp({
             modal: null,
         }
     },
-    computed: {
-        apply_filters() {
+    methods: {
+        set_props(action, user) {
+            this.action = action
+            if (action == "create") {
+                this.modal_user = {
+                    teams: [],
+                }
+            } else {
+                this.modal_user = user
+            }
+            this.modal = bootstrap.Modal.getOrCreateInstance("#userModal")
+            this.modal.toggle()
+        },
+        apply_filters(page) {
             var filters = []
             if (this.filter.name != "") {
                 filters.push(`name=${this.filter.name}`)
@@ -45,22 +58,14 @@ const app = createApp({
             if (this.filter.team != null) {
                 filters.push(`team=${this.filter.team}`)
             }
+            if (this.filter.limit != "") {
+                filters.push(`limit=${this.filter.limit}`)
+            }
+            if (page != 1) {
+                filters.push(`page=${page}`)
+            }
             return `/admin/users?${filters.join("&")}`
         },
-    },
-    methods: {
-        set_props(action, user) {
-            this.action = action
-            if (action == "create") {
-                this.modal_user = {
-                    teams: [],
-                }
-            } else {
-                this.modal_user = user
-            }
-            this.modal = bootstrap.Modal.getOrCreateInstance("#userModal")
-            this.modal.toggle()
-        }
     },
 })
 app.config.compilerOptions.delimiters = ["${", "}"]

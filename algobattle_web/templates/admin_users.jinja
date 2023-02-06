@@ -92,6 +92,17 @@
         <span class="visually-hidden">Applied filters</span>
       </span>
     </button>
+    {% if max_page != 1 %}
+    <nav aria-label="Table pagination">
+      <ul class="pagination pagination-sm justify-content-end mb-0 ms-2">
+        <li class="page-item"><a class="page-link" :class="{disabled: {{page}} <= 1}" :href="apply_filters(1)"><i class="bi bi-chevron-double-left"></i></a></li>
+        <li class="page-item"><a class="page-link" :class="{disabled: {{page}} <= 1}" :href="apply_filters({{page}} - 1)"><i class="bi bi-chevron-compact-left"></i></a></li>
+        <li class="page-item"><a class="page-link" href="#">{{page}}</a></li>
+        <li class="page-item"><a class="page-link" :class="{disabled: {{page}} >= {{max_page}}}" :href="apply_filters({{page}} + 1)"><i class="bi bi-chevron-compact-right"></i></a></li>
+        <li class="page-item"><a class="page-link" :class="{disabled: {{page}} >= {{max_page}}}" :href="apply_filters({{max_page}})"><i class="bi bi-chevron-double-right"></i></a></li>
+      </ul>
+    </nav>
+    {% endif %}
   </div>
 
   <div class="d-flex justify-content-end">
@@ -117,7 +128,9 @@
           <option :value="null"></option>
           <option v-for="(team, id) in store.teams" :value="id">${team.name}</option>
         </select>
-        <a class="btn btn-primary mt-3" :href="apply_filters" role="buttom">Apply</a>
+        <label for="limitFilter" class="form-label">Limit</label>
+        <input class="form-control w-em" id="limitFilter" type="number" min="1" max="200" step="1" v-model="filter.limit">
+        <a class="btn btn-primary mt-3" :href="apply_filters({{page}})" role="buttom">Apply</a>
       </div>
     </div>
   </div>
