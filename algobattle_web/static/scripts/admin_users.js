@@ -1,6 +1,5 @@
 import { createApp, reactive } from "vue"
 import { send_request, pick, queryParams, omit } from "base"
-import "bootstrap"
 
 const store = reactive({
     users: users_input,

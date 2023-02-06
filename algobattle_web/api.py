@@ -1,16 +1,20 @@
 "Module specifying the json api actions."
 from datetime import datetime
 from typing import Any, Callable, Literal, cast
+
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
+from sqlalchemy import select
+
 from algobattle_web.battle import run_match
 from algobattle_web.models import (
     DbFile,
     MatchParticipant,
     autocommit,
+    encode,
     get_db,
     Session,
     ID,
@@ -45,6 +49,33 @@ admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)], route_
 # *******************************************************************************
 # * User
 # *******************************************************************************
+
+
+class UserFilter(BaseSchema):
+    name: str | None = None
+    email: str | None = None
+    is_admin: bool | None = None
+    context: ID | None = None
+    team: ID | None = None
+
+
+@admin.get("/user")
+@autocommit
+def get_users(*, db = Depends(get_db), filter: UserFilter):
+    filters = []
+    if filter.name is not None:
+        filters.append(User.name.contains(filter.name, autoescape=True))
+    if filter.email is not None:
+        filters.append(User.email.contains(filter.email, autoescape=True))
+    if filter.is_admin is not None:
+        filters.append(User.is_admin == filter.is_admin)
+    if filter.context is not None:
+        _context = unwrap(db.get(Context, filter.context))
+        filters.append(Team.context_id == _context.id)
+    if filter.team is not None:
+        filters.append(Team.id == filter.team)
+    users = db.scalars(select(User).join(User.teams, isouter=True).filter(*filters).order_by(User.is_admin.desc())).unique().all()
+    return encode(users)
 
 
 class CreateUser(BaseSchema):

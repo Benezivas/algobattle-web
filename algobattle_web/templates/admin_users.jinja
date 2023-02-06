@@ -70,7 +70,7 @@
 
 <div id="app">
   <h3>Users</h3>
-  <table class="table table-hover" id="users">
+  <table class="table table-hover mb-2" id="users">
     <thead>
       <tr>
         <th scope="col">Name</th>
@@ -84,18 +84,19 @@
     </tbody>
   </table>
 
-  <button type="button" class="btn btn-primary btn-sm mb-3" @click="set_props('create', null)">Create new user</button>
+  <div class="d-flex mb-3 pe-2">
+    <button type="button" class="btn btn-primary btn-sm me-auto" @click="set_props('create', null)">Create new user</button>
+    <button type="button" class="btn btn-primary btn-sm position-relative" data-bs-toggle="collapse" data-bs-target="#filters" aria-expanded="false" aria-controls="filters">
+      <i class="bi bi-funnel-fill"></i>
+      <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle" v-if="has_params">
+        <span class="visually-hidden">Applied filters</span>
+      </span>
+    </button>
+  </div>
 
-  <user-window :user="modal_user" :action="action" :modal="modal"></user-window>
-
-  <div class="accordion w-xs" id="filtersAccordion">
-    <div class="accordion-item">
-      <h2 class="accordion-header" id="filterHeading">
-        <button class="accordion-button" :class="{ collapsed: !has_params }" type="button" data-bs-toggle="collapse" data-bs-target="#filters" aria-expanded="false" aria-controls="filters">
-          Filter
-        </button>
-      </h2>
-      <div id="filters" class="accordion-collapse collapse p-3" :class="{ show: has_params }" aria-labelledby="filterHeading" data-bs-parent="#filtersAccordion">
+  <div class="d-flex justify-content-end">
+    <div class="collapse w-em" id="filters" aria-labelledby="filterHeading">
+      <div class="card card-body">
         <label for="nameFilter" class="form-label">Name</label>
         <input class="form-control w-em" id="nameFilter" type="text" v-model="filter.name">
         <label for="emailFilter" class="form-label mt-3">Email</label>
@@ -120,6 +121,8 @@
       </div>
     </div>
   </div>
+
+  <user-window :user="modal_user" :action="action" :modal="modal"></user-window>
 </div>
 
 
