@@ -19,7 +19,7 @@ const app = createApp({
                 is_admin: params.is_admin != null ? params.is_admin : null,
                 context: params.context || null,
                 team: params.team || null,
-                limit: params.limit || "",
+                limit: params.limit || 25,
             },
             modal_user: {
                 teams: [],

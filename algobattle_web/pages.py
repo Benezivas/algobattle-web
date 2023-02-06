@@ -208,7 +208,7 @@ def users_get(
         context: ID | None = None,
         team: ID | None = None,
         page: int = 1,
-        limit: int = 50,
+        limit: int = 25,
     ):
     filters = []
     where = []
