@@ -13,6 +13,20 @@ export async function send_request(action, content) {
     }
 }
 
+export async function send_get(action, content) {
+    var _content = {
+        "method": "GET",
+    }
+    var params = ""
+    if (content != undefined) {
+        params = "?" + new URLSearchParams(content).toString()
+    }
+    var response = await fetch("/api/" + action + params, _content)
+    if (response.ok) {
+        return response.json()
+    }
+}
+
 export async function send_form(endpoint, content) {
     var response = await fetch("/api/" + endpoint, {
         "method": "POST",

@@ -61,42 +61,44 @@ class UserFilter(BaseSchema):
     page: int = 1
 
 
-class UserData(BaseSchema):
-    users: dict[ID, User.Schema]
-    teams: dict[ID, Team.Schema]
-    num_pages: int
-
-
-@admin.get("/user/all", response_model=UserData)
+@admin.get("/user/search", response_model=list[User.Schema])
 @autocommit
-def get_users(*, db = Depends(get_db), filter: UserFilter):
+def get_users(
+    *,
+    db = Depends(get_db),
+    name: str | None = None,
+    email: str | None = None,
+    is_admin: bool | None = None,
+    context: ID | None = None,
+    team: ID | None = None,
+    limit: int = 25,
+    page: int = 1,
+    ):
     filters = []
     where = []
     teams_filters = []
-    if filter.name is not None:
-        filters.append(User.name.contains(filter.name, autoescape=True))
-    if filter.email is not None:
-        filters.append(User.email.contains(filter.email, autoescape=True))
-    if filter.is_admin is not None:
-        filters.append(User.is_admin == filter.is_admin)
-    if filter.context is not None:
-        _context = unwrap(db.get(Context, filter.context))
+    if name is not None:
+        filters.append(User.name.contains(name, autoescape=True))
+    if email is not None:
+        filters.append(User.email.contains(email, autoescape=True))
+    if is_admin is not None:
+        filters.append(User.is_admin == is_admin)
+    if context is not None:
+        _context = unwrap(db.get(Context, context))
         where.append(User.teams.any(Team.context_id == _context.id))
         teams_filters.append(Team.context_id == _context.id)
-    if filter.team is not None:
-        where.append(User.teams.any(Team.id == filter.team))
-    page = max(filter.page - 1, 0)
+    if team is not None:
+        where.append(User.teams.any(Team.id == team))
+    page = max(page - 1, 0)
     users = db.scalars(
         select(User)
         .filter(*filters)
         .where(*where)
         .order_by(User.is_admin.desc())
-        .limit(filter.limit)
-        .offset(page * filter.limit)
+        .limit(limit)
+        .offset(page * limit)
     ).unique().all()
-    users_count = db.scalar(select(func.count()).select_from(User).filter(*filters)) or 0
-    teams = [team for user in users for team in user.teams]
-    return {"users": encode(users), "teams": encode(teams), "num_pages": users_count // filter.limit + 1 }
+    return users
 
 
 class CreateUser(BaseSchema):
@@ -220,19 +222,21 @@ async def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
 class CreateTeam(BaseSchema):
     name: str
     context: ID
+    members: list[ID]
 
 
 @admin.post("/team/create")
 @autocommit
 def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
     context = unwrap(Context.get(db, team.context))
-    return Team(db, team.name, context)
+    members = [unwrap(db.get(User, id)) for id in team.members]
+    return Team(db, team.name, context, members)
 
 
 class EditTeam(BaseSchema):
     name: str | Missing = missing
     context: ID | Missing = missing
-    members: list[tuple[Literal["add", "remove"], ID]] | Missing = missing
+    members: dict[ID, bool] | Missing = missing
 
 
 @admin.post("/team/{id}/edit")
@@ -244,19 +248,14 @@ def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
     if present(edit.context):
         team.context_id = edit.context
     if present(edit.members):
-        for action, user_id in edit.members:
-            user = unwrap(db.get(User, user_id))
-            match action:
-                case "add":
-                    if user in team.members:
-                        raise HTTPException(400)
-                    team.members.append(user)
-                    if len(user.teams) == 1:
-                        user.settings.selected_team = team
-                case "remove":
-                    if user not in team.members:
-                        raise HTTPException(400)
-                    team.members.remove(user)
+        for id, add in edit.members.items():
+            user = unwrap(db.get(User, id))
+            if add and user not in team.members:
+                team.members.append(user)
+            elif not add and user in team.members:
+                team.members.remove(user)
+            else:
+                raise ValueError
     return team
 
 

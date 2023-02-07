@@ -390,7 +390,7 @@ class Team(Base, unsafe_hash=True):
     context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
 
     context: Mapped[Context] = relationship(back_populates="teams", uselist=False, lazy="joined")
-    members: Mapped[list[User]] = relationship(secondary=team_members, back_populates="teams", lazy="joined", init=False)
+    members: Mapped[list[User]] = relationship(secondary=team_members, back_populates="teams", lazy="joined", default_factory=list)
 
     class Schema(Base.Schema):
         name: str

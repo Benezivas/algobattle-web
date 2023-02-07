@@ -1,169 +1,158 @@
 import { createApp, reactive } from "vue"
-import { send_request } from "base"
+import { send_request, send_get, pick, queryParams, omit } from "base"
 
 
 const store = reactive({
     teams: teams_input,
-    contexts: contexts_input,
     users: users_input,
-    curr_row: {},
+    contexts: contexts_input,
 })
 
 
-async function create_team(event) {
-    var fields = event.currentTarget.elements
-
-    var response = await send_request("team/create", {
-        name: fields.name.value,
-        context: fields.context.value,
-    })
-    if (response) {
-        store.teams[response.id] = response
-        fields.name.value = ""
-    }
-}
-
-async function edit_team(event) {
-    var fields = event.currentTarget.elements
-    var team = store.curr_row.team
-
-    var response = await send_request(`team/${team.id}/edit`, {
-        name: fields.name.value ? fields.name.value : undefined,
-        context: fields.context.value != team.context ? fields.context.value : undefined,
-    })
-    if (response) {
-        team.name = response.name
-        team.context = response.context
-        store.curr_row.editing = false
-    }
-}
-
-
-async function delete_team(event) {
-    var team = store.curr_row.team
-
-    var response = await send_request(`team/${team.id}/delete`)
-    if (response) {
-        store.curr_row.editing = false
-        store.curr_row = {}
-        delete store.teams[team.id]
-    }
-}
-
-
-async function change_member(event, action) {
-    var response = await send_request(`team/${this.edit_team_member_team}/edit`, {
-        members: [[action, this.edit_team_member_user]],
-    })
-    if (response) {
-        store.teams[response.id] = response
-    }
-}
-
-
-async function create_context(event) {
-    var fields = event.currentTarget.elements
-
-    var response = await send_request("context/create", {
-        name: fields.name.value,
-    })
-    if (response) {
-        store.contexts[response.id] = response
-        fields.name.value = ""
-    }
-
-}
-
-async function edit_context(event) {
-    var fields = event.currentTarget.elements
-    var context = store.curr_row.context
-
-    var response = await send_request(`context/${context.id}/edit`, {
-        name: fields.name.value,
-    })
-    if (response) {
-        context.name = response.name
-        store.curr_row.editing = false
-        store.curr_row = {}
-    }
-}
-
-
-async function delete_context(event) {
-    var context = store.curr_row.context
-
-    var response = await send_request(`context/${context.id}delete`)
-    if (response) {
-        store.curr_row = {}
-        delete store.contexts[context.id]
-    }
-}
-
-
-function toggle_editing() {
-    if (this.editing) {
-        this.editing = false
-        store.curr_row = {}
-    } else {
-        store.curr_row.editing = false
-        store.curr_row = this
-        this.editing = true
-    }
-}
-
-
+const params = queryParams()
 const app = createApp({
-    methods: {
-        create_team,
-        edit_team,
-        change_member,
-        create_context,
-        edit_context,
-    },
     data() {
         return {
-            edit_team_member_team: "",
-            edit_team_member_user: "",
             store: store,
+            has_params: Object.keys(omit(params, "page", "limit")).length != 0,
+            filter: {
+                name: params.name || "",
+                context: params.context || null,
+                limit: params.limit || 25,
+            },
+            modal_team: {
+                members: [],
+            },
+            action: "edit",
+            modal: null,
         }
+    },
+    methods: {
+        open_modal(action, team) {
+            this.action = action
+            if (action == "create") {
+                this.modal_team = {
+                    members: [],
+                }
+            } else {
+                this.modal_team = team
+            }
+            this.modal = bootstrap.Modal.getOrCreateInstance("#teamModal")
+            this.modal.toggle()
+        },
+        apply_filters(page) {
+            var filters = []
+            if (this.filter.name != "") {
+                filters.push(`name=${this.filter.name}`)
+            }
+            if (this.filter.context != null) {
+                filters.push(`context=${this.filter.context}`)
+            }
+            if (this.filter.limit != "") {
+                filters.push(`limit=${this.filter.limit}`)
+            }
+            if (page != 1) {
+                filters.push(`page=${page}`)
+            }
+            return `/admin/teams?${filters.join("&")}`
+        },
     },
 })
 app.config.compilerOptions.delimiters = ["${", "}"]
 
-app.component("TeamRow", {
-    template: "#team_row",
-    props: ["team"],
+app.component("HoverBadge", {
+    template: "#hoverBadge",
+    props: ["data"],
     data() {
         return {
-            editing: false,
-            store: store,
+            hover: false,
         }
     },
-    computed: {
-        members_str() {
-            return this.team.members.map(u => store.users[u].name).join(", ")
-        },
-    },
-    methods: {
-        toggle_editing,
-        delete_team,
-    }
 })
 
-app.component("ContextRow", {
-    template: "#context_row",
-    props: ["context"],
+
+app.component("TeamWindow", {
+    template: "#teamWindow",
+    props: ["team", "action", "modal"],
     data() {
         return {
-            editing: false,
             store: store,
+            data: {
+                members: {},
+            },
+            display_members: [],
+            search: {
+                name: "",
+                email: "",
+                result: [],
+            },
+        }
+    },
+    watch: {
+        team(team) {
+            this.data = pick(team, "name", "email", "is_admin")
+            this.data.members = {}
+            this.display_members = [...team.members]
         }
     },
     methods: {
-        toggle_editing,
-        delete_context,
-    }
+        async remove_user(user) {
+            if (this.data.members[user.id] == undefined) {
+                this.data.members[user.id] = false
+            } else {
+                delete this.data.members[user.id]
+            }
+            const index = this.display_members.indexOf(user.id)
+            this.display_members.splice(index, 1)
+        },
+        async add_user(user) {
+            if (this.data.members[user.id] == null) {
+                this.data.members[user.id] = true
+            } else {
+                delete this.data.members[user.id]
+            }
+            this.display_members.push(user.id)
+            this.new_team = null
+        },
+        async delete_team(event) {
+            var response = await send_request(`team/${this.team.id}/delete`)
+            if (response) {
+                delete store.teams[this.team.id]
+            }
+        },
+        async submit_data() {
+            if (this.action == "edit") {
+                var response = await send_request(`team/${this.team.id}/edit`, this.data)
+                if (response) {
+                    Object.assign(store.teams[this.team.id], response)
+                    this.modal.toggle()
+                }
+            } else {
+                const processed = omit(this.data, "members")
+                processed.members = Object.keys(this.data.members)
+                var response = await send_request("team/create", processed)
+                if (response) {
+                    store.teams[response.id] = response
+                    this.modal.toggle()
+                }
+            }
+        },
+        async send_search() {
+            const filter = {limit: 5}
+            if (this.search.name != "") {
+                filter.name = this.search.name
+            }
+            if (this.search.email != "") {
+                filter.email = this.search.email
+            }
+            const response = await send_get("user/search", filter, "GET")
+            if (response) {
+                this.search.result = response.filter(u => !this.display_members.includes(u.id))
+            }
+        }
+    },
 })
+
 
 app.mount("#app")
 
