@@ -142,6 +142,7 @@ app.component("UserWindow", {
             var response = await send_request(`user/${this.user.id}/delete`)
             if (response) {
                 delete store.users[this.user.id]
+                this.modal.toggle()
             }
         },
         async submit_data() {
@@ -149,7 +150,6 @@ app.component("UserWindow", {
                 var response = await send_request(`user/${this.user.id}/edit`, this.data)
                 if (response) {
                     Object.assign(store.users[this.user.id], response)
-                    // Doesnt actually work, but we need to do something like this
                     this.modal.toggle()
                 }
             } else {

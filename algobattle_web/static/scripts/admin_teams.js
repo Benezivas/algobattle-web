@@ -118,6 +118,7 @@ app.component("TeamWindow", {
             var response = await send_request(`team/${this.team.id}/delete`)
             if (response) {
                 delete store.teams[this.team.id]
+                this.modal.toggle()
             }
         },
         async submit_data() {
