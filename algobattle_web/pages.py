@@ -268,6 +268,15 @@ def teams_get(
     return "admin_teams.jinja", {"teams": encode(teams), "contexts": encode(contexts), "users": encode(users), "page": page + 1, "max_page": team_count // limit + 1}
 
 
+@admin.get("/contexts")
+@templated
+def contexts_get(db = Depends(get_db), page: int = 1, limit: int = 25):
+    page = max(page - 1, 0)
+    contexts = db.scalars(select(Context)).unique().all()
+    count = db.scalar(select(func.count()).select_from(Context)) or 0
+    return "admin_contexts.jinja", {"contexts": encode(contexts), "page": page + 1, "max_page": count // limit + 1}
+
+
 @admin.get("/configs")
 @templated
 def config_get(db: Session = Depends(get_db)):
