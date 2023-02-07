@@ -16,6 +16,7 @@ from sqlalchemy import Table, ForeignKey, Column, select, String, create_engine,
 from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, Session, DeclarativeBase, registry, MappedAsDataclass
+from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
@@ -386,11 +387,12 @@ class Context(Base, unsafe_hash=True):
 
 
 class Team(Base, unsafe_hash=True):
-    name: Mapped[str] = mapped_column(unique=True)
-    context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
-
+    name: Mapped[str]
     context: Mapped[Context] = relationship(back_populates="teams", uselist=False, lazy="joined")
+    context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
     members: Mapped[list[User]] = relationship(secondary=team_members, back_populates="teams", lazy="joined", default_factory=list)
+
+    __table_args__ = (UniqueConstraint("name", "context_id"),)
 
     class Schema(Base.Schema):
         name: str
