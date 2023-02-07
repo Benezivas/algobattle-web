@@ -39,29 +39,31 @@
           <div class="d-flex flex-row mb-1">
             <hover-badge v-for="id in display_teams" :data="store.teams[id]" @remove="remove_team"></hover-badge>
           </div>
-          <div class="btn-group dropend">
-            <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Add
-            </button>
-            <ul class="dropdown-menu">
-              <li>
-                <form class="py-1 px-2">
-                  <div class="mb-3">
-                    <label for="searchName" class="form-label">Name</label>
-                    <input type="text" class="form-control form-control-sm" id="searchName" v-model="search.name" @input="send_search">
-                  </div>
-                  <div>
-                    <label for="searchContext" class="form-label">Context</label>
-                    <select class="form-select form-select-sm" id="searchContext" v-model="search.context" @change="send_search">
-                      <option :value="null" :selected="data.context == null"></option>
-                      <option v-for="(context, id) in store.contexts" :value="id" :selected="id == data.context">${context.name}</option>
-                    </select>
-                  </div>
-                </form>
-              </li>
-              <li><hr class="dropdown-divider"></li>
-              <li v-for="(user, id) in search.result"><a class="dropdown-item" @click.prevent="add_team(user)" href="#">${user.name}</a></li>
-            </ul>
+          <div class="card mt-2">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2"> Add team</h6>
+              <div class="row mb-2">
+                <div class="col">
+                  <label for="searchContext" class="form-label">Context</label>
+                  <select class="form-select form-select-sm" id="searchContext" v-model="search.context" @change="send_search">
+                    <option :value="null" :selected="data.context == null"></option>
+                    <option v-for="(context, id) in store.contexts" :value="id" :selected="id == data.context">${context.name}</option>
+                  </select>
+                </div>
+                <div class="col">
+                  <label for="searchName" class="form-label">Name</label>
+                  <input type="text" class="form-control form-control-sm" id="searchName" v-model="search.name" @input="send_search">
+                </div>
+              </div>
+              <div class="d-flex flex-row">
+                <span v-for="(team, id) in search.result" class="badge rounded-pill m-1 text-bg-success">
+                  ${team.name}
+                  <a href="#" @click.prevent="add_team(team)" title="add">
+                    <i class="bi bi-plus-lg text-light"></i>
+                  </a>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">

@@ -128,6 +128,9 @@ app.component("UserWindow", {
             }
             this.display_teams.push(team.id)
             store.teams[team.id] = team
+            this.search.name = ""
+            this.search.context = null
+            this.search.result = []
         },
         async delete_user(event) {
             var response = await send_request(`user/${this.user.id}/delete`)
@@ -164,8 +167,6 @@ app.component("UserWindow", {
             const response = await send_get("team/search", filter)
             if (response) {
                 this.search.result = response
-                this.search.name = ""
-                this.search.context = ""
             }
         },
     },
