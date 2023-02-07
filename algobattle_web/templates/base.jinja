@@ -49,9 +49,7 @@
             {{ sbitem("Schedule", "/schedule", "calendar-week") }}
             {{ sbitem("Results", "/results", "bar-chart-line") }}
             {% if user.is_admin %}
-            {{ sbitem("Users", "/admin/users", "person") }}
-            {{ sbitem("Teams", "/admin/teams", "people") }}
-            {{ sbitem("Configs", "/admin/configs", "sliders") }}
+            {{ sbitem("Admin pane", "/admin/users", "people") }}
             {% endif %}
           </ul>
 
