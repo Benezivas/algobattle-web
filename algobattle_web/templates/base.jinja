@@ -49,7 +49,11 @@
             {{ sbitem("Schedule", "/schedule", "calendar-week") }}
             {{ sbitem("Results", "/results", "bar-chart-line") }}
             {% if user.is_admin %}
-            {{ sbitem("Admin pane", "/admin/users", "people") }}
+            <li class="nav-item mx-2">
+              <a href="/admin/users" class="nav-link align-middle {{'active' if '/admin/' in request.url.path}}" {{ "aria-current" if '/admin/' in request.url.path }}>
+                <i class="bi bi-people"></i> <span class="ms-1">Admin panel</span>
+              </a>
+            </li>
             {% endif %}
           </ul>
 
