@@ -54,26 +54,28 @@
           <div class="d-flex flex-row mb-1">
             <hover-badge v-for="id in display_members" :data="store.users[id]" @remove="remove_user"></hover-badge>
           </div>
-          <div class="btn-group dropend">
-            <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Add
-            </button>
-            <ul class="dropdown-menu">
-              <li>
-                <form class="py-1 px-2">
-                  <div class="mb-3">
-                    <label for="searchName" class="form-label">Name</label>
-                    <input type="text" class="form-control form-control-sm" id="searchName" v-model="search.name" @input="send_search">
-                  </div>
-                  <div>
-                    <label for="searchEmail" class="form-label">Email</label>
-                    <input type="text" class="form-control form-control-sm" id="searchEmail" v-model="search.email" @input="send_search">
-                  </div>
-                </form>
-              </li>
-              <li><hr class="dropdown-divider"></li>
-              <li v-for="(user, id) in search.result"><a class="dropdown-item" @click.prevent="add_user(user)" href="#">${user.name}</a></li>
-            </ul>
+          <div class="card mt-2">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2">Add user</h6>
+              <div class="row mb-2">
+                <div class="col">
+                  <label for="searchName" class="form-label">Name</label>
+                  <input type="text" class="form-control form-control-sm" id="searchName" v-model="search.name" @input="send_search">
+                </div>
+                <div class="col">
+                  <label for="searchEmail" class="form-label">Email</label>
+                  <input type="text" class="form-control form-control-sm" id="searchEmail" v-model="search.email" @input="send_search">
+                </div>
+              </div>
+              <div class="d-flex flex-row">
+                <span v-for="(user, id) in search.result" class="badge rounded-pill m-1 text-bg-success">
+                  ${user.name}
+                  <a href="#" @click.prevent="add_user(user)" title="add">
+                    <i class="bi bi-plus-lg text-light"></i>
+                  </a>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">

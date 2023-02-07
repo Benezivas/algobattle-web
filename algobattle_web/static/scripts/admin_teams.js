@@ -116,6 +116,9 @@ app.component("TeamWindow", {
             }
             this.display_members.push(user.id)
             store.users[user.id] = user
+            this.search.name = ""
+            this.search.email = ""
+            this.search.result = []
         },
         async delete_team(event) {
             var response = await send_request(`team/${this.team.id}/delete`)
@@ -152,8 +155,6 @@ app.component("TeamWindow", {
             const response = await send_get("user/search", filter)
             if (response) {
                 this.search.result = response
-                this.search.name = ""
-                this.search.email = ""
             }
         },
     },
