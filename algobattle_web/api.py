@@ -1,20 +1,19 @@
 "Module specifying the json api actions."
 from datetime import datetime
-from typing import Any, Callable, Literal, cast
+from typing import Any, Callable, cast
 
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
-from sqlalchemy import select, func
+from sqlalchemy import select
 
 from algobattle_web.battle import run_match
 from algobattle_web.models import (
     DbFile,
     MatchParticipant,
     autocommit,
-    encode,
     get_db,
     Session,
     ID,
