@@ -79,7 +79,7 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-danger me-auto" title="Delete team" v-if="action == 'edit'" @click="delete_team">Delete team</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-          <button type="button" class="btn btn-primary" @click="submit_data">Submit</button>
+          <button type="button" class="btn btn-primary" @click="submit_data">${action == "edit" ? "Save" : "Create"}</button>
         </div>
       </form>
     </div>

@@ -67,7 +67,7 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-danger me-auto" data-bs-toggle="tooltip" title="Delete user" v-if="action == 'edit' && user.id != '{{user.id}}'" @click="delete_user">Delete user</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-          <button type="button" class="btn btn-primary" @click="submit_data">Submit</button>
+          <button type="button" class="btn btn-primary" @click="submit_data">${action == "edit" ? "Save" : "Create"}</button>
         </div>
       </form>
     </div>
