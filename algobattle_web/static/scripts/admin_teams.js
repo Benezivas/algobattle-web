@@ -51,9 +51,6 @@ const app = createApp({
             if (this.filter.limit != "") {
                 filters.push(`limit=${this.filter.limit}`)
             }
-            if (page != 1) {
-                filters.push(`page=${page}`)
-            }
             return `/admin/teams?${filters.join("&")}`
         },
     },
