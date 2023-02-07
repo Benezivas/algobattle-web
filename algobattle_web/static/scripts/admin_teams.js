@@ -103,13 +103,16 @@ app.component("TeamWindow", {
             this.display_members.splice(index, 1)
         },
         async add_user(user) {
+            if (this.display_members.includes(user.id)) {
+                return
+            }
             if (this.data.members[user.id] == null) {
                 this.data.members[user.id] = true
             } else {
                 delete this.data.members[user.id]
             }
             this.display_members.push(user.id)
-            this.new_team = null
+            store.users[user.id] = user
         },
         async delete_team(event) {
             var response = await send_request(`team/${this.team.id}/delete`)
@@ -143,11 +146,11 @@ app.component("TeamWindow", {
             if (this.search.email != "") {
                 filter.email = this.search.email
             }
-            const response = await send_get("user/search", filter, "GET")
+            const response = await send_get("user/search", filter)
             if (response) {
-                this.search.result = response.filter(u => !this.display_members.includes(u.id))
+                this.search.result = response
             }
-        }
+        },
     },
 })
 
