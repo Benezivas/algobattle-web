@@ -152,7 +152,7 @@
             <input class="form-control w-em" id="limitFilter" type="number" min="1" max="200" step="1" v-model="filter.limit">
           </div>
           <div class="col text-end align-self-end">
-            
+            <a v-if="has_params" class="btn btn-secondary me-2" href="users" role="button">Clear</a>
             <a class="btn btn-primary" :href="apply_filters({{page}})" role="button">Apply</a>
           </div>
         </div>
