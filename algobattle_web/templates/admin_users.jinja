@@ -18,7 +18,7 @@
 <script type="text/x-template" id="userWindow">
   <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true" ref="user_modal">
     <div class="modal-dialog modal-dialog-centered">
-      <form class="modal-content">
+      <form class="modal-content" @submit.prevent="submit_data">
         <div class="modal-header">
           <h1 class="modal-title fs-5" id="modalLabel">
           <span v-if="action == 'edit'">Edit user</span>
@@ -29,12 +29,12 @@
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
           <div class="input-group w-em input-group-sm mb-3" name="name">
-            <input class="form-control w-em" type="text" v-model="data.name">
+            <input class="form-control w-em" type="text" v-model="data.name" :required="action == 'create'">
             <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="data.is_admin">
             <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
           </div>
           <label for="email" class="form-label">Email</label>
-          <input class="form-control w-em form-control-sm mb-3" name="email" type="email" v-model="data.email">
+          <input class="form-control w-em form-control-sm mb-3" name="email" type="email" v-model="data.email" :required="action == 'create'">
           <label for="teams" class="form-label mb-0">Teams</label>
           <div class="d-flex flex-row mb-1">
             <hover-badge v-for="id in display_teams" :data="store.teams[id]" @remove="remove_team"></hover-badge>
@@ -69,7 +69,7 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-danger me-auto" data-bs-toggle="tooltip" title="Delete user" v-if="action == 'edit' && user.id != '{{user.id}}'" @click="delete_user">Delete user</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-          <button type="button" class="btn btn-primary" @click="submit_data">${action == "edit" ? "Save" : "Create"}</button>
+          <button type="submit" class="btn btn-primary">${action == "edit" ? "Save" : "Create"}</button>
         </div>
       </form>
     </div>
