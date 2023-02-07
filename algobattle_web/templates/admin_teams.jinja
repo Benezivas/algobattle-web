@@ -28,7 +28,7 @@
 <script type="text/x-template" id="hoverBadge">
   <span class="badge rounded-pill m-1" :class="{'text-bg-warning': !hover, 'text-bg-danger': hover}">
     ${data.name}
-    <a @click.prevent="$emit('remove', data)" href="#" @mouseover="hover = true" @mouseleave="hover = false"><i class="bi bi-x-lg"></i></a>
+    <a @click.prevent="$emit('remove', data)" href="#" @mouseover="hover = true" @mouseleave="hover = false" title="remove"><i class="bi bi-x-lg"></i></a>
   </span>
 </script>
 
@@ -153,7 +153,7 @@
           </div>
           <div class="col text-end align-self-end">
             <a v-if="has_params" class="btn btn-secondary me-2" href="teams" role="button">Clear</a>
-            <a class="btn btn-primary" :href="apply_filters({{page}})" role="button">Apply</a>
+            <a class="btn btn-primary" :href="apply_filters(1)" role="button">Apply</a>
           </div>
         </div>
       </div>

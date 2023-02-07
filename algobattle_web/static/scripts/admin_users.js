@@ -61,6 +61,9 @@ const app = createApp({
             if (this.filter.limit != "") {
                 filters.push(`limit=${this.filter.limit}`)
             }
+            if (page != 1) {
+                filters.push(`page=${page}`)
+            }
             return `/admin/users?${filters.join("&")}`
         },
     },
@@ -155,12 +158,14 @@ app.component("UserWindow", {
             if (this.search.name != "") {
                 filter.name = this.search.name
             }
-            if (this.search.context != "") {
+            if (this.search.context != null) {
                 filter.context = this.search.context
             }
             const response = await send_get("team/search", filter)
             if (response) {
                 this.search.result = response
+                this.search.name = ""
+                this.search.context = ""
             }
         },
     },

@@ -11,7 +11,7 @@
 <script type="text/x-template" id="hoverBadge">
   <span class="badge rounded-pill m-1" :class="{'text-bg-warning': !hover, 'text-bg-danger': hover}">
     ${data.name}
-    <a @click.prevent="$emit('remove', data)" href="#" @mouseover="hover = true" @mouseleave="hover = false"><i class="bi bi-x-lg"></i></a>
+    <a @click.prevent="$emit('remove', data)" href="#" @mouseover="hover = true" @mouseleave="hover = false" title="remove"><i class="bi bi-x-lg"></i></a>
   </span>
 </script>
 
@@ -53,6 +53,7 @@
                   <div>
                     <label for="searchContext" class="form-label">Context</label>
                     <select class="form-select form-select-sm" id="searchContext" v-model="search.context" @change="send_search">
+                      <option :value="null" :selected="data.context == null"></option>
                       <option v-for="(context, id) in store.contexts" :value="id" :selected="id == data.context">${context.name}</option>
                     </select>
                   </div>
@@ -168,7 +169,7 @@
           </div>
           <div class="col text-end align-self-end">
             <a v-if="has_params" class="btn btn-secondary me-2" href="users" role="button">Clear</a>
-            <a class="btn btn-primary" :href="apply_filters({{page}})" role="button">Apply</a>
+            <a class="btn btn-primary" :href="apply_filters(1)" role="button">Apply</a>
           </div>
         </div>
       </div>

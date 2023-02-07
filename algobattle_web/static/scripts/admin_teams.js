@@ -51,6 +51,9 @@ const app = createApp({
             if (this.filter.limit != "") {
                 filters.push(`limit=${this.filter.limit}`)
             }
+            if (page != 1) {
+                filters.push(`page=${page}`)
+            }
             return `/admin/teams?${filters.join("&")}`
         },
     },
@@ -149,6 +152,8 @@ app.component("TeamWindow", {
             const response = await send_get("user/search", filter)
             if (response) {
                 this.search.result = response
+                this.search.name = ""
+                this.search.email = ""
             }
         },
     },
