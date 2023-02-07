@@ -63,7 +63,7 @@
   </div>
 </script>
 
-<div id="app">
+<div id="app" v-cloak>
   <h3>Match Results</h3>
   <div class="accordion" id="results">
     <Result v-for="(result, id) in store.results" :key="id" :result="result"></Result>

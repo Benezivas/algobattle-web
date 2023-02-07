@@ -7,7 +7,7 @@
   const settings = {{ settings | tojson }}
 </script>
 
-<div id="app" class="w-xs">
+<div id="app" class="w-xs" v-cloak>
   <div class="d-flex justify-content-between">
     <h3>User data</h3>
     <button type="button" class="btn btn-sm btn-warning float-end" data-bs-toggle="tooltip" title="Edit" @click="toggle_editing"><i class="bi bi-pencil"></i></button>

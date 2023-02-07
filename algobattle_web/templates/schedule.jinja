@@ -83,7 +83,7 @@
   </div>
 </script>
 
-<div id="app">
+<div id="app" v-cloak>
   <h3>Schedule</h3>
   <div class="accordion" id="schedules">
     <Schedule v-for="(schedule, id) in store.schedules" :key="id" :schedule="schedule"></Schedule>
