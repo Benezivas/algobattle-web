@@ -3,13 +3,14 @@ from typing import Any, Never, Self, TypeGuard, TypeVar
 from inspect import Parameter, Signature, signature
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, BaseConfig, Extra
 from fastapi import UploadFile, File, Form
 
 
 class BaseSchema(BaseModel):
-    class Config:
+    class Config(BaseConfig):
         orm_mode = True
+        extra = Extra.forbid
 
     @classmethod
     def from_form(cls: type[Self]):
