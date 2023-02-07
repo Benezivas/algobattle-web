@@ -51,16 +51,6 @@ admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)], route_
 # *******************************************************************************
 
 
-class UserFilter(BaseSchema):
-    name: str | None = None
-    email: str | None = None
-    is_admin: bool | None = None
-    context: ID | None = None
-    team: ID | None = None
-    limit: int = 25
-    page: int = 1
-
-
 @admin.get("/user/search", response_model=list[User.Schema])
 @autocommit
 def get_users(
@@ -217,6 +207,32 @@ async def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
 # *******************************************************************************
 # * Team
 # *******************************************************************************
+
+
+@admin.get("/team/search", response_model=list[Team.Schema])
+@autocommit
+def search_team(
+    *,
+    db = Depends(get_db),
+    name: str | None = None,
+    context: ID | None = None,
+    limit: int = 25,
+    page: int = 1,
+    ):
+    filters = []
+    if name is not None:
+        filters.append(Team.name.contains(name, autoescape=True))
+    if context is not None:
+        unwrap(db.get(Context, context))
+        filters.append(Team.context_id == context)
+    page = max(page - 1, 0)
+    users = db.scalars(
+        select(Team)
+        .filter(*filters)
+        .limit(limit)
+        .offset(page * limit)
+    ).unique().all()
+    return users
 
 
 class CreateTeam(BaseSchema):

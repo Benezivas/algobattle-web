@@ -1,5 +1,5 @@
 import { createApp, reactive } from "vue"
-import { send_request, pick, queryParams, omit } from "base"
+import { send_request, send_get, pick, queryParams, omit } from "base"
 
 const store = reactive({
     users: users_input,
@@ -29,7 +29,7 @@ const app = createApp({
         }
     },
     methods: {
-        set_props(action, user) {
+        open_modal(action, user) {
             this.action = action
             if (action == "create") {
                 this.modal_user = {
@@ -67,24 +67,9 @@ const app = createApp({
 })
 app.config.compilerOptions.delimiters = ["${", "}"]
 
-app.component("TableRow", {
-    template: "#table_row",
-    props: ["user"],
-    data() {
-        return {
-            store: store,
-        }
-    },
-    computed: {
-        teams_str() {
-            return this.user.teams.map(t => store.teams[t].name).join(", ")
-        },
-    }
-})
-
 app.component("HoverBadge", {
     template: "#hoverBadge",
-    props: ["team"],
+    props: ["data"],
     data() {
         return {
             hover: false,
@@ -105,7 +90,11 @@ app.component("UserWindow", {
                 teams: {},
             },
             display_teams: [...this.user.teams],
-            new_team: null,
+            search: {
+                name: "",
+                context: null,
+                result: [],
+            },
         }
     },
     watch: {
@@ -125,15 +114,17 @@ app.component("UserWindow", {
             const index = this.display_teams.indexOf(team.id)
             this.display_teams.splice(index, 1)
         },
-        async add_team() {
-            const team = this.new_team
-            if (this.data.teams[team] == null) {
-                this.data.teams[team] = true
-            } else {
-                delete this.data.teams[team]
+        async add_team(team) {
+            if (this.display_teams.includes(team.id)) {
+                return
             }
-            this.display_teams.push(team)
-            this.new_team = null
+            if (this.data.teams[team.id] == null) {
+                this.data.teams[team.id] = true
+            } else {
+                delete this.data.teams[team.id]
+            }
+            this.display_teams.push(team.id)
+            store.teams[team.id] = team
         },
         async delete_user(event) {
             var response = await send_request(`user/${this.user.id}/delete`)
@@ -159,10 +150,18 @@ app.component("UserWindow", {
                 }
             }
         },
-    },
-    computed: {
-        new_teams() {
-            return Object.entries(store.teams).filter(data => !this.display_teams.includes(data[0]))
+        async send_search() {
+            const filter = {limit: 5}
+            if (this.search.name != "") {
+                filter.name = this.search.name
+            }
+            if (this.search.context != "") {
+                filter.context = this.search.context
+            }
+            const response = await send_get("team/search", filter)
+            if (response) {
+                this.search.result = response
+            }
         },
     },
 })

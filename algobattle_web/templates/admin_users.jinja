@@ -8,24 +8,10 @@
   const contexts_input = {{contexts | tojson}}
 </script>
 
-<script type="text/x-template" id="table_row">
-  <tr :class="{'table-info': user.id == '{{user.id}}'}">
-    <td>
-      ${user.name}
-      <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success ms-1" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
-    </td>
-    <td>${user.email}</td>
-    <td>${teams_str}</td>
-    <td class="text-end">
-      <button type="button" class="btn btn-warning btn-sm" title="Edit user" @click="$emit('open_edit', user)"><i class="bi bi-pencil"></i></button>
-    </td>
-  </tr>
-</script>
-
 <script type="text/x-template" id="hoverBadge">
   <span class="badge rounded-pill m-1" :class="{'text-bg-warning': !hover, 'text-bg-danger': hover}">
-    ${team.name}
-    <a @click.prevent="$emit('remove_team', team)" href="#" @mouseover="hover = true" @mouseleave="hover = false"><i class="bi bi-x-lg"></i></a>
+    ${data.name}
+    <a @click.prevent="$emit('remove', data)" href="#" @mouseover="hover = true" @mouseleave="hover = false"><i class="bi bi-x-lg"></i></a>
   </span>
 </script>
 
@@ -43,20 +29,39 @@
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
           <div class="input-group w-em input-group-sm mb-3" name="name">
-            <input class="form-control w-em" type="text" v-model="data.name" :required="action == 'create' ? 'required' : null">
+            <input class="form-control w-em" type="text" v-model="data.name">
             <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="data.is_admin">
             <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
           </div>
           <label for="email" class="form-label">Email</label>
-          <input class="form-control w-em form-control-sm mb-3" name="email" type="email" v-model="data.email" :required="action == 'create' ? 'required' : null">
+          <input class="form-control w-em form-control-sm mb-3" name="email" type="email" v-model="data.email">
           <label for="teams" class="form-label mb-0">Teams</label>
           <div class="d-flex flex-row mb-1">
-            <hover-badge v-for="id in display_teams" :team="store.teams[id]" @remove_team="remove_team"></hover-badge>
+            <hover-badge v-for="id in display_teams" :data="store.teams[id]" @remove="remove_team"></hover-badge>
           </div>
-          <select class="form-select form-select-sm w-es m-1" v-model="new_team" @change="add_team">
-            <option :value="null" selected>Add team</option>
-            <option v-for="data in new_teams" :value="data[0]">${data[1].name}</option>
-          </select>
+          <div class="btn-group dropend">
+            <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Add
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <form class="py-1 px-2">
+                  <div class="mb-3">
+                    <label for="searchName" class="form-label">Name</label>
+                    <input type="text" class="form-control form-control-sm" id="searchName" v-model="search.name" @input="send_search">
+                  </div>
+                  <div>
+                    <label for="searchContext" class="form-label">Context</label>
+                    <select class="form-select form-select-sm" id="searchContext" v-model="search.context" @change="send_search">
+                      <option v-for="(context, id) in store.contexts" :value="id" :selected="id == data.context">${context.name}</option>
+                    </select>
+                  </div>
+                </form>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li v-for="(user, id) in search.result"><a class="dropdown-item" @click.prevent="add_team(user)" href="#">${user.name}</a></li>
+            </ul>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-danger me-auto" data-bs-toggle="tooltip" title="Delete user" v-if="action == 'edit' && user.id != '{{user.id}}'" @click="delete_user">Delete user</button>
@@ -80,12 +85,22 @@
       </tr>
     </thead>
     <tbody>
-      <tr is="vue:table-row" v-for="user in store.users" :user="user" :key="user.id" @open_edit="(u) => set_props('edit', u)"></tr>
+      <tr v-for="user in store.users" :class="{'table-info': user.id == '{{user.id}}'}">
+        <td>
+          ${user.name}
+          <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success ms-1" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
+        </td>
+        <td>${user.email}</td>
+        <td>${user.teams.map(t => store.teams[t].name).join(", ")}</td>
+        <td class="text-end">
+          <button type="button" class="btn btn-warning btn-sm" title="Edit user" @click="open_modal('edit', user)"><i class="bi bi-pencil"></i></button>
+        </td>
+      </tr>
     </tbody>
   </table>
 
   <div class="d-flex mb-3 pe-2">
-    <button type="button" class="btn btn-primary btn-sm me-auto" @click="set_props('create', null)">Create new user</button>
+    <button type="button" class="btn btn-primary btn-sm me-auto" @click="open_modal('create', null)">Create new user</button>
     <button type="button" class="btn btn-primary btn-sm position-relative" data-bs-toggle="collapse" data-bs-target="#filters" aria-expanded="false" aria-controls="filters">
       <i class="bi bi-funnel-fill"></i>
       <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle" v-if="has_params">
