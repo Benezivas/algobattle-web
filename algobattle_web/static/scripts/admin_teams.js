@@ -165,8 +165,8 @@ app.component("TeamWindow", {
                 filter.email = this.search.email
             }
             const response = await send_get("user/search", filter)
-            if (response) {
-                this.search.result = response
+            if (response.ok) {
+                this.search.result = await response.json()
             }
         },
     },

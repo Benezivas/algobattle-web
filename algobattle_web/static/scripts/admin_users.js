@@ -177,8 +177,8 @@ app.component("UserWindow", {
                 filter.context = this.search.context
             }
             const response = await send_get("team/search", filter)
-            if (response) {
-                this.search.result = response
+            if (response.ok) {
+                this.search.result = await response.json()
             }
         },
     },
