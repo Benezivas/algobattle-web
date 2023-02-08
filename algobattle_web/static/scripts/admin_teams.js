@@ -123,7 +123,7 @@ app.component("TeamWindow", {
             store.users[user.id] = user
             this.search.name = ""
             this.search.email = ""
-            this.search.result = []
+            this.send_search()
         },
         async delete_team(event) {
             var response = await send_request(`team/${this.team.id}/delete`)

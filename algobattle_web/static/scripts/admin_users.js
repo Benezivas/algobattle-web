@@ -135,7 +135,7 @@ app.component("UserWindow", {
             store.teams[team.id] = team
             this.search.name = ""
             this.search.context = null
-            this.search.result = []
+            this.send_search()
         },
         async delete_user(event) {
             var response = await send_request(`user/${this.user.id}/delete`)
