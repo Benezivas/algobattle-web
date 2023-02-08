@@ -95,6 +95,7 @@ app.component("TeamWindow", {
             this.data.members = {}
             this.display_members = [...team.members]
             this.error = null
+            this.send_search()
         }
     },
     methods: {

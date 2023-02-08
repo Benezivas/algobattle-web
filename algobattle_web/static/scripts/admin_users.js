@@ -107,6 +107,7 @@ app.component("UserWindow", {
             this.data.teams = {}
             this.display_teams = [...new_user.teams]
             this.error = null
+            this.send_search()
         }
     },
     methods: {
