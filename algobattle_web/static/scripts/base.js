@@ -1,5 +1,5 @@
 
-export async function send_request(action, content) {
+export function send_request(action, content) {
     var _content = {
         "method": "POST",
     }
@@ -7,14 +7,10 @@ export async function send_request(action, content) {
         _content.headers = {"Content-type": "application/json"}
         _content.body = JSON.stringify(content)
     }
-    var response = await fetch("/api/" + action, _content)
-    return {
-        "status": response.status,
-        "data": await response.json(),
-    }
+    return fetch("/api/" + action, _content)
 }
 
-export async function send_get(action, content) {
+export function send_get(action, content) {
     var _content = {
         "method": "GET",
     }
@@ -22,22 +18,14 @@ export async function send_get(action, content) {
     if (content != undefined) {
         params = "?" + new URLSearchParams(content).toString()
     }
-    var response = await fetch("/api/" + action + params, _content)
-    return {
-        "status": response.status,
-        "data": await response.json(),
-    }
+    return fetch("/api/" + action + params, _content)
 }
 
-export async function send_form(endpoint, content) {
-    var response = await fetch("/api/" + endpoint, {
+export function send_form(endpoint, content) {
+    return fetch("/api/" + endpoint, {
         "method": "POST",
         "body": content,
     })
-    return {
-        "status": response.status,
-        "data": await response.json(),
-    }
 }
 
 export function fmt_date(date) {
