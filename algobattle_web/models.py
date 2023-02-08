@@ -492,10 +492,7 @@ class Documentation(Base, unsafe_hash=True):
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
     file: Mapped[DbFile]
 
-    def __post_init__(self, db: Session) -> None:
-        if self.get(db, self.team, self.problem) is not None:
-            raise ValueTaken("team/problem")
-        return super().__post_init__(db)
+    __table_args__ = (UniqueConstraint("team_id", "problem_id"),)
 
     class Schema(Base.Schema):
         team: ObjID
