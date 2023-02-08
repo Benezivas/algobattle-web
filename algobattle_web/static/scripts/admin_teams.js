@@ -87,6 +87,7 @@ app.component("TeamWindow", {
                 result: [],
             },
             error: null,
+            confirm_delete: false,
         }
     },
     watch: {
@@ -95,6 +96,7 @@ app.component("TeamWindow", {
             this.data.members = {}
             this.display_members = [...team.members]
             this.error = null
+            this.confirm_delete = false
             this.send_search()
         }
     },

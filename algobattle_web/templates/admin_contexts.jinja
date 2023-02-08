@@ -32,8 +32,11 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-danger me-auto" data-bs-toggle="tooltip" title="Delete user" v-if="action == 'edit'" @click="delete_context">Delete context</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
+          <button type="button" class="btn" :class="{'btn-danger': !confirm_delete, 'btn-secondary': confirm_delete}" data-bs-toggle="tooltip" v-if="action == 'edit'" @click="confirm_delete = !confirm_delete">
+            ${confirm_delete ? "Cancel delete" : "Delete context"}
+          </button>
+          <button type="button" class="btn btn-danger ms-2" data-bs-toggle="tooltip" v-if="confirm_delete" @click="delete_user">Confirm delete</button>
+          <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Discard</button>
           <button type="submit" class="btn btn-primary">${action == "edit" ? "Save" : "Create"}</button>
         </div>
       </form>

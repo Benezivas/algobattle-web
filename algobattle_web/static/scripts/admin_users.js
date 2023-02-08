@@ -99,6 +99,7 @@ app.component("UserWindow", {
                 result: [],
             },
             error: null,
+            confirm_delete: false,
         }
     },
     watch: {
@@ -107,6 +108,7 @@ app.component("UserWindow", {
             this.data.teams = {}
             this.display_teams = [...new_user.teams]
             this.error = null
+            this.confirm_delete = false,
             this.send_search()
         }
     },

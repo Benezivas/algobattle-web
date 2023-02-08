@@ -58,12 +58,14 @@ app.component("ContextWindow", {
             store: store,
             data: {},
             error: null,
+            confirm_delete: false,
         }
     },
     watch: {
         context(context) {
             this.data.name = context.name
             this.error = null
+            this.confirm_delete = false
         }
     },
     methods: {
