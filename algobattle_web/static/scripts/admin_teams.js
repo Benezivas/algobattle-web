@@ -143,7 +143,8 @@ app.component("TeamWindow", {
                 processed.members = Object.keys(this.data.members)
                 var response = await send_request("team/create", processed)
                 if (response.ok) {
-                    store.teams[response.id] = response
+                    const team = response.json()
+                    store.teams[user.id] = team
                     this.modal.toggle()
                     return
                 }
