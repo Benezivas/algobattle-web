@@ -14,7 +14,7 @@
 </script>
 
 <script type="text/x-template" id="contextWindow">
-  <div class="modal fade" id="contextModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true" ref="user_modal">
+  <div class="modal fade" id="contextModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <form class="modal-content" @submit.prevent="submit_data">
         <div class="modal-header">
@@ -115,7 +115,7 @@
     </div>
   </div>
 
-  <context-window :user="modal_context" :action="action" :modal="modal"></context-window>
+  <context-window :context="modal_context" :action="action" :modal="modal"></context-window>
 </div>
 
 
