@@ -8,6 +8,7 @@ from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from algobattle_web.battle import run_match
 from algobattle_web.models import (
@@ -27,7 +28,7 @@ from algobattle_web.models import (
     Team,
     User,
 )
-from algobattle_web.util import unwrap, BaseSchema, Missing, missing, present
+from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present
 from algobattle_web.dependencies import curr_user, check_if_admin
 
 
@@ -101,6 +102,8 @@ class CreateUser(BaseSchema):
 @autocommit
 async def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
     _teams = [unwrap(db.get(Team, id)) for id in user.teams]
+    if db.scalars(select(User).filter(User.email == user.email)).unique().first() is not None:
+        raise ValueTaken("email", user.email)
     return User(db=db, email=user.email, name=user.name, is_admin=user.is_admin, teams=_teams)
 
 
@@ -115,6 +118,9 @@ class EditUser(BaseSchema):
 @autocommit
 async def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     user = unwrap(User.get(db, id))
+    if db.scalars(select(User).filter(User.email == edit.email, User.id != id)).unique().first() is not None:
+        raise ValueTaken("email", user.email, id)
+
     for key, val in edit.dict(exclude_unset=True).items():
         if key != "teams":
             setattr(user, key, val)
