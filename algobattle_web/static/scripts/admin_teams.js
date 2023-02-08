@@ -146,7 +146,7 @@ app.component("TeamWindow", {
                 var response = await send_request("team/create", processed)
                 if (response.ok) {
                     const team = await response.json()
-                    store.teams[user.id] = team
+                    store.teams[team.id] = team
                     this.modal.toggle()
                     return
                 }
