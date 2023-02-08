@@ -113,29 +113,6 @@ def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_user))
     return "programs.jinja", {k: encode(v) for k, v in params.items()}
 
 
-@router.get("/documentation")
-@templated
-def docs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
-    if user.settings.selected_team is None:
-        raise HTTPException(400)
-    problems = db.scalars(select(Problem).where(Problem.visible_sql(user))).all()
-    teams = db.scalars(select(Team)).unique().all() if user.is_admin else [user.settings.selected_team]
-    docs = db.scalars(select(Documentation)).unique().all()
-    if user.is_admin:
-        docs_by_team = {
-            problem.id: {doc.team.id: doc.encode() for doc in docs if doc.problem == problem} for problem in problems
-        }
-    else:
-        docs_by_team = {doc.problem.id: doc.encode() for doc in docs}
-    user_team = user.settings.selected_team
-    return "documentation.jinja", {
-        "problems": encode(problems),
-        "teams": encode(teams),
-        "docs": jsonable_encoder(docs_by_team),
-        "user_team": user_team.encode(),
-    }
-
-
 @router.get("/schedule")
 @templated
 def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
@@ -273,13 +250,6 @@ def contexts_get(db = Depends(get_db), page: int = 1, limit: int = 25):
     contexts = db.scalars(select(Context)).unique().all()
     count = db.scalar(select(func.count()).select_from(Context)) or 0
     return "admin_contexts.jinja", {"contexts": encode(contexts), "page": page + 1, "max_page": count // limit + 1}
-
-
-@admin.get("/configs")
-@templated
-def config_get(db: Session = Depends(get_db)):
-    configs = db.query(Config).all()
-    return "admin_configs.jinja", {"configs": encode(configs)}
 
 
 # * has to be executed after all route defns
