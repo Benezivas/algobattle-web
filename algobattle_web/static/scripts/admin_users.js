@@ -98,6 +98,7 @@ app.component("UserWindow", {
                 context: null,
                 result: [],
             },
+            error: null,
         }
     },
     watch: {
@@ -105,6 +106,7 @@ app.component("UserWindow", {
             this.data = pick(new_user, "name", "email", "is_admin")
             this.data.teams = {}
             this.display_teams = [...new_user.teams]
+            this.error = null
         }
     },
     methods: {
@@ -134,7 +136,7 @@ app.component("UserWindow", {
         },
         async delete_user(event) {
             var response = await send_request(`user/${this.user.id}/delete`)
-            if (response) {
+            if (response.ok) {
                 delete store.users[this.user.id]
                 this.modal.toggle()
             }
@@ -142,18 +144,26 @@ app.component("UserWindow", {
         async submit_data() {
             if (this.action == "edit") {
                 var response = await send_request(`user/${this.user.id}/edit`, this.data)
-                if (response) {
-                    Object.assign(store.users[this.user.id], response)
+                if (response.ok) {
+                    Object.assign(store.users[this.user.id], await response.json())
                     this.modal.toggle()
+                    return
                 }
             } else {
                 const processed = omit(this.data, "teams")
                 processed.teams = Object.keys(this.data.teams)
                 var response = await send_request("user/create", processed)
-                if (response) {
-                    store.users[response.id] = response
+                if (response.ok) {
+                    store.users[response.id] = await response.json()
                     this.modal.toggle()
+                    return
                 }
+            }
+            const error = await response.json()
+            if (error.type == "value_taken") {
+                this.error = "email"
+            } else {
+                this.error = "other"
             }
         },
         async send_search() {
