@@ -25,7 +25,7 @@ from pydantic import validator
 
 from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.config import SERVER_CONFIG
-from algobattle_web.util import BaseSchema, ObjID, ValueTaken, PermissionExcpetion
+from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
