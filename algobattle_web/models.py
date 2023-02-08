@@ -432,6 +432,9 @@ class Problem(Base, unsafe_hash=True):
     end: Mapped[datetime | None] = mapped_column(default=None)
     description: Mapped[DbFile | None] = mapped_column(default=None)
 
+    short_description: Mapped[str | None] = mapped_column(default=None)
+    image: Mapped[DbFile | None] = mapped_column(default=None)
+
     class Schema(Base.Schema):
         name: str
         file: DbFile.Schema
@@ -439,6 +442,8 @@ class Problem(Base, unsafe_hash=True):
         start: datetime | None
         end: datetime | None
         description: DbFile.Schema | None
+        short_description: str | None
+        image: DbFile.Schema | None
 
     @classmethod
     def get(cls, db: Session, identifier: ID | str) -> Self | None:
