@@ -26,7 +26,7 @@
         </div>
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
-          <input class="form-control w-em" type="text" v-model="data.name" :required="action == 'create'" :class="{'is-invalid': error == 'name'}">
+          <input class="form-control w-em" type="text" v-model="data.name" :required :class="{'is-invalid': error == 'name'}">
           <div class="invalid-feedback">
             Another context with that name exists already
           </div>

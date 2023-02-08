@@ -29,12 +29,12 @@
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
           <div class="input-group w-em input-group-sm mb-3" name="name">
-            <input class="form-control w-em" type="text" v-model="data.name" :required="action == 'create'">
+            <input class="form-control w-em" type="text" v-model="data.name" required>
             <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="data.is_admin">
             <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
           </div>
           <label for="email" class="form-label">Email</label>
-          <input class="form-control w-em form-control-sm" :class="{'is-invalid': error == 'email'}" name="email" type="email" v-model="data.email" :required="action == 'create'">
+          <input class="form-control w-em form-control-sm" :class="{'is-invalid': error == 'email'}" name="email" type="email" v-model="data.email" required>
           <div class="invalid-feedback">
             Email already in use by another user
           </div>

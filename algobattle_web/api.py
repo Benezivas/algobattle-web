@@ -8,7 +8,7 @@ from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from pydantic import Field
 
 from algobattle_web.battle import run_match
 from algobattle_web.models import (
@@ -92,8 +92,8 @@ def get_users(
 
 
 class CreateUser(BaseSchema):
-    name: str
-    email: str
+    name: str = Field(min_length=1)
+    email: str = Field(min_length=1)
     is_admin: bool = False
     teams: list[ID] = []
 
@@ -108,8 +108,8 @@ async def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> Use
 
 
 class EditUser(BaseSchema):
-    name: str | Missing = missing
-    email: str | Missing = missing
+    name: str | Missing = Field(missing, min_length=1)
+    email: str | Missing = Field(missing, min_length=1)
     is_admin: bool | Missing = missing
     teams: dict[ID, bool] | Missing = missing
 
@@ -179,7 +179,7 @@ async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(c
 
 
 class CreateContext(BaseSchema):
-    name: str
+    name: str = Field(min_length=1)
 
 
 @admin.post("/context/create")
@@ -245,7 +245,7 @@ def search_team(
 
 
 class CreateTeam(BaseSchema):
-    name: str
+    name: str = Field(min_length=1)
     context: ID
     members: list[ID]
 
@@ -261,7 +261,7 @@ def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
 
 
 class EditTeam(BaseSchema):
-    name: str | Missing = missing
+    name: str | Missing = Field(missing, min_length=1)
     context: ID | Missing = missing
     members: dict[ID, bool] | Missing = missing
 
