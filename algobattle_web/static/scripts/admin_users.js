@@ -159,12 +159,14 @@ app.component("UserWindow", {
                     return
                 }
             }
-            const error = await response.json()
-            if (error.type == "value_taken") {
-                this.error = "email"
-            } else {
-                this.error = "other"
+            if (response.status == 409) {
+                const error = await response.json()
+                if (error.type == "value_taken") {
+                    this.error = "email"
+                    return
+                }
             }
+            this.error = "other"
         },
         async send_search() {
             const filter = {limit: 5}
