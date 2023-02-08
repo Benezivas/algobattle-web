@@ -97,7 +97,9 @@ class AlgobattleError(Exception):
 @dataclass
 class ValueTaken(AlgobattleError):
     """Raised when a uniqueness constrained would be violated."""
+    field: str
     value: str
+    object: UUID | None = None
 
 
 @dataclass

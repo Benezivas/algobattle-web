@@ -13,7 +13,7 @@ from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.api import router as api
 from algobattle_web.pages import router as pages
 from algobattle_web.battle import main as battle_main
-from algobattle_web.util import PermissionExcpetion
+from algobattle_web.util import PermissionExcpetion, ValueTaken
 
 
 Base.metadata.create_all(bind=engine)
@@ -43,6 +43,17 @@ async def perm_err(request: Request, e: PermissionError):
 @app.exception_handler(ValueError)
 async def val_err(request: Request, e: ValueError):
     raise HTTPException(status.HTTP_400_BAD_REQUEST)
+
+@app.exception_handler(ValueTaken)
+async def val_taken_err(request: Request, e: ValueTaken):
+    return JSONResponse(
+        status_code=422,
+        content=jsonable_encoder({
+            "field": e.field,
+            "value": e.value,
+            "object": e.object,
+        })
+    )
 
 app.include_router(api)
 app.include_router(pages)
