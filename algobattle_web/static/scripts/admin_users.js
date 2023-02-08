@@ -7,6 +7,10 @@ const store = reactive({
     contexts: contexts_input,
 })
 
+function team_name(team) {
+    return `${team.name} (${store.contexts[team.context].name})`
+}
+
 const params = queryParams()
 const app = createApp({
     data() {
@@ -66,6 +70,7 @@ const app = createApp({
             }
             return `/admin/users?${filters.join("&")}`
         },
+        team_name,
     },
 })
 app.config.compilerOptions.delimiters = ["${", "}"]
@@ -78,6 +83,9 @@ app.component("HoverBadge", {
             hover: false,
         }
     },
+    methods: {
+        team_name,
+    }
 })
 
 app.component("UserWindow", {
@@ -185,6 +193,7 @@ app.component("UserWindow", {
                 this.search.result = await response.json()
             }
         },
+        team_name,
     },
 })
 

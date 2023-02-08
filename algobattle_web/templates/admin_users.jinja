@@ -10,7 +10,7 @@
 
 <script type="text/x-template" id="hoverBadge">
   <span class="badge rounded-pill m-1" :class="{'text-bg-warning': !hover, 'text-bg-danger': hover}">
-    ${data.name}
+    ${team_name(data)}
     <a @click.prevent="$emit('remove', data)" href="#" @mouseover="hover = true" @mouseleave="hover = false" title="remove"><i class="bi bi-x-lg"></i></a>
   </span>
 </script>
@@ -60,7 +60,7 @@
               </div>
               <div class="d-flex flex-row">
                 <span v-for="(team, id) in search.result" class="badge rounded-pill m-1 text-bg-success">
-                  ${team.name}
+                  ${team_name(team)}
                   <a href="#" @click.prevent="add_team(team)" title="add">
                     <i class="bi bi-plus-lg text-light"></i>
                   </a>
@@ -110,7 +110,7 @@
           <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success ms-1" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
         </td>
         <td>${user.email}</td>
-        <td>${user.teams.map(t => store.teams[t].name).join(", ")}</td>
+        <td>${user.teams.map(t => team_name(store.teams[t])).join(", ")}</td>
         <td class="text-end">
           <button type="button" class="btn btn-warning btn-sm" title="Edit user" @click="open_modal('edit', user)"><i class="bi bi-pencil"></i></button>
         </td>
