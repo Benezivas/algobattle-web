@@ -47,8 +47,9 @@ async def val_err(request: Request, e: ValueError):
 @app.exception_handler(ValueTaken)
 async def val_taken_err(request: Request, e: ValueTaken):
     return JSONResponse(
-        status_code=422,
+        status_code=409,
         content=jsonable_encoder({
+            "type": "value_taken",
             "field": e.field,
             "value": e.value,
             "object": e.object,
