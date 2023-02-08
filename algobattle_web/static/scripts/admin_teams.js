@@ -136,7 +136,7 @@ app.component("TeamWindow", {
             if (this.action == "edit") {
                 var response = await send_request(`team/${this.team.id}/edit`, this.data)
                 if (response.ok) {
-                    Object.assign(store.teams[this.team.id], response)
+                    Object.assign(store.teams[this.team.id], await response.json())
                     this.modal.toggle()
                     return
                 }
