@@ -1,27 +1,35 @@
 import { createApp, reactive } from "vue"
 import { send_form, send_request, fmt_date, remove_unchanged } from "base"
 
+function parse(problem) {
+    if (problem.start != null) {
+        problem.start = new Date(problem.start)
+    }
+    if (problem.end != null) {
+        problem.end = new Date(problem.end)
+    }
+    return problem
+}
+for (problem of problems.values()) {
+    parse(problem)
+}
+function in_context(problem) {
+    if (store.selected_context == null) {
+        return true
+    } else {
+        return problem.context == store.selected_context
+    }
+}
+const now = new Date()
 
 const store = reactive({
     problems: problems,
-    configs: configs,
+    contexts: contexts,
+    selected_context: selected_context,
 })
 
 
 const app = createApp({
-    methods: {
-        async create_problem(event) {
-            const payload = new FormData(event.currentTarget)
-            if (payload.get("description").size == 0) {
-                payload.delete("description")
-            }
-            var response = await send_form("problem/create", payload)
-            if (response) {
-                response = await response.json()
-                store.problems[response.id] = response
-            }
-        },
-    },
     data() {
         return {
             store: store,
@@ -36,38 +44,38 @@ app.component("Problem", {
     props: ["problem"],
     data() {
         return {
-            editing: false,
             store: store,
         }
     },
     methods: {
-        toggle_editing() {
-            this.editing = !this.editing
+    },
+    computed: {
+        future_problems() {
+            return Object.fromEntries(Object.entries(store.problems)
+                .filter(([id, problem]) => 
+                    in_context(problem)
+                    && problem.start != null
+                    && problem.start > now
+                ))
         },
-        async delete_problem() {
-            var response = await send_request(`problem/${this.problem.id}/delete`)
-            if (response) {
-                delete store.problems[this.problem.id]
-            }
+        current_problems() {
+            return Object.fromEntries(Object.entries(store.problems)
+                .filter(([id, problem]) =>
+                    in_context(problem)
+                    && problem.start != null
+                    && problem.start <= now
+                    && (problem.end == null || problem.end > now)
+                ))
         },
-        async edit(event) {
-            const payload = new FormData(event.currentTarget)
-            if (payload.get("description").size == 0) {
-                payload.delete("description")
-            }
-            if (payload.get("file").size == 0) {
-                payload.delete("file")
-            }
-            remove_unchanged(payload, this.problem)
-            var response = await send_form(`problem/${this.problem.id}/edit`, payload)
-            if (response) {
-                response = await response.json()
-                store.problems[response.id] = response
-                this.toggle_editing()
-            }
+        past_problems() {
+            return Object.fromEntries(Object.entries(store.problems)
+                .filter(([id, problem]) =>
+                    in_context(problem)
+                    && problem.end != null
+                    && problem.end < now
+                ))
         },
-        fmt_date
-    }
+    },
 })
 
 
