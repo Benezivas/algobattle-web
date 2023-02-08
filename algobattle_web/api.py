@@ -185,6 +185,8 @@ class CreateContext(BaseSchema):
 @admin.post("/context/create")
 @autocommit
 async def create_context(*, db: Session = Depends(get_db), context: CreateContext) -> Context:
+    if db.scalars(select(Context).filter(Context.name == context.name)).unique().first() is not None:
+        raise ValueTaken("name", context.name)
     return Context(db, context.name)
 
 
@@ -196,6 +198,8 @@ class EditContext(BaseSchema):
 @autocommit
 async def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditContext) -> Context:
     context = unwrap(Context.get(db, id))
+    if db.scalars(select(Context).filter(Context.name == data.name, Context.id != id)).unique().first() is not None:
+        raise ValueTaken("name", context.name)
     if present(data.name):
         context.name = data.name
     return context

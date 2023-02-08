@@ -57,17 +57,19 @@ app.component("ContextWindow", {
         return {
             store: store,
             data: {},
+            error: null,
         }
     },
     watch: {
         context(context) {
             this.data.name = context.name
+            this.error = null
         }
     },
     methods: {
         async delete_context() {
             var response = await send_request(`context/${this.context.id}/delete`)
-            if (response) {
+            if (response.ok) {
                 delete store.contexts[this.context.id]
                 this.modal.toggle()
             }
@@ -75,17 +77,27 @@ app.component("ContextWindow", {
         async submit_data() {
             if (this.action == "edit") {
                 var response = await send_request(`context/${this.context.id}/edit`, this.data)
-                if (response) {
-                    Object.assign(store.contexts[this.context.id], response)
+                if (response.ok) {
+                    Object.assign(store.contexts[this.context.id], await response.json())
                     this.modal.toggle()
+                    return
                 }
             } else {
                 var response = await send_request("context/create", this.data)
-                if (response) {
-                    store.contexts[response.id] = response
+                if (response.ok) {
+                    store.contexts[response.id] = await response.json()
                     this.modal.toggle()
+                    return
                 }
             }
+            if (response.status == 409) {
+                const error = await response.json()
+                if (error.type == "value_taken") {
+                    this.error = "name"
+                    return
+                }
+            }
+            this.error = "other"
         },
     },
 })
