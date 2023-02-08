@@ -118,7 +118,8 @@ class EditUser(BaseSchema):
 @autocommit
 async def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     user = unwrap(User.get(db, id))
-    if db.scalars(select(User).filter(User.email == edit.email, User.id != id)).unique().first() is not None:
+    edit_email = edit.email if present(edit.email) else user.email
+    if db.scalars(select(User).filter(User.email == edit_email, User.id != id)).unique().first() is not None:
         raise ValueTaken("email", user.email, id)
 
     for key, val in edit.dict(exclude_unset=True).items():
@@ -198,7 +199,8 @@ class EditContext(BaseSchema):
 @autocommit
 async def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditContext) -> Context:
     context = unwrap(Context.get(db, id))
-    if db.scalars(select(Context).filter(Context.name == data.name, Context.id != id)).unique().first() is not None:
+    edit_name = data.name if present(data.name) else context.name
+    if db.scalars(select(Context).filter(Context.name == edit_name, Context.id != id)).unique().first() is not None:
         raise ValueTaken("name", context.name)
     if present(data.name):
         context.name = data.name
@@ -270,7 +272,8 @@ class EditTeam(BaseSchema):
 @autocommit
 def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
     team = unwrap(Team.get(db, id))
-    if db.scalars(select(Team).filter(Team.name == edit.name, Team.context_id == edit.context, Team.id != id)).unique().first() is not None:
+    edit_context = edit.context if present(edit.context) else team.context.id
+    if db.scalars(select(Team).filter(Team.name == edit.name, Team.context_id == edit_context, Team.id != id)).unique().first() is not None:
         raise ValueTaken("name", team.name)
     if present(edit.name):
         team.name = edit.name
