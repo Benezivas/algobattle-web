@@ -255,6 +255,8 @@ class CreateTeam(BaseSchema):
 def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
     context = unwrap(Context.get(db, team.context))
     members = [unwrap(db.get(User, id)) for id in team.members]
+    if db.scalars(select(Team).filter(Team.name == team.name, Team.context_id == team.context)).unique().first() is not None:
+        raise ValueTaken("name", team.name)
     return Team(db, team.name, context, members)
 
 
@@ -268,6 +270,8 @@ class EditTeam(BaseSchema):
 @autocommit
 def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
     team = unwrap(Team.get(db, id))
+    if db.scalars(select(Team).filter(Team.name == edit.name, Team.context_id == edit.context, Team.id != id)).unique().first() is not None:
+        raise ValueTaken("name", team.name)
     if present(edit.name):
         team.name = edit.name
     if present(edit.context):

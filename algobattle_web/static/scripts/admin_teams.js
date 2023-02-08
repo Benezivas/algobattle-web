@@ -86,6 +86,7 @@ app.component("TeamWindow", {
                 email: "",
                 result: [],
             },
+            error: null,
         }
     },
     watch: {
@@ -93,6 +94,7 @@ app.component("TeamWindow", {
             this.data = pick(team, "name", "email", "is_admin")
             this.data.members = {}
             this.display_members = [...team.members]
+            this.error = null
         }
     },
     methods: {
@@ -122,7 +124,7 @@ app.component("TeamWindow", {
         },
         async delete_team(event) {
             var response = await send_request(`team/${this.team.id}/delete`)
-            if (response) {
+            if (response.ok) {
                 delete store.teams[this.team.id]
                 this.modal.toggle()
             }
@@ -130,19 +132,29 @@ app.component("TeamWindow", {
         async submit_data() {
             if (this.action == "edit") {
                 var response = await send_request(`team/${this.team.id}/edit`, this.data)
-                if (response) {
+                if (response.ok) {
                     Object.assign(store.teams[this.team.id], response)
                     this.modal.toggle()
+                    return
                 }
             } else {
                 const processed = omit(this.data, "members")
                 processed.members = Object.keys(this.data.members)
                 var response = await send_request("team/create", processed)
-                if (response) {
+                if (response.ok) {
                     store.teams[response.id] = response
                     this.modal.toggle()
+                    return
                 }
             }
+            if (response.status == 409) {
+                const error = await response.json()
+                if (error.type == "value_taken") {
+                    this.error = "name"
+                    return
+                }
+            }
+            this.error = "other"
         },
         async send_search() {
             const filter = {limit: 5}

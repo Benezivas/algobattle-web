@@ -45,7 +45,10 @@
         </div>
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
-          <input class="form-control w-em" type="text" v-model="data.name" :required="action == 'create'">
+          <input class="form-control w-em" type="text" v-model="data.name" :required="action == 'create'" :class="{'is-invalid': error == 'name'}">
+          <div class="invalid-feedback">
+            Another team with the same name already exists in this context
+          </div>
           <label for="context" class="form-label">Context</label>
           <select class="form-select w-em mb-3" name="context" v-model="data.context" :required="action == 'create'">
             <option v-for="(context, id) in store.contexts" :value="id" :selected="id == data.context">${context.name}</option>
