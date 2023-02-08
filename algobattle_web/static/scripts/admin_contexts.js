@@ -87,7 +87,7 @@ app.component("ContextWindow", {
             } else {
                 var response = await send_request("context/create", this.data)
                 if (response.ok) {
-                    const context = response.json()
+                    const context = await response.json()
                     store.contexts[context.id] = context
                     this.modal.toggle()
                     return
