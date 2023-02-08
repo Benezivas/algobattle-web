@@ -8,11 +8,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
 from uvicorn import run
 
-from algobattle_web.models import Base, SessionLocal, engine, User, PermissionError
+from algobattle_web.models import Base, SessionLocal, engine, User
 from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.api import router as api
 from algobattle_web.pages import router as pages
 from algobattle_web.battle import main as battle_main
+from algobattle_web.util import PermissionExcpetion
 
 
 Base.metadata.create_all(bind=engine)
@@ -35,12 +36,12 @@ async def err_handler(request: Request, e: RequestValidationError):
         })
     )
 
-@app.exception_handler(PermissionError)
-async def perm_err(e: PermissionError):
+@app.exception_handler(PermissionExcpetion)
+async def perm_err(request: Request, e: PermissionError):
     raise HTTPException(status.HTTP_403_FORBIDDEN)
 
 @app.exception_handler(ValueError)
-async def val_err(e: ValueError):
+async def val_err(request: Request, e: ValueError):
     raise HTTPException(status.HTTP_400_BAD_REQUEST)
 
 app.include_router(api)

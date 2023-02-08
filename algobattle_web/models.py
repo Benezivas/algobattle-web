@@ -25,7 +25,7 @@ from pydantic import validator
 
 from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.config import SERVER_CONFIG
-from algobattle_web.util import BaseSchema, ObjID
+from algobattle_web.util import BaseSchema, ObjID, ValueTaken, PermissionExcpetion
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
@@ -38,24 +38,6 @@ StoreManager.register("fs", partial(FileSystemStore, SERVER_CONFIG.storage_path,
 async def get_db() -> AsyncIterable[Session]:
     with SessionLocal() as db, StoreManager(db):
         yield db
-
-
-class ModelError(Exception):
-    pass
-
-
-@dataclass
-class ValueTaken(ModelError):
-    value: str
-
-
-@dataclass
-class ResourceNeeded(ModelError):
-    err: str | None = None
-
-
-class PermissionError(ModelError):
-    pass
 
 
 P = ParamSpec("P")
@@ -220,7 +202,7 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
     def assert_visible(self, user: "User") -> None:
         """Asserts that this model is visible to a given user."""
         if not self.visible(user):
-            raise PermissionError
+            raise PermissionExcpetion
 
     def editable(self, user: "User") -> bool:
         """Checks wether this model is editable by a given user."""
@@ -234,7 +216,7 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
     def assert_editable(self, user: "User") -> None:
         """Asserts that this model is editable by a given user."""
         if not self.editable(user):
-            raise PermissionError
+            raise PermissionExcpetion
 
 
 class Base(BaseNoID, unsafe_hash=True):

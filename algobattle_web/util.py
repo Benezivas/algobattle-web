@@ -1,4 +1,5 @@
 """Util functions."""
+from dataclasses import dataclass
 from typing import Any, Never, Self, TypeGuard, TypeVar
 from inspect import Parameter, Signature, signature
 from uuid import UUID
@@ -79,7 +80,6 @@ def send_email(email: str, content: str):
     print(f"sending email to {email}: {content}")
 
 
-
 T = TypeVar("T")
 def unwrap(arg: T | None) -> T:
     """Returns the argument if it is not `None`, otherwise raises an exception."""
@@ -87,3 +87,25 @@ def unwrap(arg: T | None) -> T:
         raise ValueError
     else:
         return arg
+
+
+class AlgobattleError(Exception):
+    """Base exception class."""
+    pass
+
+
+@dataclass
+class ValueTaken(AlgobattleError):
+    """Raised when a uniqueness constrained would be violated."""
+    value: str
+
+
+@dataclass
+class ResourceNeeded(AlgobattleError):
+    """Raised to indicate that a value can't be deleted or modified because of references to it."""
+    err: str | None = None
+
+
+class PermissionExcpetion(AlgobattleError):
+    """Raised when the user does not have the needed permissions"""
+    pass
