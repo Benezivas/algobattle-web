@@ -8,8 +8,9 @@ export async function send_request(action, content) {
         _content.body = JSON.stringify(content)
     }
     var response = await fetch("/api/" + action, _content)
-    if (response.ok) {
-        return response.json()
+    return {
+        "status": response.status,
+        "data": await response.json(),
     }
 }
 
@@ -22,8 +23,9 @@ export async function send_get(action, content) {
         params = "?" + new URLSearchParams(content).toString()
     }
     var response = await fetch("/api/" + action + params, _content)
-    if (response.ok) {
-        return response.json()
+    return {
+        "status": response.status,
+        "data": await response.json(),
     }
 }
 
@@ -32,8 +34,9 @@ export async function send_form(endpoint, content) {
         "method": "POST",
         "body": content,
     })
-    if (response.ok) {
-        return response
+    return {
+        "status": response.status,
+        "data": await response.json(),
     }
 }
 
