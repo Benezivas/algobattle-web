@@ -366,23 +366,31 @@ def delete_config(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 class ProblemCreate(BaseSchema):
     name: str
+    context: ID
     file: UploadFile
     config: ID
     start: datetime | None = None
     end: datetime | None = None
     description: UploadFile | None = None
+    short_description: str | None = None
+    image: UploadFile | None = None
 
 
 @admin.post("/problem/create")
 @autocommit
 async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate = Depends(ProblemCreate.from_form())) -> Problem:
-    config = unwrap(Config.get(db, problem.config))
+    context = unwrap(db.get(Context, problem.context))
     file = DbFile.create_from(problem.file)
+    config = unwrap(Config.get(db, problem.config))
     if problem.description is not None:
         desc = DbFile.create_from(problem.description)
     else:
         desc = None
-    return Problem(db, problem.name, file, config, problem.start, problem.end, desc)
+    if problem.image is not None:
+        image = DbFile.create_from(problem.image)
+    else:
+        image = None
+    return Problem(db, problem.name, context, file, config, problem.start, problem.end, desc, problem.short_description, image)
 
 
 @router.get("/problem/{id}/file")
@@ -403,32 +411,33 @@ async def get_problem(*, db: Session = Depends(get_db), user: User = Depends(cur
 
 class ProblemEdit(BaseSchema):
     name: str | Missing = missing
+    context: ID | Missing = missing
     file: UploadFile | Missing = missing
     config: ID | Missing = missing
     start: datetime | None | Missing = missing
     end: datetime | None | Missing = missing
     description: UploadFile | None | Missing = missing
+    short_description: str | None | Missing = missing
+    image: UploadFile | None | Missing = missing
 
 
 @admin.post("/problem/{id}/edit")
 @autocommit
 async def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
     problem = unwrap(db.get(Problem, id))
-    for key in ("name", "start", "end"):
+    for key in ("name", "start", "end", "short_description"):
         val = getattr(edit, key)
         if present(val):
             setattr(problem, key, val)
     if present(edit.file):
         problem.file.attach(edit.file)
-    if present(edit.description):
-        if edit.description is None:
-            problem.description = None
-        elif problem.description is None:
-            problem.description = DbFile.create_from(edit.description)
-        else:
-            problem.description.attach(edit.description)
     if present(edit.config):
+        unwrap(db.get(Config, edit.config))
         problem.config_id = edit.config
+    if present(edit.description):
+        problem.attach_optional("description", edit.description)
+    if present(edit.image):
+        problem.attach_optional("image", edit.image)
     return problem
 
 

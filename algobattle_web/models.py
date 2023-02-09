@@ -218,6 +218,18 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
         if not self.editable(user):
             raise PermissionExcpetion
 
+    def attach_optional(self, attr: str, file: DbFile | UploadFile | None) -> None:
+        """Attaches the file to the attribute."""
+        if file is None:
+            setattr(self, attr, file)
+            return
+        current = getattr(self, attr)
+        if current is None:
+            setattr(self, attr, DbFile.create_from(file))
+        else:
+            assert isinstance(current, DbFile)
+            current.create_from(file)
+
 
 class Base(BaseNoID, unsafe_hash=True):
     __abstract__ = True
