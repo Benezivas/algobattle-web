@@ -26,6 +26,7 @@ dependencies = [
     "python-multipart",
     "sqlalchemy >= 2.0.0b1",
     "sqlalchemy-media",
+    "pydantic",
 ]
 
 [project.scripts]
