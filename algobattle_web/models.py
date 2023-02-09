@@ -425,13 +425,14 @@ class Config(Base, unsafe_hash=True):
 
 class Problem(Base, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
+    context: Mapped[Context] = relationship()
+    context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
     file: Mapped[DbFile]
-    config: Mapped[Config] = relationship(uselist=False, lazy="joined")
+    config: Mapped[Config] = relationship()
     config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"), init=False)
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
     description: Mapped[DbFile | None] = mapped_column(default=None)
-
     short_description: Mapped[str | None] = mapped_column(default=None)
     image: Mapped[DbFile | None] = mapped_column(default=None)
 
