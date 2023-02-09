@@ -91,12 +91,15 @@ def team_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
 @templated
 def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     if user.is_admin:
-        problems = db.query(Problem).all()
-        configs = db.query(Config).all()
+        context = user.settings.selected_team.context_id if user.settings.selected_team else None
+        problems = db.scalars(select(Problem)).unique().all()
+    elif user.settings.selected_team is None:
+        return "problems.jinja", {"problems": {}, "contexts": {}, "selected_context": None}
     else:
-        problems = db.query(Problem).filter(Problem.visible_sql(user)).all()
-        configs = {p.config for p in problems}
-    return "problems.jinja", {"problems": encode(problems), "configs": encode(configs)}
+        context = user.settings.selected_team.context_id
+        problems = db.scalars(select(Problem).filter(Problem.visible_sql(user), Problem.context_id == context)).unique().all()
+    contexts = db.scalars(select(Context).filter(Context.visible_sql(user))).unique().all()
+    return "problems.jinja", {"problems": encode(problems), "contexts": encode(contexts), "selected_context": context}
 
 
 @router.get("/programs")
