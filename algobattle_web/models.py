@@ -438,6 +438,7 @@ class Problem(Base, unsafe_hash=True):
 
     class Schema(Base.Schema):
         name: str
+        context: ObjID
         file: DbFile.Schema
         config: ObjID
         start: datetime | None
