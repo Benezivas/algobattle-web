@@ -320,9 +320,9 @@ def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr
 
 @admin.post("/config/create")
 @autocommit
-def add_config(*, db: Session = Depends(get_db), name: str = Form(), file: UploadFile = File()) -> Config:
+def add_config(*, db: Session = Depends(get_db), file: UploadFile = File()) -> Config:
     db_file = DbFile.create_from(file)
-    return Config(db, name, db_file)
+    return Config(db, db_file)
 
 
 @router.get("/config/{id}/file")
@@ -344,14 +344,10 @@ def edit_config(
     *,
     db: Session = Depends(get_db),
     id: ID,
-    name: str | Missing = Form(default=missing),
-    file: UploadFile | Missing = File(default=missing),
+    file: UploadFile = File(),
 ) -> Config:
     config = unwrap(Config.get(db, id))
-    if present(name):
-        config.name = name
-    if present(file):
-        config.file.attach(file)
+    config.file.attach(file)
     return config
 
 

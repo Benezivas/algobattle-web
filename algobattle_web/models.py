@@ -408,19 +408,10 @@ class Team(Base, unsafe_hash=True):
 
 
 class Config(Base, unsafe_hash=True):
-    name: Mapped[str] = mapped_column(unique=True)
     file: Mapped[DbFile]
 
     class Schema(Base.Schema):
         name: str
-
-    @classmethod
-    def get(cls, db: Session, identifier: ID | str) -> Self | None:
-        """Queries the database for the config with the given id or name."""
-        if isinstance(identifier, UUID):
-            return super().get(db, identifier)
-        else:
-            return db.query(cls).filter(cls.name == identifier).first()
 
 
 class Problem(Base, unsafe_hash=True):
