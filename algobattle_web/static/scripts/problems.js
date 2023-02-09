@@ -10,7 +10,7 @@ function parse(problem) {
     }
     return problem
 }
-for (problem of problems.values()) {
+for (problem of Object.values(problems)) {
     parse(problem)
 }
 function in_context(problem) {
@@ -34,20 +34,6 @@ const app = createApp({
         return {
             store: store,
         }
-    },
-})
-app.config.compilerOptions.delimiters = ["${", "}"]
-
-
-app.component("Problem", {
-    template: "#problem",
-    props: ["problem"],
-    data() {
-        return {
-            store: store,
-        }
-    },
-    methods: {
     },
     computed: {
         future_problems() {
@@ -75,6 +61,20 @@ app.component("Problem", {
                     && problem.end < now
                 ))
         },
+    },
+})
+app.config.compilerOptions.delimiters = ["${", "}"]
+
+
+app.component("Problem", {
+    template: "#problem",
+    props: ["problem"],
+    data() {
+        return {
+            store: store,
+        }
+    },
+    methods: {
     },
 })
 

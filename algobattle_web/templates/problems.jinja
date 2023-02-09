@@ -28,11 +28,11 @@
     <problem v-for="(problem, id) in future_problems" :problem="problem" :key="id"></problem>
   </div>
   {% endif %}
-  <h3>Current</h3>
+  <h3 v-if="Object.keys(current_problems).length != 0">Current</h3>
   <div class="d-flex flex-wrap">
     <problem v-for="(problem, id) in current_problems" :problem="problem" :key="id"></problem>
   </div>
-  <h3>Past</h3>
+  <h3 v-if="Object.keys(past_problems).length != 0">Past</h3>
   <div class="d-flex flex-wrap">
     <problem v-for="(problem, id) in past_problems" :problem="problem" :key="id"></problem>
   </div>
