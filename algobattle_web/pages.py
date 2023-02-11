@@ -27,7 +27,7 @@ from algobattle_web.util import send_email, unwrap
 from algobattle_web.dependencies import curr_user, curr_user_maybe, check_if_admin
 
 router = APIRouter()
-admin = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(check_if_admin)])
+admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)])
 
 
 @router.get("/")
@@ -186,11 +186,11 @@ def results_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
 
 
 # *******************************************************************************
-# * Admin
+# * Admin panel
 # *******************************************************************************
 
 
-@admin.get("/users", response_class=HTMLResponse)
+@admin.get("/admin/users", response_class=HTMLResponse)
 @templated
 def users_get(
         db: Session = Depends(get_db),
@@ -230,7 +230,7 @@ def users_get(
     return "admin_users.jinja", {"users": encode(users), "teams": encode(teams), "contexts": encode(contexts), "page": page + 1, "max_page": users_count // limit + 1}
 
 
-@admin.get("/teams", response_class=HTMLResponse)
+@admin.get("/admin/teams", response_class=HTMLResponse)
 @templated
 def teams_get(
         db: Session = Depends(get_db),
@@ -258,7 +258,7 @@ def teams_get(
     return "admin_teams.jinja", {"teams": encode(teams), "contexts": encode(contexts), "users": encode(users), "page": page + 1, "max_page": team_count // limit + 1}
 
 
-@admin.get("/contexts")
+@admin.get("/admin/contexts")
 @templated
 def contexts_get(db = Depends(get_db), page: int = 1, limit: int = 25):
     page = max(page - 1, 0)
