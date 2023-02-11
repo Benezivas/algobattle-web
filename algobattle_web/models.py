@@ -439,6 +439,8 @@ class Problem(Base, unsafe_hash=True):
     short_description: Mapped[str | None] = mapped_column(default=None)
     image: Mapped[DbFile | None] = mapped_column(default=None)
 
+    __table_args__ = (UniqueConstraint("name", "context_id"),)
+
     class Schema(Base.Schema):
         name: str
         context: ObjID
