@@ -102,6 +102,14 @@ def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_user))
     return "problems.jinja", {"problems": encode(problems), "contexts": encode(contexts), "selected_context": context}
 
 
+@router.get("/problems/{context_name}/{problem_name}")
+@templated
+def problems_details(*, db = Depends(get_db), user = Depends(curr_user), context_name: str, problem_name: str):
+    context = unwrap(db.scalars(select(Context).filter(Context.name == context_name)).unique().first())
+    problem = unwrap(db.scalars(select(Problem).filter(Problem.name == problem_name, Problem.context_id == context.id)).unique().first())
+    problem.assert_visible(user)
+    return "problem_detail.jinja", {"problem": problem.encode()}
+
 @router.get("/programs")
 @templated
 def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
