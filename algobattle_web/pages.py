@@ -27,6 +27,7 @@ from algobattle_web.util import send_email, unwrap
 from algobattle_web.dependencies import curr_user, curr_user_maybe, check_if_admin
 
 router = APIRouter()
+admin = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(check_if_admin)])
 
 
 @router.get("/")
@@ -110,6 +111,12 @@ def problems_details(*, db = Depends(get_db), user = Depends(curr_user), context
     problem.assert_visible(user)
     return "problem_detail.jinja", {"problem": problem.encode()}
 
+
+@admin.get("/problems/create")
+@templated
+def problem_create(*, db = Depends(get_db)):
+    return "problem_create.jinja"
+
 @router.get("/programs")
 @templated
 def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
@@ -181,9 +188,6 @@ def results_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
 # *******************************************************************************
 # * Admin
 # *******************************************************************************
-
-
-admin = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(check_if_admin)])
 
 
 @admin.get("/users", response_class=HTMLResponse)
