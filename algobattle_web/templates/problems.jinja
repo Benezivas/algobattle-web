@@ -14,7 +14,7 @@
     <img v-if="problem.image" :src="image_url" class="card-img-top" style="height: 10rem; object-fit: contain" :alt="problem.image.alt">
     <div class="card-body">
       <h5 class="card-title">${problem.name}</h5>
-      <p class="card-text">${problem.short_description}</p>
+      <p class="card-text overflow-hidden">${problem.short_description}</p>
       <a :href="problem_url" class="btn btn-primary">View details</a>
     </div>
   </div>
