@@ -76,6 +76,16 @@ app.component("Problem", {
     },
     methods: {
     },
+    computed: {
+        problem_url() {
+            const context = encodeURIComponent(store.contexts[this.problem.context].name)
+            const name = encodeURIComponent(this.problem.name)
+            return `/problems/${context}/${name}`
+        },
+        image_url() {
+            return `/api/problem/${this.problem.id}/image`
+        },
+    },
 })
 
 
