@@ -10,7 +10,7 @@ const app = createApp({
     data() {
         return {
             store: store,
-            form_index: 0,
+            page: 0,
             error: null,
 
             name: null,
@@ -22,13 +22,14 @@ const app = createApp({
         async send_file(event) {
             const form = new FormData(event.currentTarget)
             if (form.get("file").size == 0) {
-                if (form.get("problem_id") == null) {
+                console.log(form.get("problem_id"))
+                if (form.get("problem_id") == "") {
                     this.error = "missing"
                     return
                 }
                 form.delete("file")
             } else {
-                if (form.get("problem_id") != null) {
+                if (form.get("problem_id") != "") {
                     this.error = "duplicate"
                     return
                 }
@@ -40,11 +41,16 @@ const app = createApp({
                 this.problem_schema = data.problem_schema
                 this.solution_schema = data.solution_schema
                 this.error = null
-                this.form_index = 1
+                this.page = 1
             } else {
                 this.error = "file"
             }
         },
+        async send_all(event) {
+            if (this.page != 3) {
+                return
+            }
+        }
     },
     computed: {
     },

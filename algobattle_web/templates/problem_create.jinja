@@ -14,25 +14,25 @@
       <div class="col mx-0" style="max-width: 40rem;">
         <h2 class="mb-5 text-center"><strong>Create new problem</strong></h2>
         <ul id="progressbar" class="text-center ps-0">
-          <li class="first" :class="{active: form_index == 0, set: form_index > 0}">
+          <li class="first" :class="{active: page == 0, set: page > 0}">
             <i class="bi bi-file-earmark-code progress-icon"></i>
             <strong>Problem</strong>
           </li>
-          <li :class="{active: form_index == 1, set: form_index > 1}">
+          <li :class="{active: page == 1, set: page > 1}">
             <i class="bi bi-journal-text progress-icon"></i>
             <strong>Documentation</strong>
           </li>
-          <li :class="{active: form_index == 2, set: form_index > 2}">
+          <li :class="{active: page == 2, set: page > 2}">
             <i class="bi bi-gear progress-icon"></i>
             <strong>Settings</strong>
           </li>
-          <li :class="{active: form_index == 3, set: form_index > 3}">
+          <li :class="{active: page == 3, set: page > 3}">
             <i class="bi bi-image progress-icon"></i>
             <strong>Display</strong>
           </li>
         </ul>
         <div class="card">
-          <form id="file_form" @submit.prevent="send_file" class="card-body" v-if="form_index == 0" novalidate>
+          <form id="file_form" @submit.prevent="send_file" class="card-body" v-if="page == 0" novalidate>
             <h2 class="fs-title mb-3">Problem file</h2>
             <div class="alert alert-danger" role="alert" v-if="error == 'missing'">
               Select either a problem file to upload, or an already existing problem to copy.
@@ -51,12 +51,30 @@
               <option>Test</option>
             </select>
             <div class="d-flex mt-3">
-              <button class="btn btn-primary ms-auto" type="submit" class="next action-button" value="Next Step">Next</button>
+              <button class="btn btn-primary ms-auto" type="submit">Next</button>
             </div>
           </form>
-          <form id="other_form">
-            <div class="card-body" v-if="form_index == 1">
+          <form id="other_form" @submit.prevent="send_all">
+            <div class="card-body" v-if="page == 1">
             
+              <div class="d-flex mt-3">
+                <button class="btn btn-secondary" @click="page--">Back</button>
+                <button class="btn btn-primary ms-auto" @click="page++">Next</button>
+              </div>
+            </div>
+            <div class="card-body" v-if="page == 2">
+            
+              <div class="d-flex mt-3">
+                <button class="btn btn-secondary" @click="page--">Back</button>
+                <button class="btn btn-primary ms-auto" @click="page++">Next</button>
+              </div>
+            </div>
+            <div class="card-body" v-if="page == 3">
+            
+              <div class="d-flex mt-3">
+                <button class="btn btn-secondary" @click="page--">Back</button>
+                <button class="btn btn-success ms-auto" type="submit">Create</button>
+              </div>
             </div>
           </form>
         </div>
