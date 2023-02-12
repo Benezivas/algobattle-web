@@ -10,7 +10,6 @@
 
 #progressbar li {
     list-style-type: none;
-    font-size: 12px;
     width: 25%;
     float: left;
     position: relative;
