@@ -22,6 +22,7 @@ from fastapi import UploadFile
 from fastapi.responses import FileResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import validator
+from pydantic.color import Color
 
 from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.config import SERVER_CONFIG
@@ -426,8 +427,7 @@ class Problem(Base, unsafe_hash=True):
     context: Mapped[Context] = relationship()
     context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
     file: Mapped[DbFile]
-    config: Mapped[Config] = relationship()
-    config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"), init=False)
+    config: Mapped[DbFile]
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
     description: Mapped[DbFile | None] = mapped_column(default=None)
@@ -435,6 +435,7 @@ class Problem(Base, unsafe_hash=True):
     image: Mapped[DbFile | None] = mapped_column(default=None)
     problem_schema: Mapped[str | None] = mapped_column(default=None)
     solution_schema: Mapped[str | None] = mapped_column(default=None)
+    colour: Mapped[str] = mapped_column(default=None)
 
     __table_args__ = (UniqueConstraint("name", "context_id"),)
 
@@ -442,12 +443,15 @@ class Problem(Base, unsafe_hash=True):
         name: str
         context: ObjID
         file: DbFile.Schema
-        config: ObjID
+        config: DbFile.Schema
         start: datetime | None
         end: datetime | None
         description: DbFile.Schema | None
         short_description: str | None
         image: DbFile.Schema | None
+        problem_schema: str | None
+        solution_schema: str | None
+        colour: Color
 
     @classmethod
     def get(cls, db: Session, identifier: ID | str) -> Self | None:
