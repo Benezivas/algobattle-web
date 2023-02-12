@@ -394,6 +394,7 @@ def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None)
 
 
 @admin.post("/problem/create")
+@autocommit
 def add_problem(*, db: Session = Depends(get_db), 
         file: UploadFile | None = File(None),
         problem_id: ID | None = Form(None),
