@@ -23,6 +23,7 @@ from fastapi.responses import FileResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import validator
 from pydantic.color import Color
+from starlette.datastructures import UploadFile as StarletteFile
 
 from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.config import SERVER_CONFIG
@@ -95,8 +96,8 @@ class DbFile(SqlFile):
         suppress_pre_process: bool = False,
         suppress_validation: bool = False,
         **kwargs,
-    ) -> "DbFile":
-        if isinstance(attachable, UploadFile):
+    ) -> Self:
+        if isinstance(attachable, StarletteFile):
             attachable, original_filename = attachable.file, attachable.filename
         return super().attach(
             attachable,
@@ -122,7 +123,18 @@ class DbFile(SqlFile):
         suppress_pre_process: bool = False,
         suppress_validation: bool = False,
         **kwargs,
-    ) -> "DbFile": ...
+    ) -> Self:
+        return cast(Self, super().create_from(
+            attachable,
+            content_type,
+            original_filename,
+            extension,
+            store_id,
+            overwrite,
+            suppress_pre_process,
+            suppress_validation,
+            **kwargs,
+        ))
     
     def response(self) -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
