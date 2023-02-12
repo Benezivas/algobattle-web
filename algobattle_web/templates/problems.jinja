@@ -23,6 +23,14 @@
 
 <div id="app" v-cloak>
   {% if user.is_admin %}
+  <div class="mb-5">
+    <label for="context_select" class="form-label">Select context</label>
+    <select id="context_select" class="form-select w-em" v-model="store.selected_context">
+      <option :value="null" selected>All</option>
+      <option v-for="(context, id) in store.contexts" :value="id">${context.name}</option>
+    </select>
+  </div>
+
   <h3>Upcoming</h3>
   <div class="d-flex flex-wrap mb-5">
     <problem v-for="(problem, id) in future_problems" :problem="problem" :key="id"></problem>
