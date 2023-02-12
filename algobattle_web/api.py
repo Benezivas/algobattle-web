@@ -9,6 +9,7 @@ from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from pydantic import Field
+from pydantic.color import Color
 
 from algobattle_web.battle import run_match
 from algobattle_web.models import (
@@ -390,32 +391,63 @@ def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None)
 
 
 class ProblemCreate(BaseSchema):
+    file: UploadFile | None
+    problem_id: ID | None
+
     name: str
+    description: UploadFile | None = None
+    problem_schema: str | None = None
+    solution_schema: str | None = None
+
     context: ID
-    file: UploadFile
-    config: ID
+    config: UploadFile = UploadFile("config.toml")
     start: datetime | None = None
     end: datetime | None = None
-    description: UploadFile | None = None
-    short_description: str | None = None
+
     image: UploadFile | None = None
+    short_description: str | None = None
+    colour: Color = Color("#ffffff")
 
 
 @admin.post("/problem/create")
 @autocommit
-async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate = Depends(ProblemCreate.from_form())) -> Problem:
-    context = unwrap(db.get(Context, problem.context))
-    file = DbFile.create_from(problem.file)
-    config = unwrap(db.get(Config, problem.config))
+def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate = Depends(ProblemCreate.from_form())) -> Problem:
+    if problem.file is None == problem.problem_id is None:
+        raise HTTPException(400)
+    if problem.file is not None:
+        file = DbFile.create_from(problem.file)
+    else:
+        template_prob = unwrap(db.get(Problem, problem.problem_id))
+        file = DbFile.create_from(template_prob.file)
+
     if problem.description is not None:
         desc = DbFile.create_from(problem.description)
     else:
         desc = None
+
+    context = unwrap(db.get(Context, problem.context))
+    config = DbFile.create_from(problem.config)
+
     if problem.image is not None:
         image = DbFile.create_from(problem.image)
     else:
         image = None
-    return Problem(db, problem.name, context, file, config, problem.start, problem.end, desc, problem.short_description, image)
+
+    return Problem(
+        db=db,
+        file=file,
+        name=problem.name,
+        description=desc,
+        problem_schema=problem.problem_schema,
+        solution_schema=problem.solution_schema,
+        context=context,
+        config=config,
+        start=problem.start,
+        end=problem.end,
+        image=image,
+        short_description=problem.short_description,
+        colour=problem.colour.as_hex(),
+    )
 
 
 @router.get("/problem/{id}/file")
