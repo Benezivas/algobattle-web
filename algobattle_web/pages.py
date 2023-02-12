@@ -114,7 +114,9 @@ def problems_details(*, db = Depends(get_db), user = Depends(curr_user), context
 @admin.get("/problems/create")
 @templated
 def problem_create(*, db = Depends(get_db)):
-    return "problem_create.jinja"
+    problems = db.scalars(select(Problem)).unique().all()
+    encoded = [{"name": f"{p.name} ({p.context.name})", "id": p.id} for p in problems]
+    return "problem_create.jinja", {"problems": encoded}
 
 @router.get("/programs")
 @templated
