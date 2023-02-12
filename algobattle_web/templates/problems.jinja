@@ -11,7 +11,7 @@
 
 <script type="text/x-template" id="problem">
   <div class="card m-2 border border-5" style="width: 18rem; height: 24rem;" :style="{borderColor: problem.colour + ' !important'}">
-    <img v-if="problem.image" :src="image_url" class="card-img-top" style="height: 10rem; object-fit: contain" :alt="problem.image.alt">
+    <img v-if="problem.image" :src="image_url" class="card-img-top" style="object-fit: contain" :style="{backgroundColor: problem.colour + ' !important'}" :alt="problem.image.alt">
     <div class="card-body d-flex flex-column">
       <h5 class="card-title">${problem.name}</h5>
       <p class="card-text overflow-hidden">${problem.short_description}</p>
