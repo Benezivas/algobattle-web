@@ -117,7 +117,7 @@ def problem_create(*, db = Depends(get_db)):
     problems = db.scalars(select(Problem)).unique().all()
     encoded = [{"name": f"{p.name} ({p.context.name})", "id": p.id} for p in problems]
     contexts = db.scalars(select(Context)).unique().all()
-    return "problem_create.jinja", {"problems": encoded, "contexts": encode(contexts)}
+    return "problem_create.jinja", {"problems": jsonable_encoder(encoded), "contexts": encode(contexts)}
 
 @router.get("/programs")
 @templated
