@@ -463,10 +463,18 @@ async def get_problemfile(*, db: Session = Depends(get_db), user: User = Depends
 
 @router.get("/problem/{id}/description")
 @autocommit
-async def get_problem(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
+async def get_desc(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
     problem = unwrap(Problem.get(db, id))
     problem.assert_visible(user)
     return unwrap(problem.description).response()
+
+
+@router.get("/problem/{id}/image")
+@autocommit
+async def get_image(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
+    problem = unwrap(Problem.get(db, id))
+    problem.assert_visible(user)
+    return unwrap(problem.image).response()
 
 
 class ProblemEdit(BaseSchema):
