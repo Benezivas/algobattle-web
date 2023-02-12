@@ -1,6 +1,7 @@
 "Module specifying the json api actions."
 from datetime import datetime
 from typing import Any, Callable, cast
+from urllib.parse import quote as url_encode
 
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
@@ -8,9 +9,10 @@ from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from pydantic import Field
 from pydantic.color import Color
-from sqlalchemy_media import StoreManager
+
 
 from algobattle_web.battle import run_match
 from algobattle_web.models import (
@@ -391,25 +393,6 @@ def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None)
         return unwrap(db.get(Problem, problem_id))
 
 
-class ProblemCreate(BaseSchema):
-    file: UploadFile | None
-    problem_id: ID | None
-
-    name: str
-    description: UploadFile | None = None
-    problem_schema: str | None = None
-    solution_schema: str | None = None
-
-    context: ID
-    config: UploadFile = UploadFile("config.toml")
-    start: datetime | None = None
-    end: datetime | None = None
-
-    image: UploadFile | None = None
-    short_description: str | None = None
-    colour: Color = Color("#ffffff")
-
-
 @admin.post("/problem/create")
 def add_problem(*, db: Session = Depends(get_db), 
         file: UploadFile | None = File(None),
@@ -425,46 +408,48 @@ def add_problem(*, db: Session = Depends(get_db),
         image: UploadFile | None = File(None),
         short_description: str | None = Form(None),
         colour: Color = Form(Color("#ffffff")),
-    ) -> Problem:
-    with StoreManager(db):
-        if file is None == problem_id is None:
-            raise HTTPException(400)
-        if file is not None:
-            _file = DbFile.create_from(file)
-        else:
-            template_prob = unwrap(db.get(Problem, problem_id))
-            _file = DbFile.create_from(template_prob.file)
+    ) -> str:
+    if file is None == problem_id is None:
+        raise HTTPException(400)
+    if file is not None:
+        _file = DbFile.create_from(file)
+    else:
+        template_prob = unwrap(db.get(Problem, problem_id))
+        _file = DbFile.create_from(template_prob.file)
 
-        if description is not None:
-            desc = DbFile.create_from(description)
-        else:
-            desc = None
+    if description is not None:
+        desc = DbFile.create_from(description)
+    else:
+        desc = None
 
-        _context = unwrap(db.get(Context, context))
-        _config = DbFile.create_from(config)
+    _context = unwrap(db.get(Context, context))
+    _config = DbFile.create_from(config)
 
-        if image is not None:
-            _image = DbFile.create_from(image)
-        else:
-            _image = None
+    if image is not None:
+        _image = DbFile.create_from(image)
+    else:
+        _image = None
 
-        prob = Problem(
-            db=db,
-            file=_file,
-            name=name,
-            description=desc,
-            problem_schema=problem_schema,
-            solution_schema=solution_schema,
-            context=_context,
-            config=_config,
-            start=start,
-            end=end,
-            image=_image,
-            short_description=short_description,
-            colour=colour.as_hex(),
-        )
+    prob = Problem(
+        db=db,
+        file=_file,
+        name=name,
+        description=desc,
+        problem_schema=problem_schema,
+        solution_schema=solution_schema,
+        context=_context,
+        config=_config,
+        start=start,
+        end=end,
+        image=_image,
+        short_description=short_description,
+        colour=colour.as_hex(),
+    )
+    try:
         db.commit()
-    return prob
+    except IntegrityError as e:
+        raise ValueTaken("name", name) from e
+    return url_encode(f"/problems/{prob.context.name}/{prob.name}")
 
 
 @router.get("/problem/{id}/file")
