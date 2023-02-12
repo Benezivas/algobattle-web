@@ -32,20 +32,29 @@
           </li>
         </ul>
         <div class="card">
-          <form id="file_form" class="card-body">
-            <h2 class="fs-title">Problem file</h2>
+          <form id="file_form" @submit.prevent="send_file" class="card-body" v-if="form_index == 0" novalidate>
+            <h2 class="fs-title mb-3">Problem file</h2>
             <label for="prob_file" class="form-label">Upload a new problem file</label>
-            <input type="file" name="file" id="prob_file"/>
-            <p>Or</p>
-            <label for="prob_select" class="form-label">Use an already existing one</label>
-            <select class="form-select">
+            <input type="file" name="file" class="form-control w-em mb-2" id="prob_file" ref="prob_file_select"/>
+            <div class="invalid-feedback">
+              Either select a problem file
+            </div>
+            <label for="prob_select" class="form-label">Or use an already existing one</label>
+            <select class="form-select w-em" id="prob_select" name="problem_id" @change="$refs.prob_file_select.value = null">
               <option selected :value="null"></option>
+              <option>Test</option>
             </select>
+            <div class="invalid-feedback">
+              Or select an existing one
+            </div>
             <div class="d-flex mt-3">
               <button class="btn btn-primary ms-auto" type="submit" class="next action-button" value="Next Step">Next</button>
             </div>
           </form>
           <form id="other_form">
+            <div class="card-body" v-if="form_index == 1">
+            
+            </div>
           </form>
         </div>
       </div>
