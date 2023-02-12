@@ -70,6 +70,12 @@ const app = createApp({
             for (const [key, val] of new FormData(event.currentTarget)) {
                 data.set(key, val)
             }
+            const file_keys = ["file", "description", "config", "image"]
+            for (const key of file_keys) {
+                if (!data.get(key)) {
+                    data.delete(key)
+                }
+            }
             const response = await send_form("problem/create", data)
             if (response.ok) {
                 window.location.href(await response.text())
