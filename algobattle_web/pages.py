@@ -1,6 +1,6 @@
 "Module specifying the regular user pages."
 from typing import Collection
-from fastapi import APIRouter, Depends, Form, status, Request, HTTPException
+from fastapi import APIRouter, Depends, Form, status, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select, func
@@ -12,7 +12,6 @@ from algobattle_web.models import (
     Session,
     Config,
     Context,
-    Documentation,
     MatchResult,
     Problem,
     Program,

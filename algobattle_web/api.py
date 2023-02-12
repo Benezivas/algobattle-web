@@ -1,6 +1,5 @@
 "Module specifying the json api actions."
 from datetime import datetime
-import sys
 from typing import Any, Callable, cast
 
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks

@@ -139,7 +139,7 @@ class DbFile(SqlFile):
             if isinstance(value, DbFile.Schema):
                 return value
             elif isinstance(value, DbFile):
-                name = value.original_filename if value.original_filename is not None else ""
+                name = value.original_filename
                 return cls(name=name)
             else:
                 raise TypeError
