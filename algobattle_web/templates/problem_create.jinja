@@ -57,7 +57,7 @@
           </form>
 
 
-          <form v-if="page == 1" id="docs_form" ref="docs_form" class="card-body" @submit.prevent="page++">
+          <form v-if="page == 1" id="docs_form" ref="docs_form" class="card-body" @submit.prevent="next('docs_form')">
             <h2 class="card-tile">Documentation</h2>
             <div class="mb-3">
               <label for="prob_name" class="form-label">Name</label>
@@ -81,7 +81,7 @@
           </form>
 
 
-          <form v-if="page == 2" id="settings_form" ref="settings_form" class="card-body" @submit.prevent="page++">
+          <form v-if="page == 2" id="settings_form" ref="settings_form" class="card-body" @submit.prevent="next('settings_form')">
             <h2 class="card-tile">Settings</h2>
             <div class="mb-3">
               <label for="context_sel" class="form-label">Context</label>

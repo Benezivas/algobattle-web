@@ -18,6 +18,10 @@ const app = createApp({
             name: null,
             problem_schema: null,
             solution_schema: null,
+
+            file_form: null,
+            docs_form: null,
+            settings_form: null,
         }
     },
     methods:  {
@@ -47,10 +51,29 @@ const app = createApp({
             } else {
                 this.error = "file"
             }
+            this.file_form = form
+        },
+        next(key) {
+            this[key] = new FormData(this.$refs[key])
+            this.page++
         },
         async send_all(event) {
             if (this.page != 3) {
                 return
+            }
+            const data = this.file_form
+            for (const [key, val] of this.docs_form) {
+                data.set(key, val)
+            }
+            for (const [key, val] of this.settings_form) {
+                data.set(key, val)
+            }
+            for (const [key, val] of new FormData(event.currentTarget)) {
+                data.set(key, val)
+            }
+            const response = await send_form("problem/create", data)
+            if (response.ok) {
+                console.log("yay")
             }
         }
     },
