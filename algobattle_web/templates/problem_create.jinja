@@ -14,25 +14,25 @@
       <div class="col mx-0" style="max-width: 40rem;">
         <h2 class="mb-5 text-center"><strong>Create new problem</strong></h2>
         <ul id="progressbar" class="text-center ps-0">
-          <li class="active">
+          <li class="first" :class="{active: form_index == 0, set: form_index > 0}">
             <i class="bi bi-file-earmark-code progress-icon"></i>
             <strong>Problem</strong>
           </li>
-          <li>
+          <li :class="{active: form_index == 1, set: form_index > 1}">
             <i class="bi bi-journal-text progress-icon"></i>
             <strong>Documentation</strong>
           </li>
-          <li>
+          <li :class="{active: form_index == 2, set: form_index > 2}">
             <i class="bi bi-calendar-week progress-icon"></i>
             <strong>Schedule</strong>
           </li>
-          <li>
+          <li :class="{active: form_index == 3, set: form_index > 3}">
             <i class="bi bi-image progress-icon"></i>
             <strong>Display</strong>
           </li>
         </ul>
         <div class="card">
-          <form id="file_form">
+          <form id="file_form" class="card-body">
             <h2 class="fs-title">Problem file</h2>
             <label for="prob_file" class="form-label">Upload a new problem file</label>
             <input type="file" name="file" id="prob_file"/>
@@ -41,7 +41,7 @@
             <select class="form-select">
               <option selected :value="null"></option>
             </select>
-            <div class="d-flex mt-2">
+            <div class="d-flex mt-3">
               <button class="btn btn-primary ms-auto" type="submit" class="next action-button" value="Next Step">Next</button>
             </div>
           </form>

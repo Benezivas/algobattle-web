@@ -10,6 +10,7 @@ const app = createApp({
     data() {
         return {
             store: store,
+            form_index: 2,
         }
     },
     computed: {

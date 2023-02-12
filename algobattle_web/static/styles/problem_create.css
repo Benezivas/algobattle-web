@@ -1,11 +1,10 @@
 
-/*progressbar*/
 #progressbar {
     overflow: hidden;
     color: lightgrey;
 }
 
-#progressbar .active {
+#progressbar .set, #progressbar .active {
     color: #000000;
 }
 
@@ -15,10 +14,8 @@
     width: 25%;
     float: left;
     position: relative;
-    z-index: 0;
 }
 
-/*ProgressBar before any progress*/
 #progressbar i.progress-icon {
     width: 50px;
     height: 50px;
@@ -32,19 +29,21 @@
     padding: 2px;
 }
 
-/*ProgressBar connectors*/
-#progressbar li:after {
+#progressbar li:not(.first):after {
     content: '';
     width: 100%;
     height: 2px;
     background: lightgray;
     position: absolute;
-    left: 0;
     top: 25px;
     z-index: -1;
+    right: 50%;
 }
 
-/*Color number of the step and the connector before it*/
-#progressbar li.active i.progress-icon, #progressbar li.active:after {
-    background: skyblue;
+#progressbar .active i.progress-icon, #progressbar li.active:after {
+    background: mediumturquoise;
+}
+
+#progressbar .set i.progress-icon, #progressbar li.set:after {
+    background: steelblue;
 }
