@@ -238,11 +238,6 @@ class Base(BaseNoID, unsafe_hash=True):
     class Schema(BaseNoID.Schema, ABC):
         id: ID
 
-    @classmethod
-    def get(cls: Type[T], db: Session, identifier: ID) -> T | None:
-        """Queries the database for the object with the given id."""
-        return db.query(cls).filter(cls.id == identifier).first()   # type: ignore
-
 
 def encode(col: Iterable[Base]) -> dict[ID, dict[str, Any]]:
     """Encodes a collection of database items into a jsonable container."""
@@ -297,7 +292,7 @@ class User(Base, unsafe_hash=True):
     def get(cls, db: Session, identifier: ID | str) -> Self | None:
         """Queries the user db by either the user id or their email."""
         if isinstance(identifier, UUID):
-            return super().get(db, identifier)
+            return db.get(cls, identifier)
         else:
             return db.scalars(select(cls).filter(cls.email == identifier)).first()
 
@@ -375,7 +370,7 @@ class Context(Base, unsafe_hash=True):
     def get(cls, db: Session, identifier: str | ID) -> Self | None:
         """Queries the database for the context with the given id or name."""
         if isinstance(identifier, UUID):
-            return super().get(db, identifier)
+            return db.get(cls, identifier)
         else:
             return db.scalars(select(cls).filter(cls.name == identifier)).first()
 
@@ -412,7 +407,7 @@ class Team(Base, unsafe_hash=True):
     def get(cls, db: Session, identifier: str | ID, context: Context | None = None) -> Self | None:
         """Queries the database for the team with the given id or name and context."""
         if isinstance(identifier, UUID):
-            return super().get(db, identifier)
+            return db.get(cls, identifier)
         else:
             if context is None:
                 raise ValueError("If the team is given by its name, you have to specify a context!")
@@ -458,7 +453,7 @@ class Problem(Base, unsafe_hash=True):
     def get(cls, db: Session, identifier: ID | str) -> Self | None:
         """Queries the database for the problem with the given id or name."""
         if isinstance(identifier, UUID):
-            return super().get(db, identifier)
+            return db.get(cls, identifier)
         else:
             return db.query(cls).filter(cls.name == identifier).first()
 
@@ -529,7 +524,7 @@ class Documentation(Base, unsafe_hash=True):
     def get(cls, db: Session, identifier: ID | Team, problem: Problem | None = None) -> Self | None:
         """Queries the database for the documentation with the given id or team and problem."""
         if isinstance(identifier, UUID):
-            return super().get(db, identifier)
+            return db.get(cls, identifier)
         else:
             if problem is None:
                 raise TypeError

@@ -330,7 +330,7 @@ def add_config(*, db: Session = Depends(get_db), file: UploadFile = File()) -> C
 @router.get("/config/{id}/file")
 @autocommit
 def get_config(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
-    config = unwrap(Config.get(db, id))
+    config = unwrap(db.get(Config, id))
     config.assert_visible(user)
     return config.file.response()
 
@@ -348,7 +348,7 @@ def edit_config(
     id: ID,
     file: UploadFile = File(),
 ) -> Config:
-    config = unwrap(Config.get(db, id))
+    config = unwrap(db.get(Config, id))
     config.file.attach(file)
     return config
 
@@ -356,7 +356,7 @@ def edit_config(
 @admin.post("/config/{id}/delete")
 @autocommit
 def delete_config(*, db: Session = Depends(get_db), id: ID) -> bool:
-    config = unwrap(Config.get(db, id))
+    config = unwrap(db.get(Config, id))
     db.delete(config)
     return True
 
@@ -406,7 +406,7 @@ class ProblemCreate(BaseSchema):
 async def add_problem(*, db: Session = Depends(get_db), problem: ProblemCreate = Depends(ProblemCreate.from_form())) -> Problem:
     context = unwrap(db.get(Context, problem.context))
     file = DbFile.create_from(problem.file)
-    config = unwrap(Config.get(db, problem.config))
+    config = unwrap(db.get(Config, problem.config))
     if problem.description is not None:
         desc = DbFile.create_from(problem.description)
     else:
@@ -542,7 +542,7 @@ def edit_program(*, db: Session = Depends(get_db), id: ID, user_editable: bool) 
 @router.post("/program/{id}/delete")
 @autocommit
 def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), id: ID) -> bool:
-    program = unwrap(Program.get(db, id))
+    program = unwrap(db.get(Program, id))
     program.assert_editable(user)
     db.delete(program)
     return True
@@ -603,7 +603,7 @@ class ScheduledMatchCreate(BaseSchema):
 @autocommit
 def create_schedule(*, db: Session = Depends(get_db), data: ScheduledMatchCreate, background_tasks: BackgroundTasks) -> ScheduledMatch:
     problem = unwrap(Problem.get(db, data.problem))
-    config = unwrap(Config.get(db, data.config)) if data.config is not None else None
+    config = unwrap(db.get(Config, data.config)) if data.config is not None else None
     schedule = ScheduledMatch(db, data.time, problem, config, data.name, data.points)
     for team_id, info in data.participants.items():
         team = unwrap(db.get(Team, team_id))
@@ -667,7 +667,7 @@ def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> Sched
 @admin.post("/match/schedule/{id}/delete")
 @autocommit
 def delete_schedule(*, db: Session = Depends(get_db), id: ID) -> bool:
-    match = unwrap(ScheduledMatch.get(db, id))
+    match = unwrap(db.get(ScheduledMatch, id))
     db.delete(match)
     return True
 
@@ -683,7 +683,7 @@ async def get_match_logs(*, db: Session = Depends(get_db), user: User = Depends(
 @admin.post("/match/result/{id}/delete")
 @autocommit
 def delete_result(*, db: Session = Depends(get_db), id: ID) -> bool:
-    result = unwrap(MatchResult.get(db, id))
+    result = unwrap(db.get(MatchResult, id))
     db.delete(result)
     return True
 
