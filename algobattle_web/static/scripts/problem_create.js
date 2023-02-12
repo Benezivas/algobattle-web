@@ -4,6 +4,7 @@ import { send_form, send_request, fmt_date, remove_unchanged } from "base"
 
 const store = reactive({
     problems: problems,
+    contexts: contexts,
 })
 
 
