@@ -11,30 +11,39 @@ const app = createApp({
         return {
             store: store,
             form_index: 0,
+            error: null,
 
             name: null,
-            description: null,
             problem_schema: null,
             solution_schema: null,
-
-            context: null,
-            start: null,
-            end: null,
-
-            image: null,
-            alt: null,
-            short_description: null,
-
         }
     },
     methods:  {
         async send_file(event) {
             const form = new FormData(event.currentTarget)
-            const reponse = await send_form("/api/problem/", form)
-            if (response.ok) {
-                this.form_index = 1
+            if (form.get("file").size == 0) {
+                if (form.get("problem_id") == null) {
+                    this.error = "missing"
+                    return
+                }
+                form.delete("file")
+            } else {
+                if (form.get("problem_id") != null) {
+                    this.error = "duplicate"
+                    return
+                }
             }
-            send_form(event)
+            const response = await send_form("problem/verify", form)
+            if (response.ok) {
+                const data = await response.json()
+                this.name = data.name
+                this.problem_schema = data.problem_schema
+                this.solution_schema = data.solution_schema
+                this.error = null
+                this.form_index = 1
+            } else {
+                this.error = "file"
+            }
         },
     },
     computed: {
