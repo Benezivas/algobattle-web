@@ -438,6 +438,8 @@ class Problem(Base, unsafe_hash=True):
     description: Mapped[DbFile | None] = mapped_column(default=None)
     short_description: Mapped[str | None] = mapped_column(default=None)
     image: Mapped[DbFile | None] = mapped_column(default=None)
+    problem_schema: Mapped[str | None] = mapped_column(default=None)
+    solution_schema: Mapped[str | None] = mapped_column(default=None)
 
     __table_args__ = (UniqueConstraint("name", "context_id"),)
 

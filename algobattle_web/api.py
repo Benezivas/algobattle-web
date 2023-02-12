@@ -1,5 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime
+import sys
 from typing import Any, Callable, cast
 
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
@@ -30,6 +31,8 @@ from algobattle_web.models import (
 )
 from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present
 from algobattle_web.dependencies import curr_user, check_if_admin
+from algobattle.util import TempDir
+from algobattle.problem import Problem as AlgProblem
 
 
 class SchemaRoute(APIRoute):
@@ -362,6 +365,29 @@ def delete_config(*, db: Session = Depends(get_db), id: ID) -> bool:
 # *******************************************************************************
 # * Problem
 # *******************************************************************************
+
+
+class ProblemMetadata(BaseSchema):
+    name: str
+    problem_schema: str | None
+    solution_schema: str | None
+
+@admin.post("/problem/verify", response_model=ProblemMetadata)
+def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None), problem_id: ID | None = Form(None)):
+    if file is None == problem_id is None:
+        raise ValueError
+    if file is not None:
+        with TempDir() as folder:
+            with open(folder / "problem.py", "wb+") as _file:
+                _file.write(file.file.read())
+            try:
+                prob = AlgProblem.import_from_path(folder / "problem.py")
+            except ValueError as e:
+                print(e)
+                raise HTTPException(400)
+            return ProblemMetadata(name=prob.name, problem_schema=prob.io_schema(), solution_schema=prob.Solution.io_schema())
+    else:
+        return unwrap(db.get(Problem, problem_id))
 
 
 class ProblemCreate(BaseSchema):
