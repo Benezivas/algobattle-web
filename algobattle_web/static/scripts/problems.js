@@ -10,7 +10,7 @@ function parse(problem) {
     }
     return problem
 }
-for (problem of Object.values(problems)) {
+for (const problem of Object.values(problems)) {
     parse(problem)
 }
 function in_context(problem) {
@@ -48,8 +48,7 @@ const app = createApp({
             return Object.fromEntries(Object.entries(store.problems)
                 .filter(([id, problem]) =>
                     in_context(problem)
-                    && problem.start != null
-                    && problem.start <= now
+                    && (problem.start == null || problem.start <= now)
                     && (problem.end == null || problem.end > now)
                 ))
         },
