@@ -112,6 +112,10 @@
 
 
           <form v-if="page == 3" id="display_form" ref="display_form" class="card-body" @submit.prevent="send_all">
+            <h2 class="card-tile">Display</h2>
+            <div class="alert alert-danger" role="alert" v-if="error == 'server'">
+              There was an error when processing the submitted data.
+            </div>
             <div class="mb-3">
               <label for="image_file" class="form-label">Thumbnail image</label>
               <input type="file" name="image" class="form-control w-em" id="image_file"/>
