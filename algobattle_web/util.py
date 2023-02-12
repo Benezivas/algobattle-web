@@ -5,7 +5,7 @@ from inspect import Parameter, Signature, signature
 from uuid import UUID
 
 from pydantic import BaseModel, BaseConfig, Extra
-from fastapi import UploadFile, File, Form
+from fastapi import UploadFile, File, Form, HTTPException
 
 
 class BaseSchema(BaseModel):
@@ -82,9 +82,9 @@ def send_email(email: str, content: str):
 
 T = TypeVar("T")
 def unwrap(arg: T | None) -> T:
-    """Returns the argument if it is not `None`, otherwise raises an exception."""
+    """Returns the argument if it is not `None`, otherwise raises a HTTPException."""
     if arg is None:
-        raise ValueError
+        raise HTTPException(400)
     else:
         return arg
 

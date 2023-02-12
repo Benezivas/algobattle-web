@@ -36,13 +36,11 @@ async def err_handler(request: Request, e: RequestValidationError):
         })
     )
 
+
 @app.exception_handler(PermissionExcpetion)
 async def perm_err(request: Request, e: PermissionError):
     raise HTTPException(status.HTTP_403_FORBIDDEN)
 
-@app.exception_handler(ValueError)
-async def val_err(request: Request, e: ValueError):
-    raise HTTPException(status.HTTP_400_BAD_REQUEST)
 
 @app.exception_handler(ValueTaken)
 async def val_taken_err(request: Request, e: ValueTaken):
