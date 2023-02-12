@@ -27,8 +27,8 @@ const app = createApp({
     methods:  {
         async send_file(event) {
             const form = new FormData(event.currentTarget)
+            this.file_form = new FormData(event.currentTarget)
             if (form.get("file").size == 0) {
-                console.log(form.get("problem_id"))
                 if (form.get("problem_id") == "") {
                     this.error = "missing"
                     return
@@ -51,7 +51,6 @@ const app = createApp({
             } else {
                 this.error = "file"
             }
-            this.file_form = form
         },
         next(key) {
             this[key] = new FormData(this.$refs[key])
