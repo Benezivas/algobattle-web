@@ -30,7 +30,7 @@ const app = createApp({
                 }
                 form.delete("file")
             } else {
-                if (form.get("problem_id") != "") {
+                if (form.get("problem_id") != null) {
                     this.error = "duplicate"
                     return
                 }

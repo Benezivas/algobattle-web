@@ -33,7 +33,7 @@
         </ul>
         <div class="card">
           <form id="file_form" @submit.prevent="send_file" class="card-body" v-if="page == 0" novalidate>
-            <h2 class="fs-title mb-3">Problem file</h2>
+            <h2 class="card-title mb-3">Problem file</h2>
             <div class="alert alert-danger" role="alert" v-if="error == 'missing'">
               Select either a problem file to upload, or an already existing problem to copy.
             </div>
@@ -56,7 +56,22 @@
           </form>
           <form id="other_form" @submit.prevent="send_all">
             <div class="card-body" v-if="page == 1">
-            
+              <h2 class="card-ttile">Documentation</h2>
+              <div class="mb-3">
+                <label for="prob_name" class="form-label">Name</label>
+                <input type="text" class="form-control w-em" name="name" id="prob_name" v-model="name"/>
+              </div>
+              <div class="mb-3">
+                <label for="desc_file" class="form-label">Description file</label>
+                <input type="file" name="file" name="description" class="form-control w-em" id="desc_file"/>
+              </div>
+              <div class="mb-3">
+                <label for="prob_schema" class="form-label">Problem schema</label>
+                <textarea class="form-control" name="problem_schema" id="prob_schema" rows="10" v-model="problem_schema"></textarea>
+              </div>
+              <label for="sol_schema" class="form-label">Solution schema</label>
+              <textarea class="form-control" name="solution_schema" id="sol_schema" rows="10" v-model="solution_schema"></textarea>
+
               <div class="d-flex mt-3">
                 <button class="btn btn-secondary" @click="page--">Back</button>
                 <button class="btn btn-primary ms-auto" @click="page++">Next</button>
