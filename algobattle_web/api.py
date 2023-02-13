@@ -337,52 +337,6 @@ def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr
 
 
 # *******************************************************************************
-# * Config
-# *******************************************************************************
-
-
-@admin.post("/config/create")
-@autocommit
-def add_config(*, db: Session = Depends(get_db), file: UploadFile = File()) -> Config:
-    db_file = DbFile.create_from(file)
-    return Config(db, db_file)
-
-
-@router.get("/config/{id}/file")
-@autocommit
-def get_config(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
-    config = unwrap(db.get(Config, id))
-    config.assert_visible(user)
-    return config.file.response()
-
-
-class ConfigEdit(BaseSchema):
-    id: ID
-    name: str | Missing = missing
-
-
-@admin.post("/config/{id}/edit")
-@autocommit
-def edit_config(
-    *,
-    db: Session = Depends(get_db),
-    id: ID,
-    file: UploadFile = File(),
-) -> Config:
-    config = unwrap(db.get(Config, id))
-    config.file.attach(file)
-    return config
-
-
-@admin.post("/config/{id}/delete")
-@autocommit
-def delete_config(*, db: Session = Depends(get_db), id: ID) -> bool:
-    config = unwrap(db.get(Config, id))
-    db.delete(config)
-    return True
-
-
-# *******************************************************************************
 # * Problem
 # *******************************************************************************
 
@@ -470,30 +424,6 @@ def add_problem(*, db: Session = Depends(get_db),
     return url_encode(f"/problems/{prob.context.name}/{prob.name}")
 
 
-@router.get("/problem/{id}/file")
-@autocommit
-async def get_problemfile(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
-    problem = unwrap(Problem.get(db, id))
-    problem.assert_visible(user)
-    return problem.file.response()
-
-
-@router.get("/problem/{id}/description")
-@autocommit
-async def get_desc(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
-    problem = unwrap(Problem.get(db, id))
-    problem.assert_visible(user)
-    return unwrap(problem.description).response()
-
-
-@router.get("/problem/{id}/image")
-@autocommit
-async def get_image(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
-    problem = unwrap(Problem.get(db, id))
-    problem.assert_visible(user)
-    return unwrap(problem.image).response()
-
-
 class ProblemEdit(BaseSchema):
     name: str | Missing = missing
     context: ID | Missing = missing
@@ -516,9 +446,6 @@ async def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEd
             setattr(problem, key, val)
     if present(edit.file):
         problem.file.attach(edit.file)
-    if present(edit.config):
-        unwrap(db.get(Config, edit.config))
-        problem.config_id = edit.config
     if present(edit.description):
         problem.attach_optional("description", edit.description)
     if present(edit.image):
@@ -559,14 +486,6 @@ def add_program(
     problem.assert_visible(user)
     file = DbFile.create_from(data.file)
     return Program(db, data.name, team, data.role, file, problem)
-
-
-@router.get("/program/{id}/file")
-@autocommit
-def get_program_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
-    program = unwrap(db.get(Program, id))
-    program.assert_visible(user)
-    return program.file.response()
 
 
 class ProgramEdit(BaseSchema):
@@ -626,14 +545,6 @@ async def upload_docs(*, db: Session = Depends(get_db), user: User = Depends(cur
     else:
         docs.file.attach(file)
         return docs
-
-
-@router.get("/documentation/{id}/file")
-@autocommit
-async def get_docs_file(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
-    docs = unwrap(db.get(Documentation, id))
-    docs.assert_visible(user)
-    return docs.file.response()
 
 
 @router.post("/documentation/{id}/delete")
@@ -730,14 +641,6 @@ def delete_schedule(*, db: Session = Depends(get_db), id: ID) -> bool:
     match = unwrap(db.get(ScheduledMatch, id))
     db.delete(match)
     return True
-
-
-@router.get("/match/result/{id}/logs")
-@autocommit
-async def get_match_logs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID) -> FileResponse:
-    result = unwrap(db.get(MatchResult, id))
-    result.assert_visible(user)
-    return unwrap(result.logs).response()
 
 
 @admin.post("/match/result/{id}/delete")
