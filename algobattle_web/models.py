@@ -2,7 +2,7 @@
 from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
-from typing import Any, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Callable, Concatenate, ParamSpec, Sequence, Type, TypeVar
+from typing import Any, Iterable, Literal, Mapping, Self, SupportsFloat, cast, overload, Annotated, AsyncIterable, Callable, Concatenate, ParamSpec, Sequence, Type, TypeVar
 from enum import Enum
 from uuid import UUID, uuid4
 from functools import partial
@@ -438,7 +438,7 @@ class Config(Base, unsafe_hash=True):
 
 
 class Problem(Base, unsafe_hash=True):
-    name: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str]
     context: Mapped[Context] = relationship()
     context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
     file: Mapped[DbFile]
