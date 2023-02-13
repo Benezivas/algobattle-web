@@ -78,7 +78,7 @@ const app = createApp({
             }
             const response = await send_form("problem/create", data)
             if (response.ok) {
-                window.location.href(await response.text())
+                window.location.href = await response.text()
             } else {
                 this.error = "server"
             }
