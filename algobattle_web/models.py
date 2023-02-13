@@ -9,6 +9,7 @@ from functools import partial
 from inspect import iscoroutinefunction, signature
 import json
 from pathlib import Path
+from urllib.parse import quote as urlencode
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
@@ -142,6 +143,8 @@ class DbFile(SqlFile):
 
     class Schema(BaseSchema, ABC):
         name: str
+        location: str
+        type: str | None = None
 
         @classmethod
         def __get_validators__(cls):
@@ -152,8 +155,8 @@ class DbFile(SqlFile):
             if isinstance(value, DbFile.Schema):
                 return value
             elif isinstance(value, DbFile):
-                name = value.original_filename
-                return cls(name=name)
+                url = f"/api/files/{urlencode(value.path)}"
+                return cls(name=value.original_filename, location=url, type=value.content_type)
             else:
                 raise TypeError
 

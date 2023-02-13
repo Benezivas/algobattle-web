@@ -34,6 +34,7 @@ from algobattle_web.models import (
 )
 from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present
 from algobattle_web.dependencies import curr_user, check_if_admin
+from algobattle_web.config import SERVER_CONFIG
 from algobattle.util import TempDir
 from algobattle.problem import Problem as AlgProblem
 
@@ -51,6 +52,22 @@ class SchemaRoute(APIRoute):
 
 router = APIRouter(prefix="/api", tags=["api"], route_class=SchemaRoute)
 admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)], route_class=SchemaRoute)
+
+
+# *******************************************************************************
+# * Files
+# *******************************************************************************
+
+
+@router.get("/files/{file_type}/{location}")
+async def get_file(file_type: str, location: str) -> FileResponse:
+    try:
+        split = location.split("-")
+        path = SERVER_CONFIG.storage_path / file_type / location
+        return FileResponse(path, filename=split[-1], content_disposition_type="inline")
+    except:
+        raise HTTPException(400)
+
 
 # *******************************************************************************
 # * User
