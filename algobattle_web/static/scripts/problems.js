@@ -81,9 +81,6 @@ app.component("Problem", {
             const name = encodeURIComponent(this.problem.name)
             return `/problems/${context}/${name}`
         },
-        image_url() {
-            return `/api/problem/${this.problem.id}/image`
-        },
     },
 })
 
