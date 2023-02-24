@@ -20,12 +20,12 @@
             <strong>Problem</strong>
           </li>
           <li :class="{active: page == 1, set: page > 1}">
-            <i class="bi bi-journal-text progress-icon"></i>
-            <strong>Documentation</strong>
-          </li>
-          <li :class="{active: page == 2, set: page > 2}">
             <i class="bi bi-gear progress-icon"></i>
             <strong>Settings</strong>
+          </li>
+          <li :class="{active: page == 2, set: page > 2}">
+            <i class="bi bi-journal-text progress-icon"></i>
+            <strong>Documentation</strong>
           </li>
           <li :class="{active: page == 3, set: page > 3}">
             <i class="bi bi-image progress-icon"></i>
@@ -57,31 +57,7 @@
           </form>
 
 
-          <form v-if="page == 1" id="docs_form" ref="docs_form" class="card-body" @submit.prevent="next('docs_form')">
-            <h2 class="card-tile">Documentation</h2>
-            <div class="mb-3">
-              <label for="prob_name" class="form-label">Name</label>
-              <input type="text" class="form-control w-em" name="name" id="prob_name" v-model="name" required/>
-            </div>
-            <div class="mb-3">
-              <label for="desc_file" class="form-label">Description file</label>
-              <input type="file" name="description" class="form-control w-em" id="desc_file"/>
-            </div>
-            <div class="mb-3">
-              <label for="prob_schema" class="form-label">Problem schema</label>
-              <textarea class="form-control" name="problem_schema" id="prob_schema" rows="10" v-model="problem_schema"></textarea>
-            </div>
-            <label for="sol_schema" class="form-label">Solution schema</label>
-            <textarea class="form-control" name="solution_schema" id="sol_schema" rows="10" v-model="solution_schema"></textarea>
-
-            <div class="d-flex mt-3">
-              <button class="btn btn-secondary" @click="page--">Back</button>
-              <button class="btn btn-primary ms-auto" type="submit">Next</button>
-            </div>
-          </form>
-
-
-          <form v-if="page == 2" id="settings_form" ref="settings_form" class="card-body" @submit.prevent="next('settings_form')">
+          <form v-if="page == 1" id="settings_form" ref="settings_form" class="card-body" @submit.prevent="next('settings_form')">
             <h2 class="card-tile">Settings</h2>
             <div class="mb-3">
               <label for="context_sel" class="form-label">Context</label>
@@ -104,6 +80,30 @@
               <input type="datetime-local" name="end" class="form-control w-em" id="end_time"/>
             </div>
           
+            <div class="d-flex mt-3">
+              <button class="btn btn-secondary" @click="page--">Back</button>
+              <button class="btn btn-primary ms-auto" type="submit">Next</button>
+            </div>
+          </form>
+
+
+          <form v-if="page == 2" id="docs_form" ref="docs_form" class="card-body" @submit.prevent="next('docs_form')">
+            <h2 class="card-tile">Documentation</h2>
+            <div class="mb-3">
+              <label for="prob_name" class="form-label">Name</label>
+              <input type="text" class="form-control w-em" name="name" id="prob_name" v-model="name" required/>
+            </div>
+            <div class="mb-3">
+              <label for="desc_file" class="form-label">Description file</label>
+              <input type="file" name="description" class="form-control w-em" id="desc_file"/>
+            </div>
+            <div class="mb-3">
+              <label for="prob_schema" class="form-label">Problem schema</label>
+              <textarea class="form-control" name="problem_schema" id="prob_schema" rows="10" v-model="problem_schema"></textarea>
+            </div>
+            <label for="sol_schema" class="form-label">Solution schema</label>
+            <textarea class="form-control" name="solution_schema" id="sol_schema" rows="10" v-model="solution_schema"></textarea>
+
             <div class="d-flex mt-3">
               <button class="btn btn-secondary" @click="page--">Back</button>
               <button class="btn btn-primary ms-auto" type="submit">Next</button>
