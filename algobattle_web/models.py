@@ -468,14 +468,6 @@ class Problem(Base, unsafe_hash=True):
         solution_schema: str | None
         colour: Color
 
-    @classmethod
-    def get(cls, db: Session, identifier: ID | str) -> Self | None:
-        """Queries the database for the problem with the given id or name."""
-        if isinstance(identifier, UUID):
-            return db.get(cls, identifier)
-        else:
-            return db.query(cls).filter(cls.name == identifier).first()
-
     def visible(self, user: User) -> bool:
         if user.is_admin or self.start is None:
             return True
