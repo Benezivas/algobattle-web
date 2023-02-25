@@ -56,6 +56,9 @@ const app = createApp({
             }
         },
         next(key) {
+            if (this.error != null) {
+                return
+            }
             this[key] = new FormData(this.$refs[key])
             this.page++
         },
