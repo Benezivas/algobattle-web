@@ -21,6 +21,11 @@ const app = createApp({
             problem_schema: null,
             solution_schema: null,
 
+            img_file: null,
+            img_alt: "",
+            short_desc: null,
+            color: "#000000",
+
             file_form: null,
             docs_form: null,
             settings_form: null,
@@ -74,6 +79,13 @@ const app = createApp({
                 this.error = null
             }
         },
+        file_change(event) {
+            const files = event.target.files || event.dataTransfer.files
+            if (!files.length) {
+                return
+            }
+            this.img_file = files[0]
+        },
         async send_all(event) {
             if (this.page != 3) {
                 return
@@ -103,11 +115,12 @@ const app = createApp({
         }
     },
     computed: {
+        img_url() {
+            return URL.createObjectURL(this.img_file)
+        }
     },
 })
 app.config.compilerOptions.delimiters = ["${", "}"]
-
-
 
 
 app.mount("#app")
