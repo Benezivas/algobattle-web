@@ -145,6 +145,7 @@ class DbFile(SqlFile):
         name: str
         location: str
         type: str | None = None
+        alt_text: str = ""
 
         @classmethod
         def __get_validators__(cls):
@@ -156,7 +157,7 @@ class DbFile(SqlFile):
                 return value
             elif isinstance(value, DbFile):
                 url = f"/api/files/{urlencode(value.path)}"
-                return cls(name=value.original_filename, location=url, type=value.content_type)
+                return cls(name=value.original_filename, location=url, type=value.content_type, alt_text=value.get("alt_text", ""))
             else:
                 raise TypeError
 

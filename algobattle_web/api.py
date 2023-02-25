@@ -383,6 +383,7 @@ def add_problem(*, db: Session = Depends(get_db),
         start: datetime | None = Form(None),
         end: datetime | None = Form(None),
         image: UploadFile | None = File(None),
+        alt_text: str = Form(""),
         short_description: str | None = Form(None),
         colour: Color = Form(Color("#ffffff")),
     ) -> str:
@@ -403,7 +404,7 @@ def add_problem(*, db: Session = Depends(get_db),
     _config = DbFile.create_from(config)
 
     if image is not None:
-        _image = DbFile.create_from(image)
+        _image = DbFile.create_from(image, alt_text=alt_text)
     else:
         _image = None
 
