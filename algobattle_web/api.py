@@ -1,7 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime
 from typing import Any, Callable, cast
-from urllib.parse import quote as url_encode
 
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
@@ -427,7 +426,7 @@ def add_problem(*, db: Session = Depends(get_db),
         db.commit()
     except IntegrityError as e:
         raise ValueTaken("name", name) from e
-    return url_encode(f"/problems/{prob.context.name}/{prob.name}")
+    return f"/problems/{prob.context.name}/{prob.name}"
 
 
 class ProblemEdit(BaseSchema):
