@@ -61,10 +61,17 @@
             <h2 class="card-tile">Settings</h2>
             <div class="mb-3">
               <label for="context_sel" class="form-label">Context</label>
-              <select class="form-select w-em" id="context_sel" name="context" required>
+              <select class="form-select w-em" id="context_sel" name="context" required v-model="context" @change="check_name">
                 <option v-for="(context, id) in store.contexts" :value="id">${context.name}</option>
               </select>
               <div class="invalid-feedback">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="prob_name" class="form-label">Name</label>
+              <input type="text" class="form-control w-em" name="name" id="prob_name" v-model="name" required @input="check_name" :class="{'is-invalid': error == 'name'}"/>
+              <div class="invalid-feedback">
+                A problem with this name already exists in this context.
               </div>
             </div>
             <div class="mb-3">
@@ -89,10 +96,6 @@
 
           <form v-if="page == 2" id="docs_form" ref="docs_form" class="card-body" @submit.prevent="next('docs_form')">
             <h2 class="card-tile">Documentation</h2>
-            <div class="mb-3">
-              <label for="prob_name" class="form-label">Name</label>
-              <input type="text" class="form-control w-em" name="name" id="prob_name" v-model="name" required/>
-            </div>
             <div class="mb-3">
               <label for="desc_file" class="form-label">Description file</label>
               <input type="file" name="description" class="form-control w-em" id="desc_file"/>

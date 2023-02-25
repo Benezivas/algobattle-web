@@ -1,5 +1,5 @@
 import { createApp, reactive } from "vue"
-import { send_form, send_request, fmt_date, remove_unchanged } from "base"
+import { send_form, send_get } from "base"
 
 
 const store = reactive({
@@ -16,6 +16,8 @@ const app = createApp({
             error: null,
 
             name: null,
+            context: null,
+
             problem_schema: null,
             solution_schema: null,
 
@@ -48,6 +50,7 @@ const app = createApp({
                 this.solution_schema = data.solution_schema
                 this.error = null
                 this.page = 1
+                this.check_name()
             } else {
                 this.error = "file"
             }
@@ -55,6 +58,18 @@ const app = createApp({
         next(key) {
             this[key] = new FormData(this.$refs[key])
             this.page++
+        },
+        async check_name() {
+            const context = store.contexts[this.context]
+            if (context == null) {
+                return
+            }
+            const response = await send_get(`problem/${context.name}/${this.name}`)
+            if (response.ok) {
+                this.error = "name"
+            } else {
+                this.error = null
+            }
         },
         async send_all(event) {
             if (this.page != 3) {

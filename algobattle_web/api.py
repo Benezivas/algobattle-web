@@ -364,6 +364,11 @@ def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None)
         return unwrap(db.get(Problem, problem_id))
 
 
+@admin.get("/problem/{context}/{problem}", response_model=Problem.Schema)
+def get_problem(*, db = Depends(get_db), context: str, problem: str):
+    return unwrap(db.scalars(select(Problem).join(Context).where(Problem.name == problem, Context.name == context)).unique().first())
+
+
 @admin.post("/problem/create")
 @autocommit
 def add_problem(*, db: Session = Depends(get_db), 
@@ -573,7 +578,7 @@ class ScheduledMatchCreate(BaseSchema):
 @admin.post("/match/schedule/create")
 @autocommit
 def create_schedule(*, db: Session = Depends(get_db), data: ScheduledMatchCreate, background_tasks: BackgroundTasks) -> ScheduledMatch:
-    problem = unwrap(Problem.get(db, data.problem))
+    problem = unwrap(db.get(Problem, data.problem))
     config = unwrap(db.get(Config, data.config)) if data.config is not None else None
     schedule = ScheduledMatch(db, data.time, problem, config, data.name, data.points)
     for team_id, info in data.participants.items():
