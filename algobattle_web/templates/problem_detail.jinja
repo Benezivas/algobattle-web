@@ -1,0 +1,52 @@
+{% extends "base.jinja" %}
+{% block content %}
+
+<script src="/static/scripts/problem_detail.js" type="module"></script>
+<script>
+  const problem = {{problem | tojson}}
+</script>
+
+
+<div id="app" v-cloak>
+  <nav id="navbar" class="navbar bg-body-tertiary px-3 mb-3 sticky-top" style="top: 62px">
+    <a class="navbar-brand" href="#">${problem.name}</a>
+    <ul class="nav nav-pills">
+      <li v-if="problem.description" class="nav-item">
+        <a class="nav-link" href="#description">Description</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#details">Details</a>
+      </li>
+      <li v-if="problem.problem_schema" class="nav-item">
+        <a class="nav-link" href="#problem_schema">Problem schema</a>
+      </li>
+      <li v-if="problem.solution_schema" class="nav-item">
+        <a class="nav-link" href="#solution_schema">Solution schema</a>
+      </li>
+    </ul>
+  </nav>
+  <div data-bs-spy="scroll" data-bs-target="#navbar" data-bs-root-margin="0px 0px -40%" data-bs-smooth-scroll="true" class="bg-body-tertiary p-3 rounded-2" tabindex="0">
+    <img v-if="problem.image" :src="problem.image.location" :alt="problem.image.alt_text" class="object-fit-cover border rounded mb-4" style="width: 100%;">
+    <template v-if="problem.description">
+      <h4 id="description">Description</h4>
+      <p>
+        EMBEDDED DESC
+      </p>
+    </template>
+    <h4 id="details">Details</h4>
+    <p>
+      desc
+    </p>
+    <template v-if="problem.problem_schema">
+      <h4 id="problem_schema">Problem schema</h4>
+      <pre><code>${problem.problem_schema}</code></pre>
+    </template>
+    <template v-if="problem.solution_schema">
+      <h4 id="solution_schema">Solution schema</h4>
+      <pre><code>${problem.solution_schema}</code></pre>
+    </template>
+  </div>
+</div>
+
+
+{% endblock %}
