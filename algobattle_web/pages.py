@@ -108,7 +108,22 @@ def problems_details(*, db = Depends(get_db), user = Depends(curr_user), context
     context = unwrap(db.scalars(select(Context).filter(Context.name == context_name)).unique().first())
     problem = unwrap(db.scalars(select(Problem).filter(Problem.name == problem_name, Problem.context_id == context.id)).unique().first())
     problem.assert_visible(user)
-    return "problem_detail.jinja", {"problem": problem.encode()}
+    if problem.description is None:
+        desc = None
+    else:
+        try:
+            match problem.description.content_type:
+                case "text/plain":
+                    with problem.description.open("r") as file:
+                        desc = f"<p>{file.read()}</p>"
+                case "text/html":
+                    with problem.description.open("r") as file:
+                        desc = file.read()
+                case _:
+                    desc = "__DOWNLOAD_BUTTON__"
+        except:
+            desc = "__DOWNLOAD_BUTTON__"
+    return "problem_detail.jinja", {"problem": problem.encode(), "description": desc}
 
 
 @admin.get("/problems/create")
