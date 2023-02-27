@@ -19,6 +19,7 @@ from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, Session, DeclarativeBase, registry, MappedAsDataclass
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable
+from sqlalchemy_media.typing_ import FileLike
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
 from fastapi.encoders import jsonable_encoder
@@ -140,6 +141,10 @@ class DbFile(SqlFile):
     def response(self) -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
         return FileResponse(Path(SERVER_CONFIG.storage_path) / self.path, filename=self.original_filename, content_disposition_type="inline")
+
+    def open(self, mode: str = "rb") -> FileLike:
+        """Opens the underlying file object."""
+        return self.get_store().open(self.path, mode)
 
     class Schema(BaseSchema, ABC):
         name: str
