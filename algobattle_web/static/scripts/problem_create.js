@@ -102,7 +102,7 @@ const app = createApp({
             }
             const file_keys = ["file", "description", "config", "image"]
             for (const key of file_keys) {
-                if (!data.get(key)) {
+                if (data.get(key).size == 0) {
                     data.delete(key)
                 }
             }
