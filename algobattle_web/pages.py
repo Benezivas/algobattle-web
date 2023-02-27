@@ -1,9 +1,11 @@
 "Module specifying the regular user pages."
-from typing import Collection
+from typing import Collection, cast
+
 from fastapi import APIRouter, Depends, Form, status, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select, func
+from markdown import markdown
 
 from algobattle_web.models import (
     ID,
@@ -119,6 +121,9 @@ def problems_details(*, db = Depends(get_db), user = Depends(curr_user), context
                 case "text/html":
                     with problem.description.open("r") as file:
                         desc = file.read()
+                case "text/markdown":
+                    with problem.description.open("r") as file:
+                        desc = markdown(cast(str, file.read()))
                 case _:
                     desc = "__DOWNLOAD_BUTTON__"
         except:

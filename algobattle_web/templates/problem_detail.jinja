@@ -28,21 +28,23 @@
   <div data-bs-spy="scroll" data-bs-target="#navbar" data-bs-root-margin="0px 0px -40%" data-bs-smooth-scroll="true" class="bg-body-tertiary p-3 rounded-2" tabindex="0">
     <img v-if="problem.image" :src="problem.image.location" :alt="problem.image.alt_text" class="object-fit-cover border rounded mb-4" style="width: 100%;">
     <template v-if="problem.description">
-      <h4 id="description">Description</h4>
-      <p>
-        EMBEDDED DESC
-      </p>
+      <h4 id="description" class="mt-5">Description</h4>
+      {% if description == "__DOWNLOAD_BUTTON__" %}
+        <a role="button" class="btn btn-primary btn-sm" :href="problem.description.location" title="Download file">Download description file <i class="bi bi-download"></i></a>
+      {% elif description is not None %}
+        {{ description }}
+      {% endif %}
     </template>
-    <h4 id="details">Details</h4>
+    <h4 id="details" class="mt-5">Details</h4>
     <p>
       desc
     </p>
     <template v-if="problem.problem_schema">
-      <h4 id="problem_schema">Problem schema</h4>
+      <h4 id="problem_schema" class="mt-5">Problem schema</h4>
       <pre><code>${problem.problem_schema}</code></pre>
     </template>
     <template v-if="problem.solution_schema">
-      <h4 id="solution_schema">Solution schema</h4>
+      <h4 id="solution_schema" class="mt-5">Solution schema</h4>
       <pre><code>${problem.solution_schema}</code></pre>
     </template>
   </div>
