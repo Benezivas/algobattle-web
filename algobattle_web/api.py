@@ -59,11 +59,16 @@ admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)], route_
 
 
 @router.get("/files/{file_type}/{location}")
-async def get_file(file_type: str, location: str, disposition: Literal["inline", "attachment"] = "attachment") -> FileResponse:
+async def get_file(
+        file_type: str,
+        location: str,
+        filename: str | None = None,
+        media_type: str | None = None,
+        disposition: Literal["inline", "attachment"] = "attachment"
+    ) -> FileResponse:
     try:
-        split = location.split("-")
         path = SERVER_CONFIG.storage_path / file_type / location
-        return FileResponse(path, filename=split[-1], content_disposition_type=disposition)
+        return FileResponse(path, filename=filename, media_type=media_type, content_disposition_type=disposition)
     except:
         raise HTTPException(400)
 
