@@ -1,6 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime
-from typing import Any, Callable, cast
+from typing import Any, Callable, Literal, cast
 
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
@@ -59,11 +59,11 @@ admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)], route_
 
 
 @router.get("/files/{file_type}/{location}")
-async def get_file(file_type: str, location: str) -> FileResponse:
+async def get_file(file_type: str, location: str, disposition: Literal["inline", "attachment"] = "attachment") -> FileResponse:
     try:
         split = location.split("-")
         path = SERVER_CONFIG.storage_path / file_type / location
-        return FileResponse(path, filename=split[-1], content_disposition_type="inline")
+        return FileResponse(path, filename=split[-1], content_disposition_type=disposition)
     except:
         raise HTTPException(400)
 
