@@ -2,7 +2,7 @@
 from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
-from typing import Any, Iterable, Literal, Mapping, Self, SupportsFloat, cast, overload, Annotated, AsyncIterable, Callable, Concatenate, ParamSpec, Sequence, Type, TypeVar
+from typing import Any, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Callable, Concatenate, ParamSpec, Sequence, Type, TypeVar
 from enum import Enum
 from uuid import UUID, uuid4
 from functools import partial
