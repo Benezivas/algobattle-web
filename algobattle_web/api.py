@@ -63,12 +63,11 @@ async def get_file(
         file_type: str,
         location: str,
         filename: str | None = None,
-        media_type: str | None = None,
         disposition: Literal["inline", "attachment"] = "attachment"
     ) -> FileResponse:
     try:
         path = SERVER_CONFIG.storage_path / file_type / location
-        return FileResponse(path, filename=filename, media_type=media_type, content_disposition_type=disposition)
+        return FileResponse(path, filename=filename, content_disposition_type=disposition)
     except:
         raise HTTPException(400)
 
