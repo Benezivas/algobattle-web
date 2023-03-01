@@ -2,30 +2,26 @@
 from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
-from typing import Any, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Callable, Concatenate, ParamSpec, Sequence, Type, TypeVar
+from typing import IO, Iterable, Any
+from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Sequence
 from enum import Enum
 from uuid import UUID, uuid4
-from functools import partial
-from inspect import iscoroutinefunction, signature
-import json
 from pathlib import Path
 from urllib.parse import quote as urlencode
+from shutil import copyfileobj
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey, Column, select, String, create_engine, TypeDecorator, Unicode, DateTime
+from sqlalchemy import Table, ForeignKey, Column, select, String, create_engine, DateTime
+from sqlalchemy.event import listens_for
 from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, Session, DeclarativeBase, registry, MappedAsDataclass
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy_media import StoreManager, FileSystemStore, File as SqlFile, Attachable
-from sqlalchemy_media.typing_ import FileLike
-from fastapi import UploadFile
 from fastapi.responses import FileResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import validator
 from pydantic.color import Color
-from starlette.datastructures import UploadFile as StarletteFile
 
 from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.config import SERVER_CONFIG
@@ -36,148 +32,102 @@ ID = Annotated[UUID, mapped_column(default=uuid4)]
 
 engine = create_engine(SERVER_CONFIG.database_url, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autoflush=False, bind=engine)
-StoreManager.register("fs", partial(FileSystemStore, SERVER_CONFIG.storage_path, ""), True)
 
 
 async def get_db() -> AsyncIterable[Session]:
-    with SessionLocal() as db, StoreManager(db):
+    with SessionLocal() as db:
         yield db
 
 
-P = ParamSpec("P")
-R = TypeVar("R")
+class File(MappedAsDataclass, DeclarativeBase):
+    registry = registry(
+        type_annotation_map={
+            datetime: DateTime,
+        }
+    )
+    __tablename__ = "files"
 
+    id: Mapped[ID] = mapped_column(primary_key=True, init=False, default_factory=uuid4)
+    file: InitVar[BinaryIO | Path]
+    filename: Mapped[str]
+    media_type: Mapped[str] = mapped_column(default="application/octet-stream")
+    alt_text: Mapped[str] | None = mapped_column(default=None)
+    timestamp: Mapped[datetime] = mapped_column(default_factory=datetime.now)
+    size: Mapped[int] = mapped_column(init=False)
 
-def autocommit(fn: Callable[P, R]) -> Callable[P, R]:
-    """Automatically commits the database transaction."""
-    if iscoroutinefunction(fn):
-        async def inner_async(*args: P.args, **kwargs: P.kwargs) -> R:
-            db = kwargs["db"]
-            assert isinstance(db, Session)
-            with StoreManager(db):
-                res = await fn(*args, **kwargs)
-                db.commit()
-                return res
-        inner_async.__annotations__ = fn.__annotations__
-        inner_async.__signature__ = signature(fn)
-        return cast(Callable[P, R], inner_async)
-    else:
-        def inner(*args: P.args, **kwargs: P.kwargs) -> R:
-            db = kwargs["db"]
-            assert isinstance(db, Session)
-            with StoreManager(db):
-                res = fn(*args, **kwargs)
-                db.commit()
-                return res
-        inner.__annotations__ = fn.__annotations__
-        inner.__signature__ = signature(fn)
-        return inner
+    def __post_init__(self, file: BinaryIO | Path):
+        self._file = file
 
+    @property
+    def path(self) -> Path:
+        name = str(self.id)
+        if self.extension is not None:
+            name += f".{self.extension}"
+        return SERVER_CONFIG.storage_path / name
 
-class Json(TypeDecorator[Any]):
-    impl = Unicode
+    @property
+    def extension(self) -> str | None:
+        l = self.filename.split(".")
+        if l:
+            return l[-1]
 
-    def process_bind_param(self, value, dialect):
-        return json.dumps(value)
+    def remove(self) -> None:
+        """Removes the associated file from disk."""
+        self.path.unlink()
 
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return None
-
-        return json.loads(value)
-
-class DbFile(SqlFile):
-    def attach(
-        self,
-        attachable: Attachable | UploadFile,
-        content_type: str | None = None,
-        original_filename: str | None = None,
-        extension: str | None = None,
-        store_id: str | None = None,
-        overwrite: bool = False,
-        suppress_pre_process: bool = False,
-        suppress_validation: bool = False,
-        **kwargs,
-    ) -> Self:
-        if isinstance(attachable, StarletteFile):
-            attachable, original_filename = attachable.file, attachable.filename
-        return super().attach(
-            attachable,
-            content_type,   # type: ignore
-            original_filename,   # type: ignore
-            extension,  # type: ignore
-            store_id,   # type: ignore
-            overwrite,
-            suppress_pre_process,
-            suppress_validation,
-            **kwargs,
-        )
-
-    @classmethod
-    def create_from(    # type: ignore
-        cls,
-        attachable: Attachable | UploadFile,
-        content_type: str | None = None,
-        original_filename: str | None = None,
-        extension: str | None = None,
-        store_id: str | None = None,
-        overwrite: bool = False,
-        suppress_pre_process: bool = False,
-        suppress_validation: bool = False,
-        **kwargs,
-    ) -> Self:
-        return cast(Self, super().create_from(
-            attachable,
-            content_type,
-            original_filename,
-            extension,
-            store_id,
-            overwrite,
-            suppress_pre_process,
-            suppress_validation,
-            **kwargs,
-        ))
+    def save(self) -> None:
+        """Saves the associated file to disk."""
+        if hasattr(self, "_file"):
+            if isinstance(self._file, BinaryIO):
+                with open(self.path, "wb+") as target:
+                    copyfileobj(self._file, target)
+            else:
+                self._file.rename(self.path)
+            del self._file
     
-    def response(self) -> FileResponse:
+    def response(self, content_disposition: Literal["attachment", "inline"] = "attachment") -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
-        return FileResponse(Path(SERVER_CONFIG.storage_path) / self.path, filename=self.original_filename, content_disposition_type="inline")
+        return FileResponse(self.path, filename=self.filename, content_disposition_type=content_disposition, media_type=self.media_type)
 
-    def open(self, mode: str = "rb") -> FileLike:
+    def open(self, mode: str = "rb") -> IO[Any]:
         """Opens the underlying file object."""
-        return self.get_store().open(self.path, mode)
+        return open(self.path, mode)
 
     class Schema(BaseSchema, ABC):
         name: str
         location: str
-        media_type: str | None = None
-        alt_text: str = ""
+        media_type: str
+        timestamp: datetime
+        size: int
+        alt_text: str | None = None
 
         @classmethod
         def __get_validators__(cls):
             yield cls.validate
 
         @classmethod
-        def validate(cls, value: Any) -> "DbFile.Schema":
-            if isinstance(value, DbFile.Schema):
+        def validate(cls, value: Any) -> "File.Schema":
+            if isinstance(value, File.Schema):
                 return value
-            elif isinstance(value, DbFile):
-                url = f"/api/files/{urlencode(value.path)}?filename={urlencode(value.original_filename)}"
-                if value.content_type is not None:      # type: ignore
-                    url += f"&media_type={urlencode(value.content_type)}"
-                return cls(name=value.original_filename, location=url, media_type=value.content_type, alt_text=value.get("alt_text", ""))
+            elif isinstance(value, File):
+                url = f"/api/files/{urlencode(str(value.id))}"
+                return cls(name=value.filename, location=url, media_type=value.media_type, alt_text=value.alt_text, timestamp=value.timestamp, size=value.size)
             else:
                 raise TypeError
 
-DbFile.associate_with(Json)
+
+@listens_for(SessionLocal, "deleted_to_detached")
+@listens_for(SessionLocal, "persistent_to_detached")
+@listens_for(SessionLocal, "persistent_to_transient")
+def remove_deleted(db: Session, instance: Any):
+    if isinstance(instance, File):
+        instance.remove()
 
 
-P = ParamSpec("P")
-T = TypeVar("T")
-def with_store_manager(func: Callable[Concatenate[Any, Session, P], T]) -> Callable[Concatenate[Any, Session, P], T]:
-    def inner(obj, db: Session, *args: P.args, **kwargs: P.kwargs) -> T:
-        with StoreManager(db):
-            return func(obj, db, *args, **kwargs)
-    return inner
+@listens_for(SessionLocal, "pending_to_persistent")
+def save_new(db: Session, instance: Any):
+    if isinstance(instance, File):
+        instance.save()
 
 
 @dataclass
@@ -185,7 +135,6 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
     registry = registry(
         type_annotation_map={
             datetime: DateTime,
-            DbFile: Json,
         }
     )
 
@@ -206,7 +155,7 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
         return jsonable_encoder(self.Schema.from_orm(self))
 
     @classmethod
-    def get_all(cls: Type[T], db: Session) -> Sequence[T]:
+    def get_all(cls, db: Session) -> Sequence[Self]:
         """Get all database entries of this type."""
         return db.scalars(select(cls)).unique().all()
 
@@ -241,18 +190,6 @@ class BaseNoID(MappedAsDataclass, DeclarativeBase):
         """Asserts that this model is editable by a given user."""
         if not self.editable(user):
             raise PermissionExcpetion
-
-    def attach_optional(self, attr: str, file: DbFile | UploadFile | None) -> None:
-        """Attaches the file to the attribute."""
-        if file is None:
-            setattr(self, attr, file)
-            return
-        current = getattr(self, attr)
-        if current is None:
-            setattr(self, attr, DbFile.create_from(file))
-        else:
-            assert isinstance(current, DbFile)
-            current.create_from(file)
 
 
 class Base(BaseNoID, unsafe_hash=True):
