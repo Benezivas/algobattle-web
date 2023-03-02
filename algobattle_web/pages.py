@@ -127,7 +127,11 @@ def problems_details(*, db = Depends(get_db), user = Depends(curr_user), context
                     desc = "__DOWNLOAD_BUTTON__"
         except:
             desc = "__DOWNLOAD_BUTTON__"
-    return "problem_detail.jinja", {"problem": problem.encode(), "description": desc}
+    if user.is_admin:
+        contexts = Context.get_all(db)
+    else:
+        contexts = [context]
+    return "problem_detail.jinja", {"problem": problem.encode(), "description": desc, "contexts": encode(contexts)}
 
 
 @admin.get("/problems/create")
