@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 from pathlib import Path
 from urllib.parse import quote as urlencode
 from shutil import copyfileobj, copyfile
+from mimetypes import guess_type as guess_mimetype
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
@@ -65,7 +66,7 @@ class File(RawBase, init=False):
     _new: ClassVar[list["File"]] = []
 
     @overload
-    def __init__(self, file: BinaryIO, filename: str, *, media_type: str = "application/octet-stream", alt_text: str | None = None): ...
+    def __init__(self, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str | None = None): ...
 
     @overload
     def __init__(self, file: "File"): ...
@@ -74,19 +75,29 @@ class File(RawBase, init=False):
     def __init__(self, file: UploadFile, *, alt_text: str | None = None): ...
 
     @overload
-    def __init__(self, file: Path, *, media_type: str = "application/octet-stream", alt_text: str | None = None, move: bool): ...
+    def __init__(self, file: Path, *, media_type: str | None = None, alt_text: str | None = None, move: bool): ...
 
     def __init__(
         self,
         file: "BinaryIO | Path | File | UploadFile",
         filename: str | None = None,
         *,
-        media_type: str = "application/octet-stream",
+        media_type: str | None = None,
         alt_text: str | None = None,
         move: bool = False,
     ) -> None:
         self.id = uuid4()
-        self.media_type = media_type
+
+        if isinstance(file, File):
+            self._file = file.path
+            self._move = False
+            self.filename = file.filename
+            self.media_type = file.media_type
+            self.alt_text = file.alt_text
+            self.timestamp = file.timestamp
+            super().__init__()
+            return
+
         self.alt_text = alt_text
         self.timestamp = datetime.now()
         if isinstance(file, BinaryIO):
@@ -98,17 +109,14 @@ class File(RawBase, init=False):
             self._file = file
             self._move = move
             self.filename = file.name
-        elif isinstance(file, File):
-            self._file = file.path
-            self._move = False
-            self.filename = file.filename
-            self.media_type = file.media_type
-            self.alt_text = file.alt_text
-            self.timestamp = file.timestamp
         else:
             self._file = file.file
             self.filename = file.filename
-            self.media_type = file.content_type
+            media_type = media_type or file.content_type
+        if media_type:
+            self.media_type = media_type
+        else:
+            self.media_type = guess_mimetype(self.filename)[0] or "application/octet-stream"
         super().__init__()
 
 
@@ -191,9 +199,8 @@ def remove_deleted(db: Session, instance: Any):
 
 @listens_for(SessionLocal, "after_rollback")
 def remove_rollbacked(db: Session):
-    for file in File._new:
+    for file in File._new.copy():
         file.remove()
-    File._new = []
 
 
 @listens_for(SessionLocal, "pending_to_persistent")
