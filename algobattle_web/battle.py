@@ -12,7 +12,7 @@ from algobattle.match import Match
 from algobattle.util import TempDir
 from algobattle.problem import Problem
 from algobattle.cli import Config
-from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, DbFile, Session, SessionLocal
+from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, SessionLocal
 from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.util import unwrap
 

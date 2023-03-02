@@ -2,6 +2,7 @@
 from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
+from tempfile import SpooledTemporaryFile
 from typing import IO, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Sequence
 from enum import Enum
@@ -54,7 +55,7 @@ class File(RawBase, unsafe_hash=True, init=False):
     id: Mapped[ID] = mapped_column(primary_key=True)
     filename: Mapped[str]
     media_type: Mapped[str]
-    alt: Mapped[str | None]
+    alt_text: Mapped[str | None]
     timestamp: Mapped[datetime]
 
     @overload
@@ -81,6 +82,7 @@ class File(RawBase, unsafe_hash=True, init=False):
         self.id = uuid4()
         self.media_type = media_type
         self.alt_text = alt_text
+        self.timestamp = datetime.now()
         if isinstance(file, BinaryIO):
             if filename is None:
                 raise TypeError
@@ -96,6 +98,7 @@ class File(RawBase, unsafe_hash=True, init=False):
             self.filename = file.filename
             self.media_type = file.media_type
             self.alt_text = file.alt_text
+            self.timestamp = file.timestamp
         else:
             self._file = file.file
             self.filename = file.filename
@@ -123,7 +126,7 @@ class File(RawBase, unsafe_hash=True, init=False):
     def save(self) -> None:
         """Saves the associated file to disk."""
         if hasattr(self, "_file"):
-            if isinstance(self._file, BinaryIO):
+            if isinstance(self._file, (BinaryIO, SpooledTemporaryFile)):
                 with open(self.path, "wb+") as target:
                     copyfileobj(self._file, target)
             else:
@@ -157,7 +160,7 @@ class File(RawBase, unsafe_hash=True, init=False):
         def validate(cls, value: Any) -> "File.Schema":
             if isinstance(value, File.Schema):
                 return value
-            elif isinstance(value, "File"):
+            elif isinstance(value, File):
                 url = f"/api/files/{urlencode(str(value.id))}"
                 return cls(
                     id=value.id,
@@ -172,8 +175,8 @@ class File(RawBase, unsafe_hash=True, init=False):
 
 
 @listens_for(SessionLocal, "deleted_to_detached")
-@listens_for(SessionLocal, "persistent_to_detached")
-@listens_for(SessionLocal, "persistent_to_transient")
+#@listens_for(SessionLocal, "persistent_to_detached")
+#@listens_for(SessionLocal, "persistent_to_transient")
 def remove_deleted(db: Session, instance: Any):
     if isinstance(instance, File):
         instance.remove()

@@ -201,8 +201,9 @@ class CreateContext(BaseSchema):
 async def create_context(*, db: Session = Depends(get_db), context: CreateContext) -> Context:
     if db.scalars(select(Context).filter(Context.name == context.name)).unique().first() is not None:
         raise ValueTaken("name", context.name)
+    _context = Context(db, context.name)
     db.commit()
-    return Context(db, context.name)
+    return _context
 
 
 class EditContext(BaseSchema):
@@ -271,8 +272,9 @@ def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
     members = [unwrap(db.get(User, id)) for id in team.members]
     if db.scalars(select(Team).filter(Team.name == team.name, Team.context_id == team.context)).unique().first() is not None:
         raise ValueTaken("name", team.name)
+    _team = Team(db, team.name, context, members)
     db.commit()
-    return Team(db, team.name, context, members)
+    return _team
 
 
 class EditTeam(BaseSchema):
@@ -414,6 +416,7 @@ def add_problem(*, db: Session = Depends(get_db),
     try:
         db.commit()
     except IntegrityError as e:
+        print(e)
         raise ValueTaken("name", name) from e
     return f"/problems/{prob.context.name}/{prob.name}"
 
@@ -482,8 +485,9 @@ def add_program(
     problem = unwrap(db.get(Problem, data.problem))
     problem.assert_visible(user)
     file = DbFile(data.file)
+    prog = Program(db, data.name, team, data.role, file, problem)
     db.commit()
-    return Program(db, data.name, team, data.role, file, problem)
+    return prog
 
 
 class ProgramEdit(BaseSchema):
@@ -538,12 +542,11 @@ async def upload_docs(*, db: Session = Depends(get_db), user: User = Depends(cur
     docs = Documentation.get(db, team, problem)
     if docs is None:
         _file = DbFile(file)
-        db.commit()
-        return Documentation(db, team, problem, _file)
+        docs = Documentation(db, team, problem, _file)
     else:
         docs.file = DbFile(file)
-        db.commit()
-        return docs
+    db.commit()
+    return docs
 
 
 @router.post("/documentation/{id}/delete")

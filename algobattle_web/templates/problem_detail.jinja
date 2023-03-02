@@ -31,7 +31,7 @@
       <h4 id="description" class="mt-5">Description</h4>
       {% if description == "__DOWNLOAD_BUTTON__" %}
         <a role="button" class="btn btn-primary btn-sm" :href="problem.description.location" title="Download file">Download description file <i class="bi bi-download ms-1"></i></a>
-      {% elif description is not None %}
+      {% elif description is not none %}
         {{ description }}
       {% endif %}
     </template>
