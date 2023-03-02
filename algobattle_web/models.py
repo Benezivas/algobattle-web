@@ -10,7 +10,6 @@ from uuid import UUID, uuid4
 from pathlib import Path
 from urllib.parse import quote as urlencode
 from shutil import copyfileobj, copyfile
-from mimetypes import guess_type as guess_mimetype
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
@@ -28,7 +27,7 @@ from pydantic.color import Color
 
 from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.config import SERVER_CONFIG
-from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion
+from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion, guess_mimetype
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
@@ -112,11 +111,12 @@ class File(RawBase, init=False):
         else:
             self._file = file.file
             self.filename = file.filename
-            media_type = media_type or file.content_type
+            if file.content_type != "application/octet-stream":
+                media_type = media_type or file.content_type
         if media_type:
             self.media_type = media_type
         else:
-            self.media_type = guess_mimetype(self.filename)[0] or "application/octet-stream"
+            self.media_type = guess_mimetype(self.filename)
         super().__init__()
 
 
