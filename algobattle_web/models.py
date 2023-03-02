@@ -40,12 +40,15 @@ async def get_db() -> AsyncIterable[Session]:
         yield db
 
 
-class File(MappedAsDataclass, DeclarativeBase, unsafe_hash=True, init=False):
+class RawBase(MappedAsDataclass, DeclarativeBase):
     registry = registry(
         type_annotation_map={
             datetime: DateTime,
         }
     )
+
+
+class File(RawBase, unsafe_hash=True, init=False):
     __tablename__ = "files"
 
     id: Mapped[ID] = mapped_column(primary_key=True)
@@ -68,7 +71,7 @@ class File(MappedAsDataclass, DeclarativeBase, unsafe_hash=True, init=False):
 
     def __init__(
         self,
-        file: BinaryIO | Path | "File" | UploadFile,
+        file: "BinaryIO | Path | File | UploadFile",
         filename: str | None = None,
         *,
         media_type: str = "application/octet-stream",
@@ -139,6 +142,7 @@ class File(MappedAsDataclass, DeclarativeBase, unsafe_hash=True, init=False):
         return open(self.path, mode)
 
     class Schema(BaseSchema, ABC):
+        id: ID
         name: str
         location: str
         media_type: str
@@ -155,13 +159,16 @@ class File(MappedAsDataclass, DeclarativeBase, unsafe_hash=True, init=False):
                 return value
             elif isinstance(value, "File"):
                 url = f"/api/files/{urlencode(str(value.id))}"
-                return cls(name=value.filename, location=url, media_type=value.media_type, alt_text=value.alt_text, timestamp=value.timestamp)
+                return cls(
+                    id=value.id,
+                    name=value.filename,
+                    location=url,
+                    media_type=value.media_type,
+                    alt_text=value.alt_text,
+                    timestamp=value.timestamp
+                )
             else:
                 raise TypeError
-
-
-FileRel = Annotated[File, relationship(cascade="all, delete-orphan")]
-FileID = Annotated[ID, mapped_column("files.id", init=False)]
 
 
 @listens_for(SessionLocal, "deleted_to_detached")
@@ -179,12 +186,8 @@ def save_new(db: Session, instance: Any):
 
 
 @dataclass
-class BaseNoID(MappedAsDataclass, DeclarativeBase):
-    registry = registry(
-        type_annotation_map={
-            datetime: DateTime,
-        }
-    )
+class BaseNoID(RawBase):
+    __abstract__ = True
 
     db: InitVar[Session]
 
@@ -424,21 +427,21 @@ class Team(Base, unsafe_hash=True):
 
 
 class Problem(Base, unsafe_hash=True):
-    file_id: Mapped[FileID] = mapped_column(init=False)
-    config_id: Mapped[FileID] = mapped_column(init=False)
-    description_id: Mapped[FileID] = mapped_column(init=False)
-    image_id: Mapped[FileID] = mapped_column(init=False)
+    file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
+    config_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
+    description_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
+    image_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
 
     name: Mapped[str]
     context: Mapped[Context] = relationship()
     context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
-    file: Mapped[FileRel] = relationship(foreign_keys=(file_id,))
-    config: Mapped[FileRel] = relationship(foreign_keys=(config_id,))
+    file: Mapped[File] = relationship(foreign_keys=file_id, cascade="all, delete-orphan", single_parent=True)
+    config: Mapped[File] = relationship(foreign_keys=config_id, cascade="all, delete-orphan", single_parent=True)
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
-    description: Mapped[FileRel | None] = relationship(default=None, foreign_keys=(description_id))
+    description: Mapped[File | None] = relationship(default=None, foreign_keys=description_id, cascade="all, delete-orphan", single_parent=True)
     short_description: Mapped[str | None] = mapped_column(default=None)
-    image: Mapped[FileRel | None] = relationship(default=None, foreign_keys=(image_id,))
+    image: Mapped[File | None] = relationship(default=None, foreign_keys=image_id, cascade="all, delete-orphan", single_parent=True)
     problem_schema: Mapped[str | None] = mapped_column(default=None)
     solution_schema: Mapped[str | None] = mapped_column(default=None)
     colour: Mapped[str] = mapped_column(default=None)
@@ -478,8 +481,8 @@ class Program(Base, unsafe_hash=True):
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
     role: Mapped[ProgramRole] = mapped_column(String)
-    file: Mapped[FileRel]
-    file_id: Mapped[FileID] = mapped_column(init=False)
+    file: Mapped[File] = relationship(cascade="all, delete-orphan", single_parent=True)
+    file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
     problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"), init=False)
     creation_time: Mapped[datetime] = mapped_column(default_factory=datetime.now)
@@ -502,8 +505,8 @@ class Documentation(Base, unsafe_hash=True):
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
-    file: Mapped[FileRel]
-    file_id: Mapped[ID] = mapped_column(init=False)
+    file: Mapped[File] = relationship(cascade="all, delete-orphan", single_parent=True)
+    file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
 
     __table_args__ = (UniqueConstraint("team_id", "problem_id"),)
 
@@ -556,8 +559,8 @@ class ScheduledMatch(Base, unsafe_hash=True):
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
-    config: Mapped[FileRel | None]
-    config_id: Mapped[FileID | None] = mapped_column(init=False)
+    config: Mapped[File | None] = relationship(cascade="all, delete-orphan", single_parent=True)
+    config_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     participants: Mapped[set[MatchParticipant]] = relationship(init=False, default=set, cascade="all, delete")
     name: Mapped[str] = mapped_column(default="")
     points: Mapped[float] = mapped_column(default=0)
@@ -606,10 +609,10 @@ class MatchResult(Base, unsafe_hash=True):
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id), init=False)
     participants: Mapped[set[ResultParticipant]] = relationship(default=set)
-    config_id: Mapped[FileID] = mapped_column(init=False)
-    config: Mapped[FileRel | None] = relationship(default=None, foreign_keys=config_id)
-    logs_id: Mapped[FileID | None] = mapped_column(init=False)
-    logs: Mapped[FileRel | None] = relationship(default=None, foreign_keys=logs_id)
+    config_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
+    config: Mapped[File | None] = relationship(default=None, foreign_keys=config_id, cascade="all, delete-orphan", single_parent=True)
+    logs_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
+    logs: Mapped[File | None] = relationship(default=None, foreign_keys=logs_id, cascade="all, delete-orphan", single_parent=True)
 
     Status = Literal["complete", "failed", "running"]
 
