@@ -8,7 +8,7 @@ from enum import Enum
 from uuid import UUID, uuid4
 from pathlib import Path
 from urllib.parse import quote as urlencode
-from shutil import copyfileobj
+from shutil import copyfileobj, copyfile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
@@ -18,6 +18,7 @@ from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, Session, DeclarativeBase, registry, MappedAsDataclass
 from sqlalchemy.schema import UniqueConstraint
+from fastapi import UploadFile
 from fastapi.responses import FileResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import validator
@@ -39,7 +40,7 @@ async def get_db() -> AsyncIterable[Session]:
         yield db
 
 
-class File(MappedAsDataclass, DeclarativeBase):
+class File(MappedAsDataclass, DeclarativeBase, unsafe_hash=True, init=False):
     registry = registry(
         type_annotation_map={
             datetime: DateTime,
@@ -47,16 +48,57 @@ class File(MappedAsDataclass, DeclarativeBase):
     )
     __tablename__ = "files"
 
-    id: Mapped[ID] = mapped_column(primary_key=True, init=False, default_factory=uuid4)
-    file: InitVar[BinaryIO | Path]
+    id: Mapped[ID] = mapped_column(primary_key=True)
     filename: Mapped[str]
-    media_type: Mapped[str] = mapped_column(default="application/octet-stream")
-    alt_text: Mapped[str] | None = mapped_column(default=None)
-    timestamp: Mapped[datetime] = mapped_column(default_factory=datetime.now)
-    size: Mapped[int] = mapped_column(init=False)
+    media_type: Mapped[str]
+    alt: Mapped[str | None]
+    timestamp: Mapped[datetime]
 
-    def __post_init__(self, file: BinaryIO | Path):
-        self._file = file
+    @overload
+    def __init__(self, file: BinaryIO, filename: str, *, media_type: str = "application/octet-stream", alt_text: str | None = None): ...
+
+    @overload
+    def __init__(self, file: "File"): ...
+
+    @overload
+    def __init__(self, file: UploadFile, *, alt_text: str | None = None): ...
+
+    @overload
+    def __init__(self, file: Path, *, media_type: str = "application/octet-stream", alt_text: str | None = None, move: bool): ...
+
+    def __init__(
+        self,
+        file: BinaryIO | Path | "File" | UploadFile,
+        filename: str | None = None,
+        *,
+        media_type: str = "application/octet-stream",
+        alt_text: str | None = None,
+        move: bool = False,
+    ) -> None:
+        self.id = uuid4()
+        self.media_type = media_type
+        self.alt_text = alt_text
+        if isinstance(file, BinaryIO):
+            if filename is None:
+                raise TypeError
+            self._file = file
+            self.filename = filename
+        elif isinstance(file, Path):
+            self._file = file
+            self._move = move
+            self.filename = file.name
+        elif isinstance(file, File):
+            self._file = file.path
+            self._move = False
+            self.filename = file.filename
+            self.media_type = file.media_type
+            self.alt_text = file.alt_text
+        else:
+            self._file = file.file
+            self.filename = file.filename
+            self.media_type = file.content_type
+        super().__init__()
+
 
     @property
     def path(self) -> Path:
@@ -82,7 +124,10 @@ class File(MappedAsDataclass, DeclarativeBase):
                 with open(self.path, "wb+") as target:
                     copyfileobj(self._file, target)
             else:
-                self._file.rename(self.path)
+                if self._move:
+                    self._file.rename(self.path)
+                else:
+                    copyfile(self._file, self.path)
             del self._file
     
     def response(self, content_disposition: Literal["attachment", "inline"] = "attachment") -> FileResponse:
@@ -98,7 +143,6 @@ class File(MappedAsDataclass, DeclarativeBase):
         location: str
         media_type: str
         timestamp: datetime
-        size: int
         alt_text: str | None = None
 
         @classmethod
@@ -109,11 +153,15 @@ class File(MappedAsDataclass, DeclarativeBase):
         def validate(cls, value: Any) -> "File.Schema":
             if isinstance(value, File.Schema):
                 return value
-            elif isinstance(value, File):
+            elif isinstance(value, "File"):
                 url = f"/api/files/{urlencode(str(value.id))}"
-                return cls(name=value.filename, location=url, media_type=value.media_type, alt_text=value.alt_text, timestamp=value.timestamp, size=value.size)
+                return cls(name=value.filename, location=url, media_type=value.media_type, alt_text=value.alt_text, timestamp=value.timestamp)
             else:
                 raise TypeError
+
+
+FileRel = Annotated[File, relationship(cascade="all, delete-orphan")]
+FileID = Annotated[ID, mapped_column("files.id", init=False)]
 
 
 @listens_for(SessionLocal, "deleted_to_detached")
@@ -375,24 +423,22 @@ class Team(Base, unsafe_hash=True):
             return db.query(cls).filter(cls.name == identifier, cls.context_id == context.id).first()
 
 
-class Config(Base, unsafe_hash=True):
-    file: Mapped[DbFile]
-
-    class Schema(Base.Schema):
-        name: str
-
-
 class Problem(Base, unsafe_hash=True):
+    file_id: Mapped[FileID] = mapped_column(init=False)
+    config_id: Mapped[FileID] = mapped_column(init=False)
+    description_id: Mapped[FileID] = mapped_column(init=False)
+    image_id: Mapped[FileID] = mapped_column(init=False)
+
     name: Mapped[str]
     context: Mapped[Context] = relationship()
     context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
-    file: Mapped[DbFile]
-    config: Mapped[DbFile]
+    file: Mapped[FileRel] = relationship(foreign_keys=(file_id,))
+    config: Mapped[FileRel] = relationship(foreign_keys=(config_id,))
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
-    description: Mapped[DbFile | None] = mapped_column(default=None)
+    description: Mapped[FileRel | None] = relationship(default=None, foreign_keys=(description_id))
     short_description: Mapped[str | None] = mapped_column(default=None)
-    image: Mapped[DbFile | None] = mapped_column(default=None)
+    image: Mapped[FileRel | None] = relationship(default=None, foreign_keys=(image_id,))
     problem_schema: Mapped[str | None] = mapped_column(default=None)
     solution_schema: Mapped[str | None] = mapped_column(default=None)
     colour: Mapped[str] = mapped_column(default=None)
@@ -402,13 +448,13 @@ class Problem(Base, unsafe_hash=True):
     class Schema(Base.Schema):
         name: str
         context: ObjID
-        file: DbFile.Schema
-        config: DbFile.Schema
+        file: File.Schema
+        config: File.Schema
         start: datetime | None
         end: datetime | None
-        description: DbFile.Schema | None
+        description: File.Schema | None
         short_description: str | None
-        image: DbFile.Schema | None
+        image: File.Schema | None
         problem_schema: str | None
         solution_schema: str | None
         colour: Color
@@ -432,7 +478,8 @@ class Program(Base, unsafe_hash=True):
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
     role: Mapped[ProgramRole] = mapped_column(String)
-    file: Mapped[DbFile]
+    file: Mapped[FileRel]
+    file_id: Mapped[FileID] = mapped_column(init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
     problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"), init=False)
     creation_time: Mapped[datetime] = mapped_column(default_factory=datetime.now)
@@ -444,7 +491,7 @@ class Program(Base, unsafe_hash=True):
         name: str
         team: ObjID
         role: ProgramRole
-        file: DbFile.Schema
+        file: File.Schema
         creation_time: datetime
         problem: ObjID
         user_editable: bool
@@ -455,14 +502,15 @@ class Documentation(Base, unsafe_hash=True):
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
-    file: Mapped[DbFile]
+    file: Mapped[FileRel]
+    file_id: Mapped[ID] = mapped_column(init=False)
 
     __table_args__ = (UniqueConstraint("team_id", "problem_id"),)
 
     class Schema(Base.Schema):
         team: ObjID
         problem: ObjID
-        file: DbFile.Schema
+        file: File.Schema
 
     @overload
     @classmethod
@@ -508,8 +556,8 @@ class ScheduledMatch(Base, unsafe_hash=True):
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
-    config: Mapped[Config | None] = relationship()
-    config_id: Mapped[ID | None] = mapped_column(ForeignKey("configs.id"), init=False)
+    config: Mapped[FileRel | None]
+    config_id: Mapped[FileID | None] = mapped_column(init=False)
     participants: Mapped[set[MatchParticipant]] = relationship(init=False, default=set, cascade="all, delete")
     name: Mapped[str] = mapped_column(default="")
     points: Mapped[float] = mapped_column(default=0)
@@ -519,7 +567,7 @@ class ScheduledMatch(Base, unsafe_hash=True):
         name: str
         time: datetime
         problem: ObjID
-        config: ObjID | None
+        config: File.Schema | None
         participants: dict[ObjID, MatchParticipant.Schema]
         points: float
 
@@ -555,22 +603,23 @@ class ResultParticipant(BaseNoID, unsafe_hash=True):
 class MatchResult(Base, unsafe_hash=True):
     status: Mapped[str]
     time: Mapped[datetime]
-    config: Mapped[Config] = relationship()
-    config_id: Mapped[ID] = mapped_column(ForeignKey("configs.id"), init=False)
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id), init=False)
     participants: Mapped[set[ResultParticipant]] = relationship(default=set)
-    logs: Mapped[DbFile | None] = mapped_column(default=None)
+    config_id: Mapped[FileID] = mapped_column(init=False)
+    config: Mapped[FileRel | None] = relationship(default=None, foreign_keys=config_id)
+    logs_id: Mapped[FileID | None] = mapped_column(init=False)
+    logs: Mapped[FileRel | None] = relationship(default=None, foreign_keys=logs_id)
 
     Status = Literal["complete", "failed", "running"]
 
     class Schema(Base.Schema):
         status: "MatchResult.Status"
         time: datetime
-        config: ObjID
+        config: File.Schema | None
         problem: ObjID
         participants: dict[ID, ResultParticipant.Schema]
-        logs: DbFile.Schema | None
+        logs: File.Schema | None
 
         @validator("participants")
         def val_teams(cls, val):

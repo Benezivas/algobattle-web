@@ -15,13 +15,11 @@ from pydantic.color import Color
 
 from algobattle_web.battle import run_match
 from algobattle_web.models import (
-    DbFile,
+    File as DbFile,
     MatchParticipant,
-    autocommit,
     get_db,
     Session,
     ID,
-    Config,
     Context,
     Documentation,
     MatchResult,
@@ -78,7 +76,6 @@ async def get_file(
 
 
 @admin.get("/user/search", response_model=list[User.Schema])
-@autocommit
 def get_users(
     *,
     db = Depends(get_db),
@@ -125,11 +122,11 @@ class CreateUser(BaseSchema):
 
 
 @admin.post("/user/create")
-@autocommit
 async def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
     _teams = [unwrap(db.get(Team, id)) for id in user.teams]
     if db.scalars(select(User).filter(User.email == user.email)).unique().first() is not None:
         raise ValueTaken("email", user.email)
+    db.commit()
     return User(db=db, email=user.email, name=user.name, is_admin=user.is_admin, teams=_teams)
 
 
@@ -141,7 +138,6 @@ class EditUser(BaseSchema):
 
 
 @admin.post("/user/{id}/edit")
-@autocommit
 async def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     user = unwrap(User.get(db, id))
     edit_email = edit.email if present(edit.email) else user.email
@@ -160,14 +156,15 @@ async def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) ->
                 user.teams.remove(team)
             else:
                 raise ValueError
+    db.commit()
     return user
 
 
 @admin.post("/user/{id}/delete")
-@autocommit
 async def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
     user = unwrap(User.get(db, id))
     db.delete(user)
+    db.commit()
     return True
 
 
@@ -177,10 +174,10 @@ class EditSelf(BaseSchema):
 
 
 @router.post("/user/self/edit")
-@autocommit
 async def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSelf) -> User:
     for key, val in edit.dict(exclude_unset=True).items():
         setattr(user, key, val)
+    db.commit()
     return user
 
 
@@ -189,7 +186,6 @@ class EditSettings(BaseSchema):
 
 
 @router.post("/user/self/settings")
-@autocommit
 async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
     updates = settings.dict(exclude_unset=True)
     if "selected_team" in "updates":
@@ -197,6 +193,7 @@ async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(c
         if team not in user.teams:
             raise HTTPException(status.HTTP_400_BAD_REQUEST)
         user.settings.selected_team = team
+    db.commit()
     return user
 
 
@@ -210,10 +207,10 @@ class CreateContext(BaseSchema):
 
 
 @admin.post("/context/create")
-@autocommit
 async def create_context(*, db: Session = Depends(get_db), context: CreateContext) -> Context:
     if db.scalars(select(Context).filter(Context.name == context.name)).unique().first() is not None:
         raise ValueTaken("name", context.name)
+    db.commit()
     return Context(db, context.name)
 
 
@@ -222,7 +219,6 @@ class EditContext(BaseSchema):
 
 
 @admin.post("/context/{id}/edit")
-@autocommit
 async def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditContext) -> Context:
     context = unwrap(Context.get(db, id))
     edit_name = data.name if present(data.name) else context.name
@@ -230,14 +226,15 @@ async def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditConte
         raise ValueTaken("name", context.name)
     if present(data.name):
         context.name = data.name
+    db.commit()
     return context
 
 
 @admin.post("/context/{id}/delete")
-@autocommit
 async def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
     context = unwrap(Context.get(db, id))
     db.delete(context)
+    db.commit()
     return True
 
 
@@ -247,7 +244,6 @@ async def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 
 @admin.get("/team/search", response_model=list[Team.Schema])
-@autocommit
 def search_team(
     *,
     db = Depends(get_db),
@@ -279,12 +275,12 @@ class CreateTeam(BaseSchema):
 
 
 @admin.post("/team/create")
-@autocommit
 def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
     context = unwrap(Context.get(db, team.context))
     members = [unwrap(db.get(User, id)) for id in team.members]
     if db.scalars(select(Team).filter(Team.name == team.name, Team.context_id == team.context)).unique().first() is not None:
         raise ValueTaken("name", team.name)
+    db.commit()
     return Team(db, team.name, context, members)
 
 
@@ -295,7 +291,6 @@ class EditTeam(BaseSchema):
 
 
 @admin.post("/team/{id}/edit")
-@autocommit
 def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
     team = unwrap(Team.get(db, id))
     edit_context = edit.context if present(edit.context) else team.context.id
@@ -314,14 +309,15 @@ def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
                 team.members.remove(user)
             else:
                 raise ValueError
+    db.commit()
     return team
 
 
 @admin.post("/team/{id}/delete")
-@autocommit
 def delete_team(*, db: Session = Depends(get_db), id: ID) -> bool:
     team = unwrap(Team.get(db, id))
     db.delete(team)
+    db.commit()
     return True
 
 
@@ -330,12 +326,12 @@ class MemberEditTeam(BaseSchema):
 
 
 @router.post("/team/self/edit")
-@autocommit
 def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: MemberEditTeam) -> Team:
     team = unwrap(user.settings.selected_team)
     team.assert_editable(user)
     if edit.name is not None:
         team.name = edit.name
+    db.commit()
     return team
 
 
@@ -373,7 +369,6 @@ def get_problem(*, db = Depends(get_db), context: str, problem: str):
 
 
 @admin.post("/problem/create")
-@autocommit
 def add_problem(*, db: Session = Depends(get_db), 
         file: UploadFile | None = File(None),
         problem_id: ID | None = Form(None),
@@ -393,21 +388,20 @@ def add_problem(*, db: Session = Depends(get_db),
     if file is None == problem_id is None:
         raise HTTPException(400)
     if file is not None:
-        _file = DbFile.create_from(file)
+        _file = DbFile(file)
     else:
         template_prob = unwrap(db.get(Problem, problem_id))
-        _file = DbFile.create_from(template_prob.file)
+        _file = DbFile(template_prob.file)
 
     if description is not None:
-        desc = DbFile.create_from(description)
+        desc = DbFile(description)
     else:
         desc = None
 
     _context = unwrap(db.get(Context, context))
-    _config = DbFile.create_from(config)
 
     if image is not None:
-        _image = DbFile.create_from(image, alt_text=alt_text)
+        _image = DbFile(image, alt_text=alt_text)
     else:
         _image = None
 
@@ -419,7 +413,7 @@ def add_problem(*, db: Session = Depends(get_db),
         problem_schema=problem_schema,
         solution_schema=solution_schema,
         context=_context,
-        config=_config,
+        config=DbFile(config),
         start=start,
         end=end,
         image=_image,
@@ -446,7 +440,6 @@ class ProblemEdit(BaseSchema):
 
 
 @admin.post("/problem/{id}/edit")
-@autocommit
 async def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
     problem = unwrap(db.get(Problem, id))
     for key in ("name", "start", "end", "short_description"):
@@ -454,19 +447,24 @@ async def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEd
         if present(val):
             setattr(problem, key, val)
     if present(edit.file):
-        problem.file.attach(edit.file)
-    if present(edit.description):
-        problem.attach_optional("description", edit.description)
-    if present(edit.image):
-        problem.attach_optional("image", edit.image)
+        problem.file = DbFile(edit.file)
+    if edit.description is None:
+        problem.description = None
+    elif present(edit.description):
+        problem.description = DbFile(edit.description)
+    if edit.image is None:
+        problem.image = None
+    elif present(edit.image):
+        problem.image = DbFile(edit.image)
+    db.commit()
     return problem
 
 
 @admin.post("/problem/{id}/delete")
-@autocommit
 async def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
     problem = unwrap(db.get(Problem, id))
     db.delete(problem)
+    db.commit()
     return True
 
 
@@ -483,7 +481,6 @@ class ProgramCreate(BaseSchema):
 
 
 @router.post("/program/create")
-@autocommit
 def add_program(
     *,
     db: Session = Depends(get_db),
@@ -493,7 +490,8 @@ def add_program(
     team = unwrap(user.settings.selected_team)
     problem = unwrap(db.get(Problem, data.problem))
     problem.assert_visible(user)
-    file = DbFile.create_from(data.file)
+    file = DbFile(data.file)
+    db.commit()
     return Program(db, data.name, team, data.role, file, problem)
 
 
@@ -504,7 +502,6 @@ class ProgramEdit(BaseSchema):
 
 
 @router.post("/program/{id}/edit")
-@autocommit
 def edit_own_program(
     *, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID, edit: ProgramEdit = Depends(ProgramEdit.from_form())
 ) -> Program:
@@ -516,23 +513,24 @@ def edit_own_program(
         program.role = cast(Program.Role, edit.role)
     if present(edit.problem):
         program.problem_id = edit.problem
+    db.commit()
     return program
 
 
 @admin.post("/program/{id}/user_editable")
-@autocommit
 def edit_program(*, db: Session = Depends(get_db), id: ID, user_editable: bool) -> Program:
     program = unwrap(db.get(Program, id))
     program.user_editable = user_editable
+    db.commit()
     return program
 
 
 @router.post("/program/{id}/delete")
-@autocommit
 def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), id: ID) -> bool:
     program = unwrap(db.get(Program, id))
     program.assert_editable(user)
     db.delete(program)
+    db.commit()
     return True
 
 
@@ -542,26 +540,27 @@ def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), 
 
 
 @router.post("/documentation/upload")
-@autocommit
 async def upload_docs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), problem_id: ID = Form(), file: UploadFile = File()) -> Documentation:
     team = unwrap(user.settings.selected_team)
     problem = unwrap(db.get(Problem, problem_id))
     problem.assert_editable(user)
     docs = Documentation.get(db, team, problem)
     if docs is None:
-        _file = DbFile.create_from(file)
+        _file = DbFile(file)
+        db.commit()
         return Documentation(db, team, problem, _file)
     else:
-        docs.file.attach(file)
+        docs.file = DbFile(file)
+        db.commit()
         return docs
 
 
 @router.post("/documentation/{id}/delete")
-@autocommit
 async def delete_docs(*, db: Session = Depends(get_db), user = Depends(curr_user), id: ID) -> bool:
     docs = unwrap(db.get(Documentation, id))
     docs.assert_editable(user)
     db.delete(docs)
+    db.commit()
     return True
 
 
@@ -580,7 +579,6 @@ class ScheduledMatchCreate(BaseSchema):
 
 
 @admin.post("/match/schedule/create")
-@autocommit
 def create_schedule(*, db: Session = Depends(get_db), data: ScheduledMatchCreate, background_tasks: BackgroundTasks) -> ScheduledMatch:
     problem = unwrap(db.get(Problem, data.problem))
     config = unwrap(db.get(Config, data.config)) if data.config is not None else None
@@ -594,6 +592,7 @@ def create_schedule(*, db: Session = Depends(get_db), data: ScheduledMatchCreate
     #! Prototype
     if schedule.time <= datetime.now():
         background_tasks.add_task(run_match, db, schedule)
+    db.commit()
     return schedule
 
 
@@ -611,7 +610,6 @@ class ScheduleEdit(BaseSchema):
 
 
 @admin.post("/match/schedule/{id}/edit")
-@autocommit
 def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> ScheduledMatch:
     match = unwrap(db.get(ScheduledMatch, id))
     if present(edit.name):
@@ -641,22 +639,23 @@ def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> Sched
                     participants[team].generator = unwrap(db.get(Program, info.generator))
                 if present(info.solver):
                     participants[team].solver = unwrap(db.get(Program, info.solver))
+    db.commit()
     return match
 
 
 @admin.post("/match/schedule/{id}/delete")
-@autocommit
 def delete_schedule(*, db: Session = Depends(get_db), id: ID) -> bool:
     match = unwrap(db.get(ScheduledMatch, id))
     db.delete(match)
+    db.commit()
     return True
 
 
 @admin.post("/match/result/{id}/delete")
-@autocommit
 def delete_result(*, db: Session = Depends(get_db), id: ID) -> bool:
     result = unwrap(db.get(MatchResult, id))
     db.delete(result)
+    db.commit()
     return True
 
 

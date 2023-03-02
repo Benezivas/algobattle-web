@@ -12,7 +12,6 @@ from algobattle_web.models import (
     Base,
     get_db,
     Session,
-    Config,
     Context,
     MatchResult,
     Problem,
@@ -114,7 +113,7 @@ def problems_details(*, db = Depends(get_db), user = Depends(curr_user), context
         desc = None
     else:
         try:
-            match problem.description.content_type:
+            match problem.description.media_type:
                 case "text/plain":
                     with problem.description.open("r") as file:
                         desc = f"<p>{file.read()}</p>"
@@ -160,7 +159,6 @@ def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user))
     if user.is_admin:
         problems = Problem.get_all(db)
         teams = Team.get_all(db)
-        configs = Config.get_all(db)
         progs = Program.get_all(db)
         programs = {
             team.id: {
@@ -176,14 +174,12 @@ def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user))
     else:
         problems = {s.problem for s in schedules}
         teams = {participant.team for sched in schedules for participant in sched.participants}
-        configs = {sched.config for sched in schedules if sched.config is not None}
         programs = {}
 
     return "schedule.jinja", {
         "schedules": encode(schedules),
         "problems": encode(problems),
         "teams": encode(teams),
-        "configs": encode(configs),
         "programs": jsonable_encoder(programs),
     }
 
