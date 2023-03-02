@@ -1,7 +1,7 @@
 "Module specifying the json api actions."
 from datetime import datetime
 from time import sleep
-from typing import Any, Callable, Literal, cast
+from typing import Any, Callable, cast
 
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
@@ -32,7 +32,6 @@ from algobattle_web.models import (
 )
 from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present
 from algobattle_web.dependencies import curr_user, check_if_admin
-from algobattle_web.config import SERVER_CONFIG
 from algobattle.util import TempDir
 from algobattle.problem import Problem as AlgProblem
 
