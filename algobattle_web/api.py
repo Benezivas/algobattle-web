@@ -1,12 +1,15 @@
 "Module specifying the json api actions."
 from datetime import datetime
+from io import BytesIO
 from typing import Any, Callable, cast
+from zipfile import ZipFile
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from pydantic import Field
@@ -459,6 +462,29 @@ async def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
     db.delete(problem)
     db.commit()
     return True
+
+
+@router.get("/problem/{id}/download_all")
+def download_problem(*, db = Depends(get_db), id: ID) -> Response:
+    problem = unwrap(db.get(Problem, id))
+    with BytesIO() as file:
+        with ZipFile(file, "w") as zipfile:
+            zipfile.write(problem.file.path, problem.file.filename)
+            if problem.description is not None:
+                zipfile.write(problem.description.path, problem.description.filename)
+            zipfile.write(problem.config.path, problem.config.filename)
+            if problem.problem_schema is not None:
+                zipfile.writestr("problem_schema.json", problem.problem_schema)
+            if problem.solution_schema is not None:
+                zipfile.writestr("solution_schema.json", problem.solution_schema)
+
+        file.seek(0)
+        quoted = quote(problem.name)
+        if quoted != problem.name:
+            disposition = f"attachment; filename*=utf-8''{quoted}.zip"
+        else:
+            disposition = f'attachment; filename="{quoted}.zip"'
+        return Response(file.getvalue(), headers={"content-disposition": disposition}, media_type="application/zip")
 
 
 # *******************************************************************************
