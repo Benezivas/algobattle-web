@@ -5,7 +5,6 @@ from pathlib import Path
 from time import sleep
 from zipfile import ZipFile
 from sqlalchemy import select
-from sqlalchemy_media import StoreManager
 
 from algobattle.team import TeamInfo, TeamHandler
 from algobattle.match import Match
@@ -49,7 +48,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
             config = scheduled_match.problem.config
         else:
             config = scheduled_match.config
-        problem_path = _extract_to(SERVER_CONFIG.storage_path / scheduled_match.problem.file.path, folder / "problem")
+        problem_path = _extract_to(scheduled_match.problem.file.path, folder / "problem")
             
         team_info: list[TeamInfo] = []
         paricipants: set[ResultParticipant] = set()
@@ -58,20 +57,20 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
                 gen = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "generator")).unique().first())
             else:
                 gen = participant.generator
-            gen_path = _extract_to(SERVER_CONFIG.storage_path / gen.file.path, folder / participant.team.name / "generator")
+            gen_path = _extract_to(gen.file.path, folder / participant.team.name / "generator")
             
             if participant.solver is None:
                 sol = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "solver")).unique().first())
             else:
                 sol = participant.solver
-            sol_path = _extract_to(SERVER_CONFIG.storage_path / sol.file.path, folder / participant.team.name / "solver")
+            sol_path = _extract_to(sol.file.path, folder / participant.team.name / "solver")
 
             team_info.append(TeamInfo(participant.team.name, gen_path, sol_path))
             paricipants.add(ResultParticipant(db, participant.team, gen, sol, 0))
-        db_result = MatchResult(db, "running", datetime.now(), config, scheduled_match.problem, paricipants)
+        db_result = MatchResult(db, "running", datetime.now(), scheduled_match.problem, paricipants, File(config))
         db.commit()
 
-        config = Config.from_file(Path(config.file.path))
+        config = Config.from_file(config.path)
         problem = Problem.import_from_path(problem_path)
         with TeamHandler.build(team_info, problem, config.docker, config.execution.safe_build) as teams:
             result = Match.run(config.match, config.battle_config, problem, teams)
@@ -86,15 +85,14 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
                 participant.points = points[participant.team.name]
             db_result.status = "complete"
             logging.shutdown()
-            with open(logging_path, "rb") as logs:
-                db_result.logs = DbFile.create_from(logs, original_filename=logs.name)
-                db.commit()
+            db_result.logs = File(logging_path, move=True)
+            db.commit()
 
 
 def run_scheduled_matches():
     time = datetime.now()
     first = time - SERVER_CONFIG.match_execution_interval
-    with SessionLocal() as db, StoreManager(db):
+    with SessionLocal() as db:
         scheduled_matches = db.scalars(select(ScheduledMatch).where(ScheduledMatch.time >= first, ScheduledMatch.time <= time)).unique().all()
         if len(scheduled_matches) == 0:
             return
