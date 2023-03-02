@@ -1,5 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime
+from time import sleep
 from typing import Any, Callable, Literal, cast
 
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
@@ -413,6 +414,9 @@ def add_problem(*, db: Session = Depends(get_db),
         short_description=short_description,
         colour=colour.as_hex(),
     )
+    db.flush()
+    sleep(3)
+    raise ValueError
     try:
         db.commit()
     except IntegrityError as e:

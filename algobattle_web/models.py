@@ -3,7 +3,7 @@ from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
 from tempfile import SpooledTemporaryFile
-from typing import IO, Iterable, Any
+from typing import IO, ClassVar, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Sequence
 from enum import Enum
 from uuid import UUID, uuid4
@@ -38,7 +38,11 @@ SessionLocal = sessionmaker(autoflush=False, bind=engine)
 
 async def get_db() -> AsyncIterable[Session]:
     with SessionLocal() as db:
-        yield db
+        try:
+            yield db
+        except:
+            db.rollback()
+            raise
 
 
 class RawBase(MappedAsDataclass, DeclarativeBase):
@@ -49,7 +53,7 @@ class RawBase(MappedAsDataclass, DeclarativeBase):
     )
 
 
-class File(RawBase, unsafe_hash=True, init=False):
+class File(RawBase, init=False):
     __tablename__ = "files"
 
     id: Mapped[ID] = mapped_column(primary_key=True)
@@ -57,6 +61,8 @@ class File(RawBase, unsafe_hash=True, init=False):
     media_type: Mapped[str]
     alt_text: Mapped[str | None]
     timestamp: Mapped[datetime]
+
+    _new: ClassVar[list["File"]] = []
 
     @overload
     def __init__(self, file: BinaryIO, filename: str, *, media_type: str = "application/octet-stream", alt_text: str | None = None): ...
@@ -122,6 +128,8 @@ class File(RawBase, unsafe_hash=True, init=False):
     def remove(self) -> None:
         """Removes the associated file from disk."""
         self.path.unlink()
+        if self in self._new:
+            self._new.remove(self)
 
     def save(self) -> None:
         """Saves the associated file to disk."""
@@ -135,6 +143,7 @@ class File(RawBase, unsafe_hash=True, init=False):
                 else:
                     copyfile(self._file, self.path)
             del self._file
+            self._new.append(self)
     
     def response(self, content_disposition: Literal["attachment", "inline"] = "attachment") -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
@@ -175,11 +184,16 @@ class File(RawBase, unsafe_hash=True, init=False):
 
 
 @listens_for(SessionLocal, "deleted_to_detached")
-#@listens_for(SessionLocal, "persistent_to_detached")
-#@listens_for(SessionLocal, "persistent_to_transient")
 def remove_deleted(db: Session, instance: Any):
     if isinstance(instance, File):
         instance.remove()
+
+
+@listens_for(SessionLocal, "after_rollback")
+def remove_rollbacked(db: Session):
+    for file in File._new:
+        file.remove()
+    File._new = []
 
 
 @listens_for(SessionLocal, "pending_to_persistent")
