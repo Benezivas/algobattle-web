@@ -56,18 +56,9 @@ admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)], route_
 # *******************************************************************************
 
 
-@router.get("/files/{file_type}/{location}")
-async def get_file(
-        file_type: str,
-        location: str,
-        filename: str | None = None,
-        disposition: Literal["inline", "attachment"] = "attachment"
-    ) -> FileResponse:
-    try:
-        path = SERVER_CONFIG.storage_path / file_type / location
-        return FileResponse(path, filename=filename, content_disposition_type=disposition)
-    except:
-        raise HTTPException(400)
+@router.get("/files/{id}")
+async def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
+    return unwrap(db.get(DbFile, id)).response()
 
 
 # *******************************************************************************
