@@ -93,7 +93,10 @@ app.component("editWindow", {
             }
             const response = await send_get(`problem/${context.name}/${this.name}`)
             if (response.ok) {
-                this.error = "name"
+                const existing = await response.json()
+                if (existing.id != this.problem.id) {
+                    this.error = "name"
+                }
             } else {
                 this.error = null
             }
