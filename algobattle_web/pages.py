@@ -100,7 +100,7 @@ def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_user))
         context = user.settings.selected_team.context_id
         problems = db.scalars(select(Problem).filter(Problem.visible_sql(user), Problem.context_id == context)).unique().all()
     contexts = db.scalars(select(Context).filter(Context.visible_sql(user))).unique().all()
-    return "problems.jinja", {"problems": encode(problems), "contexts": encode(contexts), "selected_context": context}
+    return "problems.jinja", {"problems": encode(problems), "contexts": encode(contexts), "selected_context": str(context)}
 
 
 @router.get("/problems/{context_name}/{problem_name}")
