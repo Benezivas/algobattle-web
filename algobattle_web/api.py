@@ -61,7 +61,7 @@ admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)], route_
 
 
 @router.get("/files/{id}")
-async def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
+def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
     return unwrap(db.get(DbFile, id)).response()
 
 
@@ -117,7 +117,7 @@ class CreateUser(BaseSchema):
 
 
 @admin.post("/user/create")
-async def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
+def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
     _teams = [unwrap(db.get(Team, id)) for id in user.teams]
     if db.scalars(select(User).filter(User.email == user.email)).unique().first() is not None:
         raise ValueTaken("email", user.email)
@@ -133,7 +133,7 @@ class EditUser(BaseSchema):
 
 
 @admin.post("/user/{id}/edit")
-async def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
+def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     user = unwrap(User.get(db, id))
     edit_email = edit.email if present(edit.email) else user.email
     if db.scalars(select(User).filter(User.email == edit_email, User.id != id)).unique().first() is not None:
@@ -156,7 +156,7 @@ async def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) ->
 
 
 @admin.post("/user/{id}/delete")
-async def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
+def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
     user = unwrap(User.get(db, id))
     db.delete(user)
     db.commit()
@@ -169,7 +169,7 @@ class EditSelf(BaseSchema):
 
 
 @router.post("/user/self/edit")
-async def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSelf) -> User:
+def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSelf) -> User:
     for key, val in edit.dict(exclude_unset=True).items():
         setattr(user, key, val)
     db.commit()
@@ -181,7 +181,7 @@ class EditSettings(BaseSchema):
 
 
 @router.post("/user/self/settings")
-async def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
+def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
     updates = settings.dict(exclude_unset=True)
     if "selected_team" in "updates":
         team = unwrap(Team.get(db, updates["selected_team"]))
@@ -202,7 +202,7 @@ class CreateContext(BaseSchema):
 
 
 @admin.post("/context/create")
-async def create_context(*, db: Session = Depends(get_db), context: CreateContext) -> Context:
+def create_context(*, db: Session = Depends(get_db), context: CreateContext) -> Context:
     if db.scalars(select(Context).filter(Context.name == context.name)).unique().first() is not None:
         raise ValueTaken("name", context.name)
     _context = Context(db, context.name)
@@ -215,7 +215,7 @@ class EditContext(BaseSchema):
 
 
 @admin.post("/context/{id}/edit")
-async def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditContext) -> Context:
+def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditContext) -> Context:
     context = unwrap(Context.get(db, id))
     edit_name = data.name if present(data.name) else context.name
     if db.scalars(select(Context).filter(Context.name == edit_name, Context.id != id)).unique().first() is not None:
@@ -227,7 +227,7 @@ async def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditConte
 
 
 @admin.post("/context/{id}/delete")
-async def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
+def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
     context = unwrap(Context.get(db, id))
     db.delete(context)
     db.commit()
@@ -441,7 +441,7 @@ class ProblemEdit(BaseSchema):
 
 
 @admin.post("/problem/{id}/edit")
-async def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
+def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
     problem = unwrap(db.get(Problem, id))
     for key in ("name", "start", "end", "short_description", "problem_schema", "solution_schema", "colour"):
         val = getattr(edit, key)
@@ -464,7 +464,7 @@ async def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEd
 
 
 @admin.post("/problem/{id}/delete")
-async def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
+def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
     problem = unwrap(db.get(Problem, id))
     db.delete(problem)
     db.commit()
