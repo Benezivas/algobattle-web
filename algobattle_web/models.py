@@ -467,13 +467,13 @@ class Problem(Base, unsafe_hash=True):
     name: Mapped[str]
     context: Mapped[Context] = relationship()
     context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
-    file: Mapped[File] = relationship(foreign_keys=file_id, cascade="all, delete-orphan", single_parent=True)
-    config: Mapped[File] = relationship(foreign_keys=config_id, cascade="all, delete-orphan", single_parent=True)
+    file: Mapped[File] = relationship(foreign_keys=file_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
+    config: Mapped[File] = relationship(foreign_keys=config_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
-    description: Mapped[File | None] = relationship(default=None, foreign_keys=description_id, cascade="all, delete-orphan", single_parent=True)
+    description: Mapped[File | None] = relationship(default=None, foreign_keys=description_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     short_description: Mapped[str | None] = mapped_column(default=None)
-    image: Mapped[File | None] = relationship(default=None, foreign_keys=image_id, cascade="all, delete-orphan", single_parent=True)
+    image: Mapped[File | None] = relationship(default=None, foreign_keys=image_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     problem_schema: Mapped[str | None] = mapped_column(default=None)
     solution_schema: Mapped[str | None] = mapped_column(default=None)
     colour: Mapped[str] = mapped_column(default=None)
@@ -513,7 +513,7 @@ class Documentation(Base, unsafe_hash=True):
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
-    file: Mapped[File] = relationship(cascade="all, delete-orphan", single_parent=True)
+    file: Mapped[File] = relationship(cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
 
     __table_args__ = (UniqueConstraint("team_id", "problem_id"),)
@@ -529,7 +529,7 @@ class Program(Base, unsafe_hash=True):
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
     role: Mapped[ProgramRole] = mapped_column(String)
-    file: Mapped[File] = relationship(cascade="all, delete-orphan", single_parent=True)
+    file: Mapped[File] = relationship(cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
     problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"), init=False)
@@ -569,7 +569,7 @@ class ScheduledMatch(Base, unsafe_hash=True):
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
-    config: Mapped[File | None] = relationship(cascade="all, delete-orphan", single_parent=True)
+    config: Mapped[File | None] = relationship(cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     config_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     participants: Mapped[set[MatchParticipant]] = relationship(init=False, default=set, cascade="all, delete")
     name: Mapped[str] = mapped_column(default="")
@@ -620,9 +620,9 @@ class MatchResult(Base, unsafe_hash=True):
     problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id), init=False)
     participants: Mapped[set[ResultParticipant]] = relationship(default=set)
     config_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
-    config: Mapped[File | None] = relationship(default=None, foreign_keys=config_id, cascade="all, delete-orphan", single_parent=True)
+    config: Mapped[File | None] = relationship(default=None, foreign_keys=config_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     logs_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
-    logs: Mapped[File | None] = relationship(default=None, foreign_keys=logs_id, cascade="all, delete-orphan", single_parent=True)
+    logs: Mapped[File | None] = relationship(default=None, foreign_keys=logs_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
 
     Status = Literal["complete", "failed", "running"]
 
