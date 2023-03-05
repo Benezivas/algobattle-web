@@ -19,6 +19,16 @@ function create_edit(problem) {
 }
 
 
+async function get_desc() {
+    const response = await send_get(`problem/${this.problem.id}/description_content`)
+    if (response.ok) {
+        this.description = await response.json()
+    } else {
+        this.description = "__ERROR__"
+    }
+}
+
+
 const app = createApp({
     data() {
         return {
@@ -26,6 +36,7 @@ const app = createApp({
             problem: store.problem,
             edit_data: create_edit(problem),
             modal: null,
+            description: null,
         }
     },
     methods: {
@@ -39,6 +50,10 @@ const app = createApp({
             this.problem = data
             this.edit_data = create_edit(data)
         },
+    },
+    created: get_desc,
+    watch: {
+        problem: get_desc,
     },
 })
 app.config.compilerOptions.delimiters = ["${", "}"]

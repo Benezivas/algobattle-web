@@ -10,6 +10,7 @@ from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse, Response
+from markdown import markdown
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from pydantic import Field
@@ -470,8 +471,9 @@ async def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 
 @router.get("/problem/{id}/download_all")
-def download_problem(*, db = Depends(get_db), id: ID) -> Response:
+def download_problem(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> Response:
     problem = unwrap(db.get(Problem, id))
+    problem.assert_visible(user)
     with BytesIO() as file:
         with ZipFile(file, "w") as zipfile:
             zipfile.write(problem.file.path, problem.file.filename)
@@ -491,6 +493,29 @@ def download_problem(*, db = Depends(get_db), id: ID) -> Response:
             disposition = f'attachment; filename="{quoted}.zip"'
         return Response(file.getvalue(), headers={"content-disposition": disposition}, media_type="application/zip")
 
+
+@router.get("/problem/{id}/description_content")
+def problem_desc(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> str | None:
+    problem = unwrap(db.get(Problem, id))
+    problem.assert_visible(user)
+    if problem.description is None:
+        return None
+    else:
+        try:
+            match problem.description.media_type:
+                case "text/plain":
+                    with problem.description.open("r") as file:
+                        return f"<p>{file.read()}</p>"
+                case "text/html":
+                    with problem.description.open("r") as file:
+                        return file.read()
+                case "text/markdown":
+                    with problem.description.open("r") as file:
+                        return markdown(cast(str, file.read()))
+                case _:
+                    return "__DOWNLOAD_BUTTON__"
+        except:
+            return "__DOWNLOAD_BUTTON__"
 
 # *******************************************************************************
 # * Program
