@@ -34,7 +34,7 @@ from algobattle_web.models import (
     Team,
     User,
 )
-from algobattle_web.util import NullableUploadFile, ValueTaken, unwrap, BaseSchema, Missing, missing, present
+from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present
 from algobattle_web.dependencies import curr_user, check_if_admin
 from algobattle.util import TempDir
 from algobattle.problem import Problem as AlgProblem

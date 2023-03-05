@@ -129,17 +129,3 @@ def guess_mimetype(info: str | Path) -> str:
     if isinstance(info, Path):
         info = info.name
     return _extension_map.get(info.split(".")[-1], "application/octet-stream")
-
-
-class NullableUploadFile(UploadFile):
-    @classmethod
-    def __get_validators__(cls) -> Iterable[Callable[..., Any]]:
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v: Any) -> Any:
-        if v == "null":
-            return None
-        elif not isinstance(v, StarletteUploadFile):
-            raise ValueError(f"Expected UploadFile, received: {type(v)}")
-        return v
