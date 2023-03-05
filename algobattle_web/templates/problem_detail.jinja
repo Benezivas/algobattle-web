@@ -141,7 +141,23 @@
     </ul>
   </nav>
   <div data-bs-spy="scroll" data-bs-target="#navbar" data-bs-root-margin="0px 0px -40%" data-bs-smooth-scroll="true" class="bg-body-tertiary p-3 rounded-2" tabindex="0">
-    <img v-if="problem.image" :src="problem.image.location" :alt="problem.image.alt_text" class="object-fit-cover border rounded mb-4" style="width: 100%;">
+    <div class="row">
+      <div class="col-md-9">
+        <img v-if="problem.image" :src="problem.image.location" :alt="problem.image.alt_text" class="object-fit-cover border rounded mb-4" style="width: 100%;">
+      </div>
+      <div class="col-md-3">
+        <ul class="list-group list-group-flush bg-body-tertiary w-em">
+          <li v-if="problem.start" class="list-group-item bg-body-tertiary">Start: ${fmt_date(problem.start)}</li>
+          <li v-if="problem.end" class="list-group-item bg-body-tertiary">End: ${fmt_date(problem.end)}</li>
+          <li class="list-group-item bg-body-tertiary">
+            <a role="button" class="btn btn-primary btn-sm" :href="`/api/problem/${problem.id}/download_all`" title="Download problem files">Download problem files <i class="bi bi-download ms-1"></i></a>
+          </li>
+          <li class="list-group-item bg-body-tertiary">
+            <button role="button" class="btn btn-warning btn-sm" title="Edit problem" @click="open_modal">Edit problem<i class="bi bi-pencil ms-1"></i></a>
+          </li>
+        </ul>
+      </div>
+    </div>
     <template v-if="problem.description">
       <h4 id="description" class="mt-5">Description</h4>
       <a v-if="description == '__DONWLOAD_BUTTON__'" role="button" class="btn btn-primary btn-sm" :href="problem.description.location" title="Download file">Download description file <i class="bi bi-download ms-1"></i></a>
@@ -150,19 +166,6 @@
       </div>
       <div v-else v-html="description"></div>
     </template>
-    <h4 id="details" class="mt-5">Details</h4>
-    <p class="row">
-      <ul class="list-group list-group-flush bg-body-tertiary w-em">
-        <li v-if="problem.start" class="list-group-item bg-body-tertiary">Start: ${fmt_date(problem.start)}</li>
-        <li v-if="problem.end" class="list-group-item bg-body-tertiary">End: ${fmt_date(problem.end)}</li>
-        <li class="list-group-item bg-body-tertiary">
-          <a role="button" class="btn btn-primary btn-sm" :href="`/api/problem/${problem.id}/download_all`" title="Download problem files">Download problem files <i class="bi bi-download ms-1"></i></a>
-        </li>
-        <li class="list-group-item bg-body-tertiary">
-          <button role="button" class="btn btn-warning btn-sm" title="Edit problem" @click="open_modal">Edit problem<i class="bi bi-pencil ms-1"></i></a>
-        </li>
-      </ul>
-    </p>
     <template v-if="problem.problem_schema">
       <h4 id="problem_schema" class="mt-5">Problem schema</h4>
       <pre><code>${problem.problem_schema}</code></pre>
