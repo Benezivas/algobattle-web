@@ -1,14 +1,13 @@
 """Util functions."""
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable, Never, Self, TypeGuard, TypeVar
+from typing import Any, Never, Self, TypeGuard, TypeVar
 from inspect import Parameter, Signature, signature
 from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 
 from pydantic import BaseModel, BaseConfig, Extra
 from fastapi import UploadFile, File, Form, HTTPException
-from starlette.datastructures import UploadFile as StarletteUploadFile
 
 
 class BaseSchema(BaseModel):
