@@ -199,7 +199,7 @@ app.component("editDoc", {
             form.set("file", this.file)
             const response = await send_form(`documentation/${this.problem.id}`, form)
             if (response.ok) {
-                store.doc_file = Object.values(await response.json())[0].file
+                store.doc_file = (await response.json()).file
                 this.$refs.doc_file_select.value = null
                 this.modal.toggle()
             }
@@ -207,7 +207,7 @@ app.component("editDoc", {
         async remove_doc() {
             const response = await send_form(`documentation/${this.problem.id}`, new FormData())
             if (response.ok) {
-                store.doc_file = Object.values(await response.json())[0].file
+                store.doc_file = (await response.json()).file
                 this.$refs.doc_file_select.value = null
                 this.modal.toggle()
             }
