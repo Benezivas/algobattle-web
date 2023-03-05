@@ -142,6 +142,7 @@ class File(RawBase, init=False):
     def save(self) -> None:
         """Saves the associated file to disk."""
         if hasattr(self, "_file"):
+            self.path.parent.mkdir(parents=True, exist_ok=True)
             if isinstance(self._file, (BinaryIO, SpooledTemporaryFile)):
                 with open(self.path, "wb+") as target:
                     copyfileobj(self._file, target)
