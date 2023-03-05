@@ -62,7 +62,8 @@ admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)], route_
 
 @router.get("/files/{id}")
 def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
-    return unwrap(db.get(DbFile, id)).response()
+    file = unwrap(db.get(DbFile, id))
+    return file.response("inline" if file.media_type == "application/pdf" else "attachment")
 
 
 # *******************************************************************************
