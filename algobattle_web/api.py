@@ -183,7 +183,7 @@ class EditSettings(BaseSchema):
 @router.post("/user/self/settings")
 def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
     updates = settings.dict(exclude_unset=True)
-    if "selected_team" in "updates":
+    if "selected_team" in updates:
         team = unwrap(Team.get(db, updates["selected_team"]))
         if team not in user.teams:
             raise HTTPException(status.HTTP_400_BAD_REQUEST)
