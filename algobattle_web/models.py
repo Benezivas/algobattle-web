@@ -119,6 +119,13 @@ class File(RawBase, init=False):
             self.media_type = guess_mimetype(self.filename)
         super().__init__()
 
+    @classmethod
+    def maybe(cls, file: UploadFile | None, *, alt_text: str | None = None) -> Self | None:
+        """Creates a `DbFile` if an `UploadFile` is given, otherwise `None`."""
+        if file is None:
+            return None
+        else:
+            return cls(file, alt_text=alt_text)
 
     @property
     def path(self) -> Path:
@@ -276,7 +283,7 @@ class Base(BaseNoID, unsafe_hash=True):
         id: ID
 
 
-def encode(col: Iterable[Base]) -> dict[ID, dict[str, Any]]:
+def encode(col: Iterable[Base]) -> dict[ID, Any]:
     """Encodes a collection of database items into a jsonable container."""
     return jsonable_encoder({el.id: el.encode() for el in col})
 
@@ -501,6 +508,22 @@ class Problem(Base, unsafe_hash=True):
             return or_(cls.start.is_(None), cls.start < datetime.now())
 
 
+class Documentation(Base, unsafe_hash=True):
+    team: Mapped[Team] = relationship(lazy="joined")
+    team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
+    problem: Mapped[Problem] = relationship(lazy="joined")
+    problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
+    file: Mapped[File] = relationship(cascade="all, delete-orphan", single_parent=True)
+    file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
+
+    __table_args__ = (UniqueConstraint("team_id", "problem_id"),)
+
+    class Schema(Base.Schema):
+        team: ObjID
+        problem: ObjID
+        file: File.Schema
+
+
 class Program(Base, unsafe_hash=True):
     name: Mapped[str]
     team: Mapped[Team] = relationship(lazy="joined")
@@ -523,44 +546,6 @@ class Program(Base, unsafe_hash=True):
         creation_time: datetime
         problem: ObjID
         user_editable: bool
-
-
-class Documentation(Base, unsafe_hash=True):
-    team: Mapped[Team] = relationship(lazy="joined")
-    team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
-    problem: Mapped[Problem] = relationship(lazy="joined")
-    problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
-    file: Mapped[File] = relationship(cascade="all, delete-orphan", single_parent=True)
-    file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
-
-    __table_args__ = (UniqueConstraint("team_id", "problem_id"),)
-
-    class Schema(Base.Schema):
-        team: ObjID
-        problem: ObjID
-        file: File.Schema
-
-    @overload
-    @classmethod
-    def get(cls, db: Session, identifier: ID) -> Self | None:
-        """Queries the database for the team with the given id."""
-        ...
-
-    @overload
-    @classmethod
-    def get(cls, db: Session, identifier: Team, problem: Problem) -> Self | None:
-        """Queries the database for the team with the given name in that context."""
-        ...
-
-    @classmethod
-    def get(cls, db: Session, identifier: ID | Team, problem: Problem | None = None) -> Self | None:
-        """Queries the database for the documentation with the given id or team and problem."""
-        if isinstance(identifier, UUID):
-            return db.get(cls, identifier)
-        else:
-            if problem is None:
-                raise TypeError
-            return db.query(cls).filter(cls.team_id == identifier.id, cls.problem_id == problem.id).first()
 
 
 class MatchParticipant(BaseNoID, unsafe_hash=True):

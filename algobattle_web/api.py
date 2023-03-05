@@ -21,6 +21,7 @@ from algobattle_web.battle import run_match
 from algobattle_web.models import (
     File as DbFile,
     MatchParticipant,
+    encode,
     get_db,
     Session,
     ID,
@@ -517,6 +518,95 @@ def problem_desc(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> 
         except:
             return "__DOWNLOAD_BUTTON__"
 
+
+# *******************************************************************************
+# * Docs
+# *******************************************************************************
+
+
+@router.post("/documentation/{problem_id}")
+def upload_own_docs(
+        *,
+        db: Session = Depends(get_db),
+        user: User = Depends(curr_user),
+        problem_id: ID,
+        file: UploadFile | None = File(None),
+    ) -> Documentation | None:
+    problem = unwrap(db.get(Problem, problem_id))
+    team = unwrap(user.settings.selected_team)
+    return docs_edit(db, user, problem, team, file)
+
+
+@admin.post("/documentation/{problem_id}/{team_id}")
+def upload_docs(
+        *,
+        db = Depends(get_db),
+        user = Depends(curr_user),
+        problem_id: ID,
+        team_id: ID,
+        file: UploadFile | None = File(None),
+    ) -> Documentation | None:
+    problem = unwrap(db.get(Problem, problem_id))
+    team = unwrap(db.get(Team, team_id))
+    return docs_edit(db, user, problem, team, file)
+
+
+def docs_edit(
+        db: Session,
+        user: User,
+        problem: Problem,
+        team: Team,
+        file: UploadFile | None,
+    ) -> Documentation | None:
+    problem.assert_editable(user)
+    docs = db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem)).unique().first()
+    if docs is None:
+        if file is None:
+            return
+        docs = Documentation(db, team, problem, DbFile(file))
+    else:
+        if file is None:
+            db.delete(docs)
+            return
+        docs.file = DbFile(file)
+    db.commit()
+    return docs
+
+
+class GetDocs(BaseSchema):
+    problem: ID | list[ID] | Literal["all"] = "all"
+
+
+@router.get("/documentation")
+def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs) -> dict[ID, Documentation.Schema]:
+    team = unwrap(user.settings.selected_team_id)
+    return _get_docs(db, user, GetDocsAdmin(problem=data.problem, team=team))
+
+
+class GetDocsAdmin(GetDocs):
+    team: ID | list[ID] | Literal["all"] = "all"
+
+@admin.get("/documentation")
+def get_docs_admin(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocsAdmin) -> dict[ID, Documentation.Schema]:
+    return _get_docs(db, user, data)
+
+
+def _get_docs(db: Session, user: User, data: GetDocsAdmin) -> dict[ID, Documentation.Schema]:
+    filters = []
+    if isinstance(data.problem, ID):
+        filters.append(Documentation.problem_id == data.problem)
+    elif isinstance(data.problem, list):
+        filters.append(Documentation.problem_id.in_(data.problem))
+    if isinstance(data.team, ID):
+        filters.append(Documentation.team_id == data.team)
+    elif isinstance(data.team, list):
+        filters.append(Documentation. team_id.in_(data.team))
+    
+    docs = db.scalars(select(Documentation).where(*filters)).unique().all()
+    docs = [d for d in docs if d.visible(user)]
+    return encode(docs)
+
+
 # *******************************************************************************
 # * Program
 # *******************************************************************************
@@ -580,35 +670,6 @@ def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), 
     program = unwrap(db.get(Program, id))
     program.assert_editable(user)
     db.delete(program)
-    db.commit()
-    return True
-
-
-# *******************************************************************************
-# * Docs
-# *******************************************************************************
-
-
-@router.post("/documentation/upload")
-async def upload_docs(*, db: Session = Depends(get_db), user: User = Depends(curr_user), problem_id: ID = Form(), file: UploadFile = File()) -> Documentation:
-    team = unwrap(user.settings.selected_team)
-    problem = unwrap(db.get(Problem, problem_id))
-    problem.assert_editable(user)
-    docs = Documentation.get(db, team, problem)
-    if docs is None:
-        _file = DbFile(file)
-        docs = Documentation(db, team, problem, _file)
-    else:
-        docs.file = DbFile(file)
-    db.commit()
-    return docs
-
-
-@router.post("/documentation/{id}/delete")
-async def delete_docs(*, db: Session = Depends(get_db), user = Depends(curr_user), id: ID) -> bool:
-    docs = unwrap(db.get(Documentation, id))
-    docs.assert_editable(user)
-    db.delete(docs)
     db.commit()
     return True
 
