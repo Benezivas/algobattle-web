@@ -2,6 +2,7 @@
 from datetime import datetime
 from io import BytesIO
 from typing import Any, Callable, Literal, cast
+from uuid import UUID
 from zipfile import ZipFile
 from urllib.parse import quote
 
@@ -578,7 +579,7 @@ class GetDocs(BaseSchema):
     problem: ID | list[ID] | Literal["all"] = "all"
 
 
-@router.get("/documentation")
+@router.post("/documentation")
 def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs) -> dict[ID, Documentation.Schema]:
     team = unwrap(user.settings.selected_team_id)
     return _get_docs(db, user, GetDocsAdmin(problem=data.problem, team=team))
@@ -587,18 +588,18 @@ def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs) 
 class GetDocsAdmin(GetDocs):
     team: ID | list[ID] | Literal["all"] = "all"
 
-@admin.get("/documentation")
+@admin.post("/documentation")
 def get_docs_admin(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocsAdmin) -> dict[ID, Documentation.Schema]:
     return _get_docs(db, user, data)
 
 
 def _get_docs(db: Session, user: User, data: GetDocsAdmin) -> dict[ID, Documentation.Schema]:
     filters = []
-    if isinstance(data.problem, ID):
+    if isinstance(data.problem, UUID):
         filters.append(Documentation.problem_id == data.problem)
     elif isinstance(data.problem, list):
         filters.append(Documentation.problem_id.in_(data.problem))
-    if isinstance(data.team, ID):
+    if isinstance(data.team, UUID):
         filters.append(Documentation.team_id == data.team)
     elif isinstance(data.team, list):
         filters.append(Documentation. team_id.in_(data.team))
