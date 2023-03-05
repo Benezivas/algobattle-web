@@ -457,7 +457,6 @@ async def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEd
     try:
         db.commit()
     except IntegrityError as e:
-        print(e)
         raise ValueTaken("name", edit.name if present(edit.name) else "") from e
     return problem
 
