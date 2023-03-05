@@ -195,6 +195,8 @@ class File(RawBase, init=False):
                     alt_text=value.alt_text,
                     timestamp=value.timestamp
                 )
+            elif isinstance(value, Mapping):
+                return cls.parse_obj(value)
             else:
                 raise TypeError
 
