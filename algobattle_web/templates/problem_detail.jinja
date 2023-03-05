@@ -147,6 +147,10 @@
       </div>
       <div class="col-md-3">
         <ul class="list-group list-group-flush bg-body-tertiary w-em">
+          <li class="list-group-item bg-body-tertiary">${problem.name}</li>
+          {% if user.is_admin %}
+          <li class="list-group-item bg-body-tertiary">${store.contexts[problem.context].name}</li>
+          {% endif %}
           <li v-if="problem.start" class="list-group-item bg-body-tertiary">Start: ${fmt_date(problem.start)}</li>
           <li v-if="problem.end" class="list-group-item bg-body-tertiary">End: ${fmt_date(problem.end)}</li>
           <li class="list-group-item bg-body-tertiary">
