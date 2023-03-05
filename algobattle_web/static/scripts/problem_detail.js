@@ -32,8 +32,12 @@ const app = createApp({
         fmt_date: fmt_date,
         open_modal() {
             this.modal = bootstrap.Modal.getOrCreateInstance("#editModal")
-            this.edit_data = create_edit(problem)
+            this.edit_data = create_edit(this.problem)
             this.modal.toggle()
+        },
+        new_problem(data) {
+            this.problem = data
+            this.edit_data = create_edit(data)
         },
     },
 })
@@ -73,7 +77,7 @@ app.component("editWindow", {
             }
             var response = await send_form(`problem/${this.problem.id}/edit`, form)
             if (response.ok) {
-                Object.assign(this.problem, create_edit(await response.json()))
+                this.$emit("new_problem", await response.json())
                 this.modal.toggle()
                 return
             }
