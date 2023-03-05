@@ -524,7 +524,7 @@ def problem_desc(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> 
 # *******************************************************************************
 
 
-@router.post("/documentation/{problem_id}")
+@router.post("/documentation/{problem_id}", response_model=Documentation.Schema | None)
 def upload_own_docs(
         *,
         db: Session = Depends(get_db),
@@ -537,7 +537,7 @@ def upload_own_docs(
     return docs_edit(db, user, problem, team, file)
 
 
-@admin.post("/documentation/{problem_id}/{team_id}")
+@admin.post("/documentation/{problem_id}/{team_id}", response_model=Documentation.Schema | None)
 def upload_docs(
         *,
         db = Depends(get_db),
