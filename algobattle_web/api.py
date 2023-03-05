@@ -1,7 +1,7 @@
 "Module specifying the json api actions."
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Callable, cast
+from typing import Any, Callable, Literal, cast
 from zipfile import ZipFile
 from urllib.parse import quote
 
@@ -32,7 +32,7 @@ from algobattle_web.models import (
     Team,
     User,
 )
-from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present
+from algobattle_web.util import NullableUploadFile, ValueTaken, unwrap, BaseSchema, Missing, missing, present
 from algobattle_web.dependencies import curr_user, check_if_admin
 from algobattle.util import TempDir
 from algobattle.problem import Problem as AlgProblem
@@ -418,7 +418,6 @@ def add_problem(*, db: Session = Depends(get_db),
     try:
         db.commit()
     except IntegrityError as e:
-        print(e)
         raise ValueTaken("name", name) from e
     return f"/problems/{prob.context.name}/{prob.name}"
 
@@ -427,32 +426,39 @@ class ProblemEdit(BaseSchema):
     name: str | Missing = missing
     context: ID | Missing = missing
     file: UploadFile | Missing = missing
-    config: ID | Missing = missing
+    config: UploadFile | Missing = missing
     start: datetime | None | Missing = missing
     end: datetime | None | Missing = missing
-    description: UploadFile | None | Missing = missing
+    description: UploadFile | Literal["null"] | Missing = missing
     short_description: str | None | Missing = missing
-    image: UploadFile | None | Missing = missing
+    image: UploadFile | Literal["null"] | Missing = missing
+    alt: str | None | Missing = missing
+    problem_schema: str | None | Missing = missing
+    solution_schema: str | None | Missing = missing
+    colour: str | Missing = missing
 
 
 @admin.post("/problem/{id}/edit")
 async def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
     problem = unwrap(db.get(Problem, id))
-    for key in ("name", "start", "end", "short_description"):
+    for key in ("name", "start", "end", "short_description", "problem_schema", "solution_schema", "colour"):
         val = getattr(edit, key)
         if present(val):
             setattr(problem, key, val)
-    if present(edit.file):
-        problem.file = DbFile(edit.file)
-    if edit.description is None:
-        problem.description = None
-    elif present(edit.description):
-        problem.description = DbFile(edit.description)
-    if edit.image is None:
-        problem.image = None
-    elif present(edit.image):
-        problem.image = DbFile(edit.image)
-    db.commit()
+    for key in ("file", "config", "description", "image"):
+        val = getattr(edit, key)
+        if val == "null":
+            setattr(problem, key, None)
+        elif present(val):
+            setattr(problem, key, DbFile(val))
+    if problem.image and present(edit.alt):
+        problem.image.alt_text = edit.alt
+
+    try:
+        db.commit()
+    except IntegrityError as e:
+        print(e)
+        raise ValueTaken("name", edit.name if present(edit.name) else "") from e
     return problem
 
 

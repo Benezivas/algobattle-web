@@ -453,8 +453,8 @@ class Team(Base, unsafe_hash=True):
 class Problem(Base, unsafe_hash=True):
     file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
     config_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
-    description_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
-    image_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
+    description_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
+    image_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
 
     name: Mapped[str]
     context: Mapped[Context] = relationship()

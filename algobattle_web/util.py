@@ -1,13 +1,14 @@
 """Util functions."""
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Never, Self, TypeGuard, TypeVar
+from typing import Any, Callable, Iterable, Never, Self, TypeGuard, TypeVar
 from inspect import Parameter, Signature, signature
 from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 
 from pydantic import BaseModel, BaseConfig, Extra
 from fastapi import UploadFile, File, Form, HTTPException
+from starlette.datastructures import UploadFile as StarletteUploadFile
 
 
 class BaseSchema(BaseModel):
@@ -129,3 +130,16 @@ def guess_mimetype(info: str | Path) -> str:
         info = info.name
     return _extension_map.get(info.split(".")[-1], "application/octet-stream")
 
+
+class NullableUploadFile(UploadFile):
+    @classmethod
+    def __get_validators__(cls) -> Iterable[Callable[..., Any]]:
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v: Any) -> Any:
+        if v == "null":
+            return None
+        elif not isinstance(v, StarletteUploadFile):
+            raise ValueError(f"Expected UploadFile, received: {type(v)}")
+        return v

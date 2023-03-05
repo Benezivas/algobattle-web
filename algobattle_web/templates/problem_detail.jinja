@@ -8,6 +8,116 @@
 </script>
 
 
+<script type="text/x-template" id="fileEdit">
+  <tr>
+    <td><slot/></td>
+    <td>
+      <template v-if="file.location !== null">
+        <a role="button" class="btn btn-primary btn-sm me-2" :href="file.location" title="File download">
+          ${file.edit !== undefined ? "New" : "Current"} file<i class="bi bi-download ms-1"></i>
+        </a>
+        <button v-if="nullable" type="button" class="btn btn-sm btn-danger" @click="remove_file">Remove</button>
+      </template>
+    </td>
+    <input type="file" class="form-control form-control-sm w-em" id="prob_file" ref="file_select" @change="select_file"/>
+  </tr>
+</script>
+
+
+<script type="text/x-template" id="editWindow">
+  <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true" ref="user_modal">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+      <form class="modal-content" @submit.prevent="submit_edit">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="modalLabel">Edit problem</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="context_sel" class="form-label">Context</label>
+              <select class="form-select w-em" id="context_sel" name="context" required v-model="problem.context" @change="check_name">
+                <option v-for="(context, id) in store.contexts" :value="id">${context.name}</option>
+              </select>
+              <div class="invalid-feedback">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="start_time" class="form-label">Starting time</label>
+              <input type="datetime-local" name="start" class="form-control w-em" id="start_time" v-model="problem.start"/>
+            </div>
+            <div class="mb-3">
+              <label for="prob_schema" class="form-label">Problem schema</label>
+              <textarea class="form-control" name="problem_schema" id="prob_schema" rows="10" v-model="problem.problem_schema"></textarea>
+            </div>
+
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="prob_name" class="form-label">Name</label>
+              <input type="text" class="form-control w-em" name="name" id="prob_name" v-model="problem.name" required @input="check_name" :class="{'is-invalid': error == 'name'}"/>
+              <div class="invalid-feedback">
+                A problem with this name already exists in this context.
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="end_time" class="form-label">Ending time</label>
+              <input type="datetime-local" name="end" class="form-control w-em" id="end_time" v-model="problem.end"/>
+            </div>
+            <div class="mb-3">
+              <label for="sol_schema" class="form-label">Solution schema</label>
+              <textarea class="form-control" name="solution_schema" id="sol_schema" rows="10" v-model="problem.solution_schema"></textarea>
+            </div>
+
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col"></th>
+                <th scope="col">File</th>
+                <th scope="col">Upload new file</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr is="vue:file-edit" :nullable="false" :file="problem.file">Problem</tr>
+              <tr is="vue:file-edit" :nullable="false" :file="problem.config">Config</tr>
+              <tr is="vue:file-edit" :nullable="true" :file="problem.description">Description</tr>
+              <tr is="vue:file-edit" :nullable="true" :file="problem.image">Image</tr>
+            </tbody>
+          </table>
+
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="short_desc" class="form-label">Image alt text</label>
+              <textarea class="form-control w-em" name="alt" id="alt_text" rows="5" v-model="problem.image.alt"></textarea>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="short_desc" class="form-label">Short description</label>
+              <textarea class="form-control w-em" name="short_description" id="short_desc" rows="5" v-model="problem.short_description"></textarea>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="prob_col" class="form-label">Problem colour</label>
+            <input type="color" name="colour" class="form-control form-control-color" id="prob_col" v-model="problem.colour"/>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button v-if="confirm_delete" type="button" class="btn btn-secondary" @click="confirm_delete = false">Cancel</button>
+          <button type="button" class="btn btn-danger ms-2" @click="delete_problem">
+            ${confirm_delete ? "Confirm deletion" : "Delete Problem"}
+          </button>
+          <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Discard</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</script>
+
+
 <div id="app" v-cloak>
   <nav id="navbar" class="navbar bg-body-tertiary px-3 mb-3 sticky-top" style="top: 62px">
     <a class="navbar-brand" href="#">
@@ -54,6 +164,9 @@
         <li class="list-group-item bg-body-tertiary">
           <a role="button" class="btn btn-primary btn-sm" :href="`/api/problem/${problem.id}/download_all`" title="Download all files">Download all files <i class="bi bi-download ms-1"></i></a>
         </li>
+        <li class="list-group-item bg-body-tertiary">
+          <button role="button" class="btn btn-warning btn-sm" title="Edit problem" @click="open_modal">Edit <i class="bi bi-pencil ms-1"></i></a>
+        </li>
       </ul>
     </p>
     <template v-if="problem.problem_schema">
@@ -65,6 +178,8 @@
       <pre><code>${problem.solution_schema}</code></pre>
     </template>
   </div>
+
+  <edit-window :problem="edit_data" :modal="modal"></edit-window>
 </div>
 
 
