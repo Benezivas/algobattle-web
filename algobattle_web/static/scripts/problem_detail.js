@@ -5,6 +5,7 @@ import { send_request, send_get, send_form, fmt_date } from "base"
 const store = reactive({
     problem: problem,
     contexts: contexts,
+    doc_file: null
 })
 
 
@@ -19,12 +20,19 @@ function create_edit(problem) {
 }
 
 
-async function get_desc() {
-    const response = await send_get(`problem/${this.problem.id}/description_content`)
+async function get_desc(data) {
+    const response = await send_get(`problem/${data.problem.id}/description_content`)
     if (response.ok) {
-        this.description = await response.json()
+        data.description = await response.json()
     } else {
-        this.description = "__ERROR__"
+        data.description = "__ERROR__"
+    }
+}
+
+async function get_doc_file(data) {
+    const response = await send_request("documentation", {problem: data.problem.id})
+    if (response.ok) {
+        store.doc_file = Object.values(await response.json())[0].file
     }
 }
 
@@ -37,6 +45,8 @@ const app = createApp({
             edit_data: create_edit(problem),
             modal: null,
             description: null,
+            docs: null,
+            doc_modal: null,
         }
     },
     methods: {
@@ -46,12 +56,19 @@ const app = createApp({
             this.edit_data = create_edit(this.problem)
             this.modal.toggle()
         },
+        open_doc_modal() {
+            this.doc_modal = bootstrap.Modal.getOrCreateInstance("#docModal")
+            this.doc_modal.toggle()
+        },
         new_problem(data) {
             this.problem = data
             this.edit_data = create_edit(data)
         },
     },
-    created: get_desc,
+    created() {
+        get_desc(this)
+        get_doc_file(this)
+    },
     watch: {
         problem: get_desc,
     },
@@ -152,6 +169,49 @@ app.component("FileEdit", {
         },
     },
     computed: {
+    },
+})
+
+
+app.component("editDoc", {
+    template: "#editDoc",
+    props: ["problem", "modal"],
+    data() {
+        return {
+            store: store,
+            file: null,
+            confirm_delete: false,
+        }
+    },
+    methods: {
+        select_file(event) {
+            const files = event.target.files || event.dataTransfer.files
+            if (files.length == 0) {
+                return
+            }
+            this.file = files[0]
+        },
+        async upload_doc() {
+            const form = new FormData()
+            if (this.file == 0) {
+                return
+            }
+            form.set("file", this.file)
+            const response = await send_form(`documentation/${this.problem.id}`, form)
+            if (response.ok) {
+                store.doc_file = Object.values(await response.json())[0].file
+                this.$refs.doc_file_select.value = null
+                this.modal.toggle()
+            }
+        },
+        async remove_doc() {
+            const response = await send_form(`documentation/${this.problem.id}`, new FormData())
+            if (response.ok) {
+                store.doc_file = Object.values(await response.json())[0].file
+                this.$refs.doc_file_select.value = null
+                this.modal.toggle()
+            }
+        },
     },
 })
 
