@@ -3,6 +3,7 @@
 *.db
 **/config.toml
 db_files
+frontend/typescript_client
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
