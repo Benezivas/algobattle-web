@@ -744,7 +744,7 @@ class ScheduleEdit(BaseSchema):
 
 
 @admin.post("/match/schedule/{id}/edit")
-def edit_schedule(*, db: Session = Depends(get_db), edit: ScheduleEdit) -> ScheduledMatch:
+def edit_schedule(*, db: Session = Depends(get_db), id: ID, edit: ScheduleEdit) -> ScheduledMatch:
     match = unwrap(db.get(ScheduledMatch, id))
     if present(edit.name):
         match.name = edit.name
