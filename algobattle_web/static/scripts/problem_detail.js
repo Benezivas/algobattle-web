@@ -205,10 +205,15 @@ app.component("editDoc", {
             }
         },
         async remove_doc() {
-            const response = await send_form(`documentation/${this.problem.id}`, new FormData())
+            if (!this.confirm_delete) {
+                this.confirm_delete = true
+                return
+            }
+            const response = await send_request(`documentation/${this.problem.id}/delete`)
             if (response.ok) {
-                store.doc_file = (await response.json()).file
+                store.doc_file = null
                 this.$refs.doc_file_select.value = null
+                this.confirm_delete = false
                 this.modal.toggle()
             }
         },

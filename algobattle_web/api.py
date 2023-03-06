@@ -532,7 +532,7 @@ def upload_own_docs(
         db: Session = Depends(get_db),
         user: User = Depends(curr_user),
         problem_id: ID,
-        file: UploadFile | None = File(None),
+        file: UploadFile = File(),
     ) -> Documentation | None:
     problem = unwrap(db.get(Problem, problem_id))
     team = unwrap(user.settings.selected_team)
@@ -546,7 +546,7 @@ def upload_docs(
         user = Depends(curr_user),
         problem_id: ID,
         team_id: ID,
-        file: UploadFile | None = File(None),
+        file: UploadFile = File(),
     ) -> Documentation | None:
     problem = unwrap(db.get(Problem, problem_id))
     team = unwrap(db.get(Team, team_id))
@@ -558,21 +558,35 @@ def docs_edit(
         user: User,
         problem: Problem,
         team: Team,
-        file: UploadFile | None,
+        file: UploadFile,
     ) -> Documentation | None:
     problem.assert_editable(user)
     docs = db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem)).unique().first()
     if docs is None:
-        if file is None:
-            return
         docs = Documentation(db, team, problem, DbFile(file))
     else:
-        if file is None:
-            db.delete(docs)
-            return
         docs.file = DbFile(file)
     db.commit()
     return docs
+
+
+@router.post("/documentation/{problem_id}/delete")
+def delete_own_docs(*, db = Depends(get_db), user = Depends(curr_user), problem_id: ID):
+    team = unwrap(user.settings.selected_team)
+    delete_docs(db, user, problem_id, team)
+
+
+@admin.post("/documentation/{problem_id}/{team_id}/delete")
+def delete_admin_docs(*, db = Depends(get_db), user = Depends(curr_user), problem_id: ID, team_id: ID):
+    team = unwrap(db.get(Team, team_id))
+    delete_docs(db, user, problem_id, team)
+
+
+def delete_docs(db: Session, user: User, problem_id: ID, team: Team):
+    problem = unwrap(db.get(Problem, problem_id))
+    docs = unwrap(db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem)).unique().first())
+    docs.assert_editable(user)
+    db.delete(docs)
 
 
 class GetDocs(BaseSchema):
