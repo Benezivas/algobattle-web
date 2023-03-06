@@ -5,7 +5,9 @@ import { send_request, send_get, send_form, fmt_date } from "base"
 const store = reactive({
     problem: problem,
     contexts: contexts,
-    doc_file: null
+    doc_file: null,
+    docs: {},
+    teams: {},
 })
 
 
@@ -29,10 +31,19 @@ async function get_desc(data) {
     }
 }
 
-async function get_doc_file(data) {
-    const response = await send_request("documentation", {problem: data.problem.id})
+async function get_doc_files(page) {
+    var query = ""
+    if (page) {
+        query = `?page={page}`
+    }
+    const response = send_request("documentation" + query, {problem: store.problem.id})
     if (response.ok) {
-        store.doc_file = Object.values(await response.json())[0].file
+        store.docs = await response.json()
+        const team_ids = Object.values(store.docs).map(o => o.id)
+        const response = await send_request("teams", team_ids)
+        if (response.ok) {
+            store.teams = await response.json()
+        }
     }
 }
 
@@ -65,9 +76,9 @@ const app = createApp({
             this.edit_data = create_edit(data)
         },
     },
-    created() {
+    async created() {
         get_desc(this)
-        get_doc_file(this)
+        get_doc_files(0)
     },
     watch: {
         problem: get_desc,
