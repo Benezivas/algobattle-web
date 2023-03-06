@@ -15,7 +15,7 @@ from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
 from sqlalchemy import Table, ForeignKey, Column, select, String, create_engine, DateTime, inspect
 from sqlalchemy.event import listens_for
-from sqlalchemy.sql import true as sql_true, or_
+from sqlalchemy.sql import true as sql_true, or_, and_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, Session, DeclarativeBase, registry, MappedAsDataclass
 from sqlalchemy.schema import UniqueConstraint
@@ -525,6 +525,26 @@ class Documentation(Base, unsafe_hash=True):
         team: ObjID
         problem: ObjID
         file: File.Schema
+
+    def visible(self, user: "User") -> bool:
+        return user.is_admin or self.team in user.teams
+
+    def editable(self, user: "User") -> bool:
+        return self.visible(user) and (user.is_admin or (self.problem.end is None or self.problem.end >= datetime.now()))
+
+    @classmethod
+    def visible_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
+        if user.is_admin:
+            return sql_true
+        else:
+            return cls.team.in_(user.teams)
+
+    @classmethod
+    def editable_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
+        if user.is_admin:
+            return super().editable_sql(user)
+        else:
+            return and_(super().editable_sql(user), or_(cls.problem.end == None, cls.problem.end >= datetime.now()))
 
 
 class Program(Base, unsafe_hash=True):
