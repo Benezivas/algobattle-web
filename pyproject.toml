@@ -15,7 +15,8 @@ classifiers = [
 dependencies = [
     "algobattle",
     "uvicorn",
-    "fastapi",
+    # until https://github.com/tiangolo/fastapi/pull/5978 is accepted
+    "fastapi @ git+https://github.com/ImogenBits/fastapi.git",
     "jinja2",
     "python-jose[cryptography]",
     "python-multipart",
