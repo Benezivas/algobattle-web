@@ -591,24 +591,12 @@ def delete_docs(db: Session, user: User, problem_id: ID, team: Team):
 
 class GetDocs(BaseSchema):
     problem: ID | list[ID] | Literal["all"] = "all"
+    team: ID | list[ID] | Literal["all"] = "all"
 
 
 @router.post("/documentation")
-def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs) -> dict[ID, Documentation.Schema]:
-    team = unwrap(user.settings.selected_team_id)
-    return _get_docs(db, user, GetDocsAdmin(problem=data.problem, team=team))
-
-
-class GetDocsAdmin(GetDocs):
-    team: ID | list[ID] | Literal["all"] = "all"
-
-@admin.post("/documentation")
-def get_docs_admin(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocsAdmin) -> dict[ID, Documentation.Schema]:
-    return _get_docs(db, user, data)
-
-
-def _get_docs(db: Session, user: User, data: GetDocsAdmin) -> dict[ID, Documentation.Schema]:
-    filters = []
+def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs, page: int = 0, limit: int = 25) -> dict[ID, Documentation.Schema]:
+    filters = [Documentation.visible_sql(user)]
     if isinstance(data.problem, UUID):
         filters.append(Documentation.problem_id == data.problem)
     elif isinstance(data.problem, list):
@@ -616,10 +604,17 @@ def _get_docs(db: Session, user: User, data: GetDocsAdmin) -> dict[ID, Documenta
     if isinstance(data.team, UUID):
         filters.append(Documentation.team_id == data.team)
     elif isinstance(data.team, list):
-        filters.append(Documentation. team_id.in_(data.team))
-    
-    docs = db.scalars(select(Documentation).where(*filters)).unique().all()
-    docs = [d for d in docs if d.visible(user)]
+        filters.append(Documentation.team_id.in_(data.team))
+    elif not user.is_admin:
+        team = unwrap(user.settings.selected_team)
+        filters.append(Documentation.team == team)
+
+    docs = db.scalars(
+        select(Documentation)
+        .where(*filters)
+        .limit(limit)
+        .offset(page * limit)
+    ).unique().all()
     return encode(docs)
 
 
