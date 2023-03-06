@@ -241,6 +241,17 @@ def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
 # *******************************************************************************
 
 
+@router.post("/team")
+def get_teams(*, db = Depends(get_db), user = Depends(curr_user), team: ID | list[ID]):
+    if isinstance(team, UUID):
+        team = [team]
+    teams = db.scalars(
+        select(Team)
+        .where(Team.id.in_(team), Team.visible_sql(user))
+    ).unique().all()
+    return encode(teams)
+
+
 @admin.get("/team/search", response_model=list[Team.Schema])
 def search_team(
     *,
