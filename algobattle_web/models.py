@@ -3,7 +3,7 @@ from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
 from tempfile import SpooledTemporaryFile
-from typing import IO, ClassVar, Iterable, Any
+from typing import IO, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Sequence
 from enum import Enum
 from uuid import UUID, uuid4
@@ -13,7 +13,7 @@ from shutil import copyfileobj, copyfile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey, Column, select, String, create_engine, DateTime
+from sqlalchemy import Table, ForeignKey, Column, select, String, create_engine, DateTime, inspect
 from sqlalchemy.event import listens_for
 from sqlalchemy.sql import true as sql_true, or_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
@@ -61,8 +61,6 @@ class File(RawBase, init=False):
     media_type: Mapped[str]
     alt_text: Mapped[str | None]
     timestamp: Mapped[datetime]
-
-    _new: ClassVar[list["File"]] = []
 
     @overload
     def __init__(self, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str | None = None): ...
@@ -143,8 +141,6 @@ class File(RawBase, init=False):
     def remove(self) -> None:
         """Removes the associated file from disk."""
         self.path.unlink()
-        if self in self._new:
-            self._new.remove(self)
 
     def save(self) -> None:
         """Saves the associated file to disk."""
@@ -159,7 +155,6 @@ class File(RawBase, init=False):
                 else:
                     copyfile(self._file, self.path)
             del self._file
-            self._new.append(self)
     
     def response(self, content_disposition: Literal["attachment", "inline"] = "attachment") -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
@@ -201,22 +196,28 @@ class File(RawBase, init=False):
                 raise TypeError
 
 
-@listens_for(SessionLocal, "deleted_to_detached")
-def remove_deleted(db: Session, instance: Any):
-    if isinstance(instance, File):
-        instance.remove()
+@listens_for(File, "after_insert")
+def insert_file(_mapper, _connection, target: File):
+    inspector = inspect(target)
+    assert inspector is not None
+    inspector.session.info.setdefault("new_files", []).append(target)
 
 
-@listens_for(SessionLocal, "after_rollback")
-def remove_rollbacked(db: Session):
-    for file in File._new.copy():
+@listens_for(File, "after_delete")
+def delete_file(_mapper, _connection, target: File):
+    inspector = inspect(target)
+    assert inspector is not None
+    inspector.session.info.setdefault("deleted_files", []).append(target)
+
+
+@listens_for(SessionLocal, "after_commit")
+def commit_files(db: Session):
+    for file in db.info.get("new_files", []):
+        assert isinstance(file, File)
+        file.save()
+    for file in db.info.get("deleted_files", []):
+        assert isinstance(file, File)
         file.remove()
-
-
-@listens_for(SessionLocal, "pending_to_persistent")
-def save_new(db: Session, instance: Any):
-    if isinstance(instance, File):
-        instance.save()
 
 
 @dataclass
