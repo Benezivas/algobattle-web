@@ -77,8 +77,8 @@ const app = createApp({
         },
     },
     async created() {
-        get_desc(this)
-        get_doc_files(0)
+        await get_desc(this)
+        await get_doc_files(0)
     },
     watch: {
         problem: get_desc,
