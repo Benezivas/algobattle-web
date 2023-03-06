@@ -265,12 +265,12 @@ class BaseNoID(RawBase):
 
     def editable(self, user: "User") -> bool:
         """Checks wether this model is editable by a given user."""
-        return True
+        return self.visible(user)
 
     @classmethod
     def editable_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
         """Emits a sql filter expression that checks whether the model is editable by a given user."""
-        return sql_true
+        return cls.visible_sql(user)
 
     def assert_editable(self, user: "User") -> None:
         """Asserts that this model is editable by a given user."""
