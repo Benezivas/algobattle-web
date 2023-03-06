@@ -112,7 +112,10 @@ def problems_details(*, db = Depends(get_db), user = Depends(curr_user), context
         contexts = Context.get_all(db)
     else:
         contexts = [context]
-    return "problem_detail.jinja", {"problem": problem.encode(), "selected_team": user.settings.selected_team, "contexts": encode(contexts)}
+    team = user.settings.selected_team
+    if team is not None:
+        team = team.encode()
+    return "problem_detail.jinja", {"problem": problem.encode(), "selected_team": team, "contexts": encode(contexts)}
 
 
 @admin.get("/problems/create")
