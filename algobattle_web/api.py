@@ -387,7 +387,7 @@ def add_problem(*, db: Session = Depends(get_db),
         problem_schema: str | None = Form(None),
         solution_schema: str | None = Form(None),
         context: ID = Form(),
-        config: UploadFile = File(UploadFile("config.toml")),
+        config: UploadFile | None = File(None),
         start: datetime | None = Form(None),
         end: datetime | None = Form(None),
         image: UploadFile | None = File(None),
@@ -409,6 +409,8 @@ def add_problem(*, db: Session = Depends(get_db),
         desc = None
 
     _context = unwrap(db.get(Context, context))
+    if config is None:
+        config = UploadFile("config.toml")
 
     if image is not None:
         _image = DbFile(image, alt_text=alt_text)
