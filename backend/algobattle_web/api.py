@@ -61,7 +61,7 @@ admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)], route_
 # *******************************************************************************
 
 
-@router.get("/files/{id}")
+@router.get("/files/{id}", tags=["files"])
 def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
     file = unwrap(db.get(DbFile, id))
     return file.response("inline" if file.media_type == "application/pdf" else "attachment")
@@ -72,12 +72,12 @@ def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
 # *******************************************************************************
 
 
-@router.get("/user/self")
+@router.get("/user/self", tags=["user"])
 def get_self(*, db = Depends(get_db), user = Depends(curr_user)):
     return user
 
 
-@admin.get("user", response_model=list[User.Schema])
+@admin.get("user", tags=["user"], response_model=list[User.Schema])
 def get_user(*, db = Depends(get_db), user = Depends(curr_user), data: ID | list[ID]):
     if isinstance(data, UUID):
         data = [data]
@@ -86,7 +86,7 @@ def get_user(*, db = Depends(get_db), user = Depends(curr_user), data: ID | list
         .where(User.id.in_(data), User.visible_sql(user))
     )
 
-@admin.get("/user/search", response_model=list[User.Schema])
+@admin.get("/user/search", tags=["user"], response_model=list[User.Schema])
 def get_users(
     *,
     db = Depends(get_db),
@@ -132,7 +132,7 @@ class CreateUser(BaseSchema):
     teams: list[ID] = []
 
 
-@admin.post("/user/create")
+@admin.post("/user/create", tags=["user"])
 def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
     _teams = [unwrap(db.get(Team, id)) for id in user.teams]
     if db.scalars(select(User).filter(User.email == user.email)).unique().first() is not None:
@@ -148,7 +148,7 @@ class EditUser(BaseSchema):
     teams: dict[ID, bool] | Missing = missing
 
 
-@admin.post("/user/{id}/edit")
+@admin.post("/user/{id}/edit", tags=["user"])
 def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     user = unwrap(User.get(db, id))
     edit_email = edit.email if present(edit.email) else user.email
@@ -171,7 +171,7 @@ def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     return user
 
 
-@admin.post("/user/{id}/delete")
+@admin.post("/user/{id}/delete", tags=["user"])
 def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
     user = unwrap(User.get(db, id))
     db.delete(user)
@@ -184,7 +184,7 @@ class EditSelf(BaseSchema):
     email: str | Missing = missing
 
 
-@router.post("/user/self/edit")
+@router.post("/user/self/edit", tags=["user"])
 def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSelf) -> User:
     for key, val in edit.dict(exclude_unset=True).items():
         setattr(user, key, val)
@@ -196,7 +196,7 @@ class EditSettings(BaseSchema):
     selected_team: ID | Missing = missing
 
 
-@router.post("/user/self/settings")
+@router.post("/user/self/settings", tags=["user"])
 def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
     updates = settings.dict(exclude_unset=True)
     if "selected_team" in updates:
