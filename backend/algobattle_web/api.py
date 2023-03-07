@@ -73,7 +73,7 @@ def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
 
 
 @router.get("/user/self", tags=["user"])
-def get_self(*, db = Depends(get_db), user = Depends(curr_user)):
+def get_self(*, db = Depends(get_db), user = Depends(curr_user)) -> User:
     return user
 
 
