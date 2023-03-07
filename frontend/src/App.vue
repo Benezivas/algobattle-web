@@ -39,7 +39,6 @@ import { store } from "./main"
             </li>
           </ul>
         </div>
-      
       </div>
     </div>
   </nav>
