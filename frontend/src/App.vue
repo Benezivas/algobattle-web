@@ -27,9 +27,7 @@ import { store } from "./main"
             <i class="bi bi-person-circle me-2"></i> <strong>{{store.user.name}}</strong>
           </a>
           <ul class="dropdown-menu">
-            {% if user.teams %}
-            <li><a class="dropdown-item" href="/team">Team</a></li>
-            {% endif %}
+            <li v-if="store.user.teams"><a class="dropdown-item" href="/team">Team</a></li>
             <li><a class="dropdown-item" href="/user">User</a></li>
             <li><hr class="dropdown-divider"></li>
             <li>
