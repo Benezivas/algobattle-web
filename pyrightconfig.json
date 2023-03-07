@@ -1,0 +1,6 @@
+{
+   "diagnosticMode": "workspace",
+    "exclude": [
+        "db_files/**",
+    ],
+}

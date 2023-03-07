@@ -28,9 +28,5 @@ dependencies = [
 [project.scripts]
 algobattle_web = "algobattle_web.app:main"
 
-[tool.pyright]
-diagnosticMode = "workspace"
-exclude = ["db_files/**"]
-
 [tool.setuptools]
 packages = ["algobattle_web"]
