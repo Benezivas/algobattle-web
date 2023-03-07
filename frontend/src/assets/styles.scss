@@ -1,2 +1,51 @@
 // Import all of Bootstrap's CSS
 @import "~bootstrap/scss/bootstrap";
+
+.w-es {
+    max-width: 150px;
+}
+.w-em {
+    max-width: 300px;
+}
+.w-xs {
+    max-width: 576px;
+}
+.w-sm {
+    max-width: 768px;
+}
+.w-md {
+    max-width: 992px;
+}
+.w-lg {
+    max-width: 1200px;
+}
+.w-xl {
+    max-width: 1400px;
+}
+
+.btn-circle {
+    width: 30px;
+    height: 30px;
+    padding: 6px 0px;
+    border-radius: 15px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.42857;
+}
+
+.btn-circle.btn-lg {
+  width: 50px;
+  height: 50px;
+  padding: 10px 16px;
+  font-size: 18px;
+  line-height: 1.33;
+  border-radius: 25px;
+}
+
+.btn-circle.btn-xl {
+    width: 70px;
+    height: 70px;
+    border-radius: 35px;
+    font-size: 24px;
+    line-height: 1.33;
+}

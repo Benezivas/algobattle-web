@@ -1,10 +1,9 @@
+import * as bootstrap from "bootstrap"
 import { createApp, reactive } from 'vue'
 import App from './App.vue'
 import router from './router'
 
 import "./assets/styles.scss"
-import * as bootsrap from "bootstrap"
-import './assets/main.css'
 
 export const store = reactive({
     user: {},
