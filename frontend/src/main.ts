@@ -6,7 +6,7 @@ import "./assets/styles.scss"
 import * as bootsrap from "bootstrap"
 import './assets/main.css'
 
-const store = reactive({
+export const store = reactive({
     user: {},
 })
 
