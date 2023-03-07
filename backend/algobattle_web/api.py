@@ -715,7 +715,7 @@ class ScheduledMatchCreate(BaseSchema):
 @admin.post("/match/schedule/create")
 def create_schedule(*, db: Session = Depends(get_db), data: ScheduledMatchCreate, background_tasks: BackgroundTasks) -> ScheduledMatch:
     problem = unwrap(db.get(Problem, data.problem))
-    config = unwrap(db.get(Config, data.config)) if data.config is not None else None
+    config = None
     schedule = ScheduledMatch(db, data.time, problem, config, data.name, data.points)
     for team_id, info in data.participants.items():
         team = unwrap(db.get(Team, team_id))
@@ -751,7 +751,7 @@ def edit_schedule(*, db: Session = Depends(get_db), id: ID, edit: ScheduleEdit) 
     if present(edit.problem):
         match.problem = unwrap(db.get(Problem, edit.problem))
     if present(edit.config):
-        match.config = unwrap(db.get(Config, edit.config))
+        match.config = None
     if present(edit.points):
         match.points = edit.points
     if present(edit.participants):
