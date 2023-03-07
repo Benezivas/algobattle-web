@@ -1,5 +1,8 @@
 {
    "diagnosticMode": "workspace",
+   "include": [
+        "backend",
+   ],
     "exclude": [
         "db_files/**",
     ],
