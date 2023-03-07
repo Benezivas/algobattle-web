@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
+import "./assets/styles.scss"
 </script>
 
 <template>
@@ -16,6 +17,8 @@ import HelloWorld from './components/HelloWorld.vue'
       </nav>
     </div>
   </header>
+  <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Discard</button>
+
 
   <RouterView />
 </template>
