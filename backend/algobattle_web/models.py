@@ -335,6 +335,12 @@ class User(Base, unsafe_hash=True):
                     return str(self.id) == o["id"]
         return NotImplemented
 
+    def visible(self, user: "User") -> bool:
+        return user.is_admin or len(set(user.teams) & set(self.teams)) != 0
+
+    def editable(self, user: "User") -> bool:
+        return user.is_admin
+
     @classmethod
     def get(cls, db: Session, identifier: ID | str) -> Self | None:
         """Queries the user db by either the user id or their email."""

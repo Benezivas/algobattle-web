@@ -72,6 +72,20 @@ def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
 # *******************************************************************************
 
 
+@router.get("/user/self")
+def get_self(*, db = Depends(get_db), user = Depends(curr_user)):
+    return user
+
+
+@admin.get("user", response_model=list[User.Schema])
+def get_user(*, db = Depends(get_db), user = Depends(curr_user), data: ID | list[ID]):
+    if isinstance(data, UUID):
+        data = [data]
+    return db.scalars(
+        select(User)
+        .where(User.id.in_(data), User.visible_sql(user))
+    )
+
 @admin.get("/user/search", response_model=list[User.Schema])
 def get_users(
     *,
