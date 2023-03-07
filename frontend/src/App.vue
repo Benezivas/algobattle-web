@@ -19,7 +19,7 @@ import { store } from "./main"
           <PageNavbarIcon link="/programs" icon="file-earmark-code">Programs</PageNavbarIcon>
           <PageNavbarIcon link="/schedule" icon="calendar-week">Schedule</PageNavbarIcon>
           <PageNavbarIcon link="/results" icon="bar-chart-line">Results</PageNavbarIcon>
-          <PageNavbarIcon v-if="store.user.is_admin" link="/admin/users" icon="people">Admin panel</PageNavbarIcon>
+          <PageNavbarIcon v-if="store.user.isAdmin" link="/admin/users" icon="people">Admin panel</PageNavbarIcon>
         </ul>
 
         <div class="nav-item dropdown">
