@@ -58,8 +58,9 @@ def login_get(
 
 @router.post("/login", response_class=HTMLResponse)
 def login_post(request: Request, db: Session = Depends(get_db), email: str = Form()):
-    if User.get(db, email) is not None:
-        token = User.login_token(email)
+    user = User.get(db, email)
+    if user is not None:
+        token = user.login_token()
         send_email(email, f"{request.url_for('login_post')}?token={token}")
         return templates.TemplateResponse("login.jinja", {"request": request, "user": None, "email_sent": True})
     else:
