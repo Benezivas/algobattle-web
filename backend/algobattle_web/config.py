@@ -15,6 +15,7 @@ class Config(BaseSchema):
     storage_path: Path
     match_execution_interval: timedelta = timedelta(minutes=5)
     frontend_base_url: AnyUrl
+    backend_base_url: AnyUrl
 
     @validator("secret_key")
     def parse_b64(cls, val) -> bytes:

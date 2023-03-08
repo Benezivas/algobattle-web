@@ -181,7 +181,7 @@ class File(RawBase, init=False):
             if isinstance(value, File.Schema):
                 return value
             elif isinstance(value, File):
-                url = f"/api/files/{urlencode(str(value.id))}"
+                url = f"{SERVER_CONFIG.backend_base_url}/api/files/{urlencode(str(value.id))}"
                 return cls(
                     id=value.id,
                     name=value.filename,
