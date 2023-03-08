@@ -396,7 +396,7 @@ class UserSettings(Base, unsafe_hash=True):
     selected_team: Mapped["Team | None"] = relationship(lazy="joined", init=False)
 
     class Schema(Base.Schema):
-        selected_team: ObjID | None
+        selected_team: "Team.Schema | None"
 
 
 class Context(Base, unsafe_hash=True):
@@ -453,6 +453,9 @@ class Team(Base, unsafe_hash=True):
             if context is None:
                 raise ValueError("If the team is given by its name, you have to specify a context!")
             return db.query(cls).filter(cls.name == identifier, cls.context_id == context.id).first()
+
+
+UserSettings.Schema.update_forward_refs()
 
 
 class Problem(Base, unsafe_hash=True):
