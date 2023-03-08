@@ -3,12 +3,27 @@ import { RouterView, useRouter } from 'vue-router'
 import PageNavbarIcon from './components/PageNavbarIcon.vue';
 import { store, userApi } from "./main"
 import LoginView from './views/LoginView.vue';
+import { useCookies } from "vue3-cookies"
+import { onMounted } from 'vue';
 
+const router = useRouter()
+const { cookies } = useCookies()
 
-try {
-  store.user = await userApi.getSelf()
-} catch {}
-
+onMounted(async () => { 
+  try {
+    store.user = await userApi.getSelf()
+  } catch {}
+  
+  let login_token = router.currentRoute.value.query.login_token
+  if (login_token instanceof Array) {
+    login_token = login_token[0]
+  }
+  if (login_token) {
+    const user_token = await userApi.getToken({loginToken: login_token})
+    cookies.set("user_token", user_token)
+    store.user = await userApi.getSelf()
+  }
+})
 
 </script>
 
