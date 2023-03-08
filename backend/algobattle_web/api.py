@@ -243,7 +243,7 @@ def get_token(*, db = Depends(get_db), login_token: str) -> TokenData:
 def all_contexts(*, db = Depends(get_db), user = Depends(curr_user)) -> dict[ID, Context.Schema]:
     if user.is_admin:
         contexts = db.scalars(
-            select(Problem)
+            select(Context)
         ).unique().all()
     else:
         team = user.settings.selected_team
@@ -255,12 +255,12 @@ def all_contexts(*, db = Depends(get_db), user = Depends(curr_user)) -> dict[ID,
 
 
 @router.get("/context", tags=["context"])
-def get_contexts(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, Team.Schema]:
-    teams = db.scalars(
+def get_contexts(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, Context.Schema]:
+    contexts = db.scalars(
         select(Context)
         .where(Context.id.in_(ids), Context.visible_sql(user))
     ).unique().all()
-    return encode(teams)
+    return encode(contexts)
 
 
 class CreateContext(BaseSchema):
