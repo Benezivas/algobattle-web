@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
+from fastapi.middleware.cors import CORSMiddleware
 from uvicorn import run
 
 from algobattle_web.models import Base, SessionLocal, engine, User
@@ -59,6 +60,14 @@ app.include_router(pages)
 for route in app.routes:
     if isinstance(route, SchemaRoute):
         route.operation_id = route.name
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 
