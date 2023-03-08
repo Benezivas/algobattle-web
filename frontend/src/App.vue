@@ -5,6 +5,7 @@ import { store, userApi } from "./main"
 import LoginView from './views/LoginView.vue';
 import { useCookies } from "vue3-cookies"
 import { onMounted } from 'vue';
+import type { AlgobattleWebModelsUserSchema } from 'typescript_client';
 
 const router = useRouter()
 const { cookies } = useCookies()
@@ -26,6 +27,11 @@ onMounted(async () => {
     router.replace({path: route.path})
   }
 })
+
+async function logout() {
+  cookies.remove("user_token")
+  store.user = {} as AlgobattleWebModelsUserSchema
+}
 
 </script>
 
@@ -56,9 +62,7 @@ onMounted(async () => {
             <li><a class="dropdown-item" href="/user">User</a></li>
             <li><hr class="dropdown-divider"></li>
             <li>
-              <form action="/logout" method="post">
-                <button class="dropdown-item" type="submit" name="LogoutButton" value="test">Log out</button>
-              </form>
+              <button class="dropdown-item" @click="logout">Log out</button>
             </li>
           </ul>
         </div>
