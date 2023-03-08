@@ -14,14 +14,16 @@ onMounted(async () => {
     store.user = await userApi.getSelf()
   } catch {}
   
-  let login_token = router.currentRoute.value.query.login_token
+  const route = router.currentRoute.value
+  let login_token = route.query.login_token
   if (login_token instanceof Array) {
     login_token = login_token[0]
   }
   if (login_token) {
-    const user_token = await userApi.getToken({loginToken: login_token})
-    cookies.set("user_token", user_token)
+    const data = await userApi.getToken({loginToken: login_token})
+    cookies.set("user_token", data.token, data.expires)
     store.user = await userApi.getSelf()
+    router.replace({path: route.path})
   }
 })
 
