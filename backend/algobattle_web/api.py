@@ -39,6 +39,7 @@ from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing
 from algobattle_web.dependencies import curr_user, check_if_admin
 from algobattle.util import TempDir
 from algobattle.problem import Problem as AlgProblem
+from backend.algobattle_web.config import SERVER_CONFIG
 
 from backend.algobattle_web.util import send_email
 
@@ -209,12 +210,17 @@ def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_us
 
 
 @router.post("/user/login", tags=["user"])
-def login(*, request: Request, db = Depends(get_db), email: str = Body(), target_url: AnyUrl = Body()) -> None:
+def login(*, request: Request, db = Depends(get_db), email: str = Body(), target_url: str = Body()) -> None:
     user = unwrap(User.get(db, email))
     token = user.login_token()
-    target_url.query = f"login_token={token}"
-    send_email(email, target_url)
+    url = SERVER_CONFIG.frontend_base_url + target_url + f"?login_token={token}"
+    send_email(email, url)
 
+
+@router.post("/user/token", tags=["user"])
+def get_token(*, db = Depends(get_db), login_token: str) -> str:
+    user = User.decode_login_token(db, login_token)
+    return user.cookie()
 
 # *******************************************************************************
 # * Context
