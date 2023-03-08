@@ -239,11 +239,18 @@ def get_token(*, db = Depends(get_db), login_token: str) -> TokenData:
 # *******************************************************************************
 
 
-@admin.post("/context/all", tags=["problem"])
-def all_contexts(*, db = Depends(get_db)) -> dict[ID, Context.Schema]:
-    contexts = db.scalars(
-        select(Problem)
-    ).unique().all()
+@router.post("/context/all", tags=["context"])
+def all_contexts(*, db = Depends(get_db), user = Depends(curr_user)) -> dict[ID, Context.Schema]:
+    if user.is_admin:
+        contexts = db.scalars(
+            select(Problem)
+        ).unique().all()
+    else:
+        team = user.settings.selected_team
+        if team is not None:
+            contexts = [team.context]
+        else:
+            contexts = []
     return encode(contexts)
 
 
@@ -414,14 +421,14 @@ def get_problems(*, db = Depends(get_db), user = Depends(curr_user), ids: list[I
     return encode(problems)
 
 
-@admin.post("/problem/all", tags=["problem"])
-def all_problems(*, db = Depends(get_db), context: ID | None = None) -> dict[ID, Problem.Schema]:
+@router.post("/problem/all", tags=["problem"])
+def all_problems(*, db = Depends(get_db), user = Depends(curr_user), context: ID | None = None) -> dict[ID, Problem.Schema]:
     filters = []
     if context is not None:
         filters.append(Problem.context_id == context)
     problems = db.scalars(
         select(Problem)
-        .where(*filters)
+        .where(*filters, Problem.visible_sql(user))
     ).unique().all()
     return encode(problems)
 
