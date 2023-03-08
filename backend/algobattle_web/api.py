@@ -6,7 +6,7 @@ from uuid import UUID
 from zipfile import ZipFile
 from urllib.parse import quote
 
-from fastapi import APIRouter, Body, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
+from fastapi import APIRouter, Body, Depends, Request, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, Response
 from markdown import markdown
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from pydantic import Field
+from pydantic import Field, AnyUrl
 from pydantic.color import Color
 
 
@@ -39,6 +39,8 @@ from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing
 from algobattle_web.dependencies import curr_user, check_if_admin
 from algobattle.util import TempDir
 from algobattle.problem import Problem as AlgProblem
+
+from backend.algobattle_web.util import send_email
 
 
 class SchemaRoute(APIRoute):
@@ -204,6 +206,14 @@ def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_us
         user.settings.selected_team = team
     db.commit()
     return user
+
+
+@router.post("/user/login", tags=["user"])
+def login(*, request: Request, db = Depends(get_db), email: str = Body(), target_url: AnyUrl = Body()) -> None:
+    user = unwrap(User.get(db, email))
+    token = user.login_token()
+    target_url.query = f"login_token={token}"
+    send_email(email, target_url)
 
 
 # *******************************************************************************
