@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import ProblemCard from '@/components/ProblemCard.vue';
 import { contextApi, problemApi, store } from '@/main';
-import type { AlgobattleWebModelsProblemSchema } from 'typescript_client';
+import type { AlgobattleWebModelsContextSchema, AlgobattleWebModelsProblemSchema } from 'typescript_client';
 import { computed, onMounted, ref, type Ref } from 'vue';
 
-let contexts = {}
+let contexts: Ref<{
+    [key: string]: AlgobattleWebModelsContextSchema
+}> = ref({})
 let selectedContext: string | undefined = undefined
 const problems: Ref<{[key: string]: AlgobattleWebModelsProblemSchema}> = ref({})
 
 onMounted(async () => {
-  contexts = await contextApi.allContexts()
+  contexts.value = await contextApi.allContexts()
   selectedContext = store.user.settings.selectedTeam?.context
   problems.value = await problemApi.allProblems({context: selectedContext})
 })
@@ -62,7 +65,7 @@ const past_problems = computed(() => {
 
   <h3>Upcoming</h3>
   <div class="d-flex flex-wrap mb-5">
-    <problem v-for="(problem, id) in future_problems" :problem="problem" :key="id"></problem>
+    <ProblemCard v-for="(problem, id) in future_problems" :problem="problem" :context="contexts[problem.context]" :key="id" />
     <div class="card border border-success-subtle m-2" style="width: 18rem; height: 24rem;">
       <img src="/static/images/default_problem.png" style="height: 10.125rem; object-fit: contain" class="card-img-top" alt="">
       <div class="card-body d-flex flex-column">
@@ -74,10 +77,10 @@ const past_problems = computed(() => {
   {% endif %}
   <h3 v-if="Object.keys(current_problems).length != 0">Current</h3>
   <div class="d-flex flex-wrap mb-5">
-    <problem v-for="(problem, id) in current_problems" :problem="problem" :key="id"></problem>
+    <ProblemCard v-for="(problem, id) in current_problems" :problem="problem" :context="contexts[problem.context]" :key="id" />
   </div>
   <h3 v-if="Object.keys(past_problems).length != 0">Past</h3>
   <div class="d-flex flex-wrap">
-    <problem v-for="(problem, id) in past_problems" :problem="problem" :key="id"></problem>
+    <ProblemCard v-for="(problem, id) in past_problems" :problem="problem" :context="contexts[problem.context]" :key="id" />
   </div>
 </template>
