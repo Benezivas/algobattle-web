@@ -18,7 +18,6 @@ from algobattle_web.models import (
     ScheduledMatch,
     Team,
     User,
-    LoginError,
     encode,
 )
 from algobattle_web.templates import templated, templates
