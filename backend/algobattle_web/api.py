@@ -40,6 +40,7 @@ from algobattle_web.dependencies import curr_user, check_if_admin
 from algobattle.util import TempDir
 from algobattle.problem import Problem as AlgProblem
 from backend.algobattle_web.config import SERVER_CONFIG
+from backend.algobattle_web.models import UserSettings
 
 from backend.algobattle_web.util import send_email
 
@@ -75,8 +76,12 @@ def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
 # *******************************************************************************
 
 
-@router.get("/user/self", tags=["user"])
-def get_self(*, db = Depends(get_db), user = Depends(curr_user)) -> User:
+class UserWithSettings(User.Schema):
+    settings: UserSettings.Schema
+
+
+@router.get("/user/self", tags=["user"], response_model=UserWithSettings)
+def get_self(*, user = Depends(curr_user)) -> User:
     return user
 
 
@@ -234,6 +239,23 @@ def get_token(*, db = Depends(get_db), login_token: str) -> TokenData:
 # *******************************************************************************
 
 
+@admin.post("/context/all", tags=["problem"])
+def all_contexts(*, db = Depends(get_db)) -> dict[ID, Context.Schema]:
+    contexts = db.scalars(
+        select(Problem)
+    ).unique().all()
+    return encode(contexts)
+
+
+@router.get("/context", tags=["context"])
+def get_contexts(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, Team.Schema]:
+    teams = db.scalars(
+        select(Context)
+        .where(Context.id.in_(ids), Context.visible_sql(user))
+    ).unique().all()
+    return encode(teams)
+
+
 class CreateContext(BaseSchema):
     name: str = Field(min_length=1)
 
@@ -277,10 +299,10 @@ def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 
 @router.post("/team", tags=["team"])
-def get_teams(*, db = Depends(get_db), user = Depends(curr_user), team: list[ID]):
+def get_teams(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, Team.Schema]:
     teams = db.scalars(
         select(Team)
-        .where(Team.id.in_(team), Team.visible_sql(user))
+        .where(Team.id.in_(ids), Team.visible_sql(user))
     ).unique().all()
     return encode(teams)
 
@@ -381,6 +403,27 @@ def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr
 # *******************************************************************************
 # * Problem
 # *******************************************************************************
+
+
+@router.post("/problem", tags=["problem"])
+def get_problems(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, Problem.Schema]:
+    problems = db.scalars(
+        select(Problem)
+        .where(Problem.id.in_(ids), Problem.visible_sql(user))
+    ).unique().all()
+    return encode(problems)
+
+
+@admin.post("/problem/all", tags=["problem"])
+def all_problems(*, db = Depends(get_db), context: ID | None = None) -> dict[ID, Problem.Schema]:
+    filters = []
+    if context is not None:
+        filters.append(Problem.context_id == context)
+    problems = db.scalars(
+        select(Problem)
+        .where(*filters)
+    ).unique().all()
+    return encode(problems)
 
 
 class ProblemMetadata(BaseSchema):
