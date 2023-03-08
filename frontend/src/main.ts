@@ -4,9 +4,17 @@ import App from './App.vue'
 import router from './router'
 
 import "./assets/styles.scss"
+import { Configuration, UserApi } from "../typescript_client"
+
+const configuration = new Configuration({
+    basePath: "http://127.0.0.1:8000",
+})
+
+const userApi = new UserApi(configuration)
+
 
 export const store = reactive({
-    user: {},
+    user:  await userApi.getSelf(),
 })
 
 const app = createApp(App)
