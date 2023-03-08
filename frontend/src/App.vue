@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterView, useRouter } from 'vue-router'
 import PageNavbarIcon from './components/PageNavbarIcon.vue';
-import { store } from "./main"
+import { store, userApi } from "./main"
+import LoginView from './views/LoginView.vue';
+
+
+try {
+  store.user = await userApi.getSelf()
+} catch {}
+
+
 </script>
 
 <template>
@@ -42,6 +50,7 @@ import { store } from "./main"
   </nav>
 
   <div class="container-xxl p-5">
-    <RouterView />
+    <RouterView v-if="store.user.id" />
+    <LoginView v-else />
   </div>
 </template>
