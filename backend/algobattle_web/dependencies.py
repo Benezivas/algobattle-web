@@ -9,10 +9,7 @@ def curr_user_maybe(db: Session = Depends(get_db), user_token: str | None = Cook
 
 def curr_user(user: User | None = Depends(curr_user_maybe)) -> User:
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
-            headers={"Location": "/login"},
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
     else:
         return user
 
