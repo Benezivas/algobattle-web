@@ -1,5 +1,5 @@
 "Module specifying the json api actions."
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from typing import Any, Callable, Literal, cast
 from uuid import UUID
@@ -217,10 +217,17 @@ def login(*, request: Request, db = Depends(get_db), email: str = Body(), target
     send_email(email, url)
 
 
+class TokenData(BaseSchema):
+    token: str
+    expires: datetime
+
+
 @router.post("/user/token", tags=["user"])
-def get_token(*, db = Depends(get_db), login_token: str) -> str:
+def get_token(*, db = Depends(get_db), login_token: str) -> TokenData:
     user = User.decode_login_token(db, login_token)
-    return user.cookie()
+    user.cookie()
+    return TokenData(token=user.cookie(), expires=datetime.now() + timedelta(weeks=4))
+
 
 # *******************************************************************************
 # * Context
