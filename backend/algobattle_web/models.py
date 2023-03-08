@@ -298,13 +298,6 @@ team_members = Table(
 )
 
 
-class LoginError(Enum):
-    NoToken = 0
-    UnregisteredUser = 1
-    InvalidToken = 2
-    ExpiredToken = 3
-
-
 class User(Base, unsafe_hash=True):
     email: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str]
@@ -349,14 +342,14 @@ class User(Base, unsafe_hash=True):
         else:
             return db.scalars(select(cls).filter(cls.email == identifier)).first()
 
-    def cookie(self) -> dict[str, Any]:
+    def cookie(self) -> str:
         payload = {
             "type": "user",
             "user_id": self.id.hex,
             "token_id": self.token_id.hex,
             "exp": datetime.now() + timedelta(weeks=4),
         }
-        return {"key": "user_token", "value": jwt.encode(payload, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)}
+        return jwt.encode(payload, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)
 
     @classmethod
     def decode_token(cls, db: Session, token: str | None) -> Self | None:
@@ -382,20 +375,16 @@ class User(Base, unsafe_hash=True):
         return jwt.encode(payload, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)
 
     @classmethod
-    def decode_login_token(cls, db: Session, token: str | None) -> Self | LoginError:
-        if token is None:
-            return LoginError.NoToken
+    def decode_login_token(cls, db: Session, token: str) -> Self:
         try:
             payload = jwt.decode(token, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)
             if payload["type"] == "login":
                 user = User.get(db, cast(str, payload["email"]))
                 if user is not None:
                     return user
-        except ExpiredSignatureError:
-            return LoginError.ExpiredToken
-        except (JWTError, NameError):
+        except (ExpiredSignatureError, JWTError, NameError):
             pass
-        return LoginError.InvalidToken
+        raise ValueError
 
 
 class UserSettings(Base, unsafe_hash=True):
