@@ -1,9 +1,10 @@
-from __future__ import annotations
-from fastapi import Depends, Cookie, HTTPException, status
+from fastapi import Depends, HTTPException, status
+from fastapi.security import APIKeyCookie
 
 from algobattle_web.models import User, Session, get_db
 
-def curr_user_maybe(db: Session = Depends(get_db), user_token: str | None = Cookie(default=None)) -> User | None:
+
+def curr_user_maybe(db: Session = Depends(get_db), user_token: str | None = Depends(APIKeyCookie(name="user_token", auto_error=True))) -> User | None:
     return User.decode_token(db, user_token)
 
 
