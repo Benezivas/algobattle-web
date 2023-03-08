@@ -6,7 +6,7 @@ from uuid import UUID
 from zipfile import ZipFile
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
+from fastapi import APIRouter, Body, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
@@ -52,8 +52,8 @@ class SchemaRoute(APIRoute):
         super().__init__(path, endpoint, response_model=response_model, **kwargs)
 
 
-router = APIRouter(prefix="/api", tags=["api"], route_class=SchemaRoute)
-admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)], route_class=SchemaRoute)
+router = APIRouter(prefix="/api", route_class=SchemaRoute)
+admin = APIRouter(dependencies=[Depends(check_if_admin)], route_class=SchemaRoute)
 
 
 # *******************************************************************************
@@ -77,13 +77,11 @@ def get_self(*, db = Depends(get_db), user = Depends(curr_user)) -> User:
     return user
 
 
-@admin.get("user", tags=["user"], response_model=list[User.Schema])
-def get_user(*, db = Depends(get_db), user = Depends(curr_user), data: ID | list[ID]):
-    if isinstance(data, UUID):
-        data = [data]
+@admin.get("/user", tags=["user"], response_model=list[User.Schema])
+def get_user(*, db = Depends(get_db), user = Depends(curr_user), users: list[ID] = Body()):
     return db.scalars(
         select(User)
-        .where(User.id.in_(data), User.visible_sql(user))
+        .where(User.id.in_(users), User.visible_sql(user))
     )
 
 @admin.get("/user/search", tags=["user"], response_model=list[User.Schema])
@@ -256,9 +254,7 @@ def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 
 @router.post("/team")
-def get_teams(*, db = Depends(get_db), user = Depends(curr_user), team: ID | list[ID]):
-    if isinstance(team, UUID):
-        team = [team]
+def get_teams(*, db = Depends(get_db), user = Depends(curr_user), team: list[ID]):
     teams = db.scalars(
         select(Team)
         .where(Team.id.in_(team), Team.visible_sql(user))
@@ -469,7 +465,7 @@ class ProblemEdit(BaseSchema):
     colour: str | Missing = missing
 
 
-@admin.post("/problem/{id}/edit")
+#@admin.post("/problem/{id}/edit")
 def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
     problem = unwrap(db.get(Problem, id))
     for key in ("name", "start", "end", "short_description", "problem_schema", "solution_schema", "colour"):
@@ -679,7 +675,7 @@ class ProgramEdit(BaseSchema):
     problem: ID | Missing = missing
 
 
-@router.post("/program/{id}/edit")
+#@router.post("/program/{id}/edit")
 def edit_own_program(
     *, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID, edit: ProgramEdit = Depends(ProgramEdit.from_form())
 ) -> Program:
