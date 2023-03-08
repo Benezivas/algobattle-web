@@ -19,8 +19,8 @@ const problem_url = computed(() => {
   <div class="card m-2 border border-5" style="width: 18rem; height: 24rem;" :style="{borderColor: problem.colour + ' !important'}">
     <img v-if="problem.image" :src="problem.image.location" class="card-img-top object-fit-cover" style="height: 10.125rem" :style="{backgroundColor: problem.colour + ' !important'}" :alt="problem.image.altText">
     <div class="card-body d-flex flex-column" style="height: 13.5rem">
-      <h5 class="card-title">${problem.name}</h5>
-      <p class="card-text overflow-hidden">${problem.short_description}</p>
+      <h5 class="card-title">{{problem.name}}</h5>
+      <p class="card-text overflow-hidden">{{problem.shortDescription}}</p>
       <a :href="problem_url" class="btn btn-sm btn-primary mt-auto stretched-link">View details</a>
     </div>
   </div>
