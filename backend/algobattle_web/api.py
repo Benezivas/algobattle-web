@@ -238,7 +238,7 @@ class CreateContext(BaseSchema):
     name: str = Field(min_length=1)
 
 
-@admin.post("/context/create")
+@admin.post("/context/create", tags=["context"])
 def create_context(*, db: Session = Depends(get_db), context: CreateContext) -> Context:
     if db.scalars(select(Context).filter(Context.name == context.name)).unique().first() is not None:
         raise ValueTaken("name", context.name)
@@ -251,7 +251,7 @@ class EditContext(BaseSchema):
     name: str | Missing = missing
 
 
-@admin.post("/context/{id}/edit")
+@admin.post("/context/{id}/edit", tags=["context"])
 def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditContext) -> Context:
     context = unwrap(Context.get(db, id))
     edit_name = data.name if present(data.name) else context.name
@@ -263,7 +263,7 @@ def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditContext) ->
     return context
 
 
-@admin.post("/context/{id}/delete")
+@admin.post("/context/{id}/delete", tags=["context"])
 def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
     context = unwrap(Context.get(db, id))
     db.delete(context)
@@ -276,7 +276,7 @@ def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
 # *******************************************************************************
 
 
-@router.post("/team")
+@router.post("/team", tags=["team"])
 def get_teams(*, db = Depends(get_db), user = Depends(curr_user), team: list[ID]):
     teams = db.scalars(
         select(Team)
@@ -285,7 +285,7 @@ def get_teams(*, db = Depends(get_db), user = Depends(curr_user), team: list[ID]
     return encode(teams)
 
 
-@admin.get("/team/search", response_model=list[Team.Schema])
+@admin.get("/team/search", tags=["team"], response_model=list[Team.Schema])
 def search_team(
     *,
     db = Depends(get_db),
@@ -316,7 +316,7 @@ class CreateTeam(BaseSchema):
     members: list[ID]
 
 
-@admin.post("/team/create")
+@admin.post("/team/create", tags=["team"])
 def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
     context = unwrap(Context.get(db, team.context))
     members = [unwrap(db.get(User, id)) for id in team.members]
@@ -333,7 +333,7 @@ class EditTeam(BaseSchema):
     members: dict[ID, bool] | Missing = missing
 
 
-@admin.post("/team/{id}/edit")
+@admin.post("/team/{id}/edit", tags=["team"])
 def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
     team = unwrap(Team.get(db, id))
     edit_context = edit.context if present(edit.context) else team.context.id
@@ -356,7 +356,7 @@ def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
     return team
 
 
-@admin.post("/team/{id}/delete")
+@admin.post("/team/{id}/delete", tags=["team"])
 def delete_team(*, db: Session = Depends(get_db), id: ID) -> bool:
     team = unwrap(Team.get(db, id))
     db.delete(team)
@@ -368,7 +368,7 @@ class MemberEditTeam(BaseSchema):
     name: str | None = None
 
 
-@router.post("/team/self/edit")
+@router.post("/team/self/edit", tags=["team"])
 def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: MemberEditTeam) -> Team:
     team = unwrap(user.settings.selected_team)
     team.assert_editable(user)
@@ -388,7 +388,7 @@ class ProblemMetadata(BaseSchema):
     problem_schema: str | None
     solution_schema: str | None
 
-@admin.post("/problem/verify", response_model=ProblemMetadata)
+@admin.post("/problem/verify", tags=["problem"], response_model=ProblemMetadata)
 def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None), problem_id: ID | None = Form(None)):
     if file is None == problem_id is None:
         raise ValueError
@@ -406,12 +406,12 @@ def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None)
         return unwrap(db.get(Problem, problem_id))
 
 
-@admin.get("/problem/{context}/{problem}", response_model=Problem.Schema)
+@admin.get("/problem/{context}/{problem}", tags=["problem"], response_model=Problem.Schema)
 def get_problem(*, db = Depends(get_db), context: str, problem: str):
     return unwrap(db.scalars(select(Problem).join(Context).where(Problem.name == problem, Context.name == context)).unique().first())
 
 
-@admin.post("/problem/create")
+@admin.post("/problem/create", tags=["problem"])
 def add_problem(*, db: Session = Depends(get_db), 
         file: UploadFile | None = File(None),
         problem_id: ID | None = Form(None),
@@ -511,7 +511,7 @@ def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit = D
     return problem
 
 
-@admin.post("/problem/{id}/delete")
+@admin.post("/problem/{id}/delete", tags=["problem"])
 def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
     problem = unwrap(db.get(Problem, id))
     db.delete(problem)
@@ -519,7 +519,7 @@ def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
     return True
 
 
-@router.get("/problem/{id}/download_all")
+@router.get("/problem/{id}/download_all", tags=["problem"])
 def download_problem(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> Response:
     problem = unwrap(db.get(Problem, id))
     problem.assert_visible(user)
@@ -543,7 +543,7 @@ def download_problem(*, db = Depends(get_db), user = Depends(curr_user), id: ID)
         return Response(file.getvalue(), headers={"content-disposition": disposition}, media_type="application/zip")
 
 
-@router.get("/problem/{id}/description_content")
+@router.get("/problem/{id}/description_content", tags=["problem"])
 def problem_desc(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> str | None:
     problem = unwrap(db.get(Problem, id))
     problem.assert_visible(user)
@@ -572,7 +572,7 @@ def problem_desc(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> 
 # *******************************************************************************
 
 
-@router.post("/documentation/{problem_id}", response_model=Documentation.Schema | None)
+@router.post("/documentation/{problem_id}", tags=["docs"], response_model=Documentation.Schema | None)
 def upload_own_docs(
         *,
         db: Session = Depends(get_db),
@@ -585,7 +585,7 @@ def upload_own_docs(
     return docs_edit(db, user, problem, team, file)
 
 
-@admin.post("/documentation/{problem_id}/{team_id}", response_model=Documentation.Schema | None)
+@admin.post("/documentation/{problem_id}/{team_id}", tags=["docs"], response_model=Documentation.Schema | None)
 def upload_docs(
         *,
         db = Depends(get_db),
@@ -616,13 +616,13 @@ def docs_edit(
     return docs
 
 
-@router.post("/documentation/{problem_id}/delete")
+@router.post("/documentation/{problem_id}/delete", tags=["docs"])
 def delete_own_docs(*, db = Depends(get_db), user = Depends(curr_user), problem_id: ID):
     team = unwrap(user.settings.selected_team)
     delete_docs(db, user, problem_id, team)
 
 
-@admin.post("/documentation/{problem_id}/{team_id}/delete")
+@admin.post("/documentation/{problem_id}/{team_id}/delete", tags=["docs"])
 def delete_admin_docs(*, db = Depends(get_db), user = Depends(curr_user), problem_id: ID, team_id: ID):
     team = unwrap(db.get(Team, team_id))
     delete_docs(db, user, problem_id, team)
@@ -640,7 +640,7 @@ class GetDocs(BaseSchema):
     team: ID | list[ID] | Literal["all"] = "all"
 
 
-@router.post("/documentation")
+@router.post("/documentation", tags=["docs"])
 def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs, page: int = 0, limit: int = 25) -> dict[ID, Documentation.Schema]:
     filters = [Documentation.visible_sql(user)]
     if isinstance(data.problem, UUID):
@@ -676,7 +676,7 @@ class ProgramCreate(BaseSchema):
     problem: ID
 
 
-@router.post("/program/create")
+@router.post("/program/create", tags=["program"])
 def add_program(
     *,
     db: Session = Depends(get_db),
@@ -698,7 +698,7 @@ class ProgramEdit(BaseSchema):
     problem: ID | Missing = missing
 
 
-#@router.post("/program/{id}/edit")
+#@router.post("/program/{id}/edit", tags=["program"])
 def edit_own_program(
     *, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID, edit: ProgramEdit = Depends(ProgramEdit.from_form())
 ) -> Program:
@@ -714,7 +714,7 @@ def edit_own_program(
     return program
 
 
-@admin.post("/program/{id}/user_editable")
+@admin.post("/program/{id}/user_editable", tags=["program"])
 def edit_program(*, db: Session = Depends(get_db), id: ID, user_editable: bool) -> Program:
     program = unwrap(db.get(Program, id))
     program.user_editable = user_editable
@@ -722,7 +722,7 @@ def edit_program(*, db: Session = Depends(get_db), id: ID, user_editable: bool) 
     return program
 
 
-@router.post("/program/{id}/delete")
+@router.post("/program/{id}/delete", tags=["program"])
 def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), id: ID) -> bool:
     program = unwrap(db.get(Program, id))
     program.assert_editable(user)
@@ -745,7 +745,7 @@ class ScheduledMatchCreate(BaseSchema):
     points: float = 0
 
 
-@admin.post("/match/schedule/create")
+@admin.post("/match/schedule/create", tags=["match"])
 def create_schedule(*, db: Session = Depends(get_db), data: ScheduledMatchCreate, background_tasks: BackgroundTasks) -> ScheduledMatch:
     problem = unwrap(db.get(Problem, data.problem))
     config = None
@@ -776,7 +776,7 @@ class ScheduleEdit(BaseSchema):
     participants: dict[ID, Participant | None] | Missing = missing
 
 
-@admin.post("/match/schedule/{id}/edit")
+@admin.post("/match/schedule/{id}/edit", tags=["match"])
 def edit_schedule(*, db: Session = Depends(get_db), id: ID, edit: ScheduleEdit) -> ScheduledMatch:
     match = unwrap(db.get(ScheduledMatch, id))
     if present(edit.name):
@@ -810,7 +810,7 @@ def edit_schedule(*, db: Session = Depends(get_db), id: ID, edit: ScheduleEdit) 
     return match
 
 
-@admin.post("/match/schedule/{id}/delete")
+@admin.post("/match/schedule/{id}/delete", tags=["match"])
 def delete_schedule(*, db: Session = Depends(get_db), id: ID) -> bool:
     match = unwrap(db.get(ScheduledMatch, id))
     db.delete(match)
@@ -818,7 +818,7 @@ def delete_schedule(*, db: Session = Depends(get_db), id: ID) -> bool:
     return True
 
 
-@admin.post("/match/result/{id}/delete")
+@admin.post("/match/result/{id}/delete", tags=["match"])
 def delete_result(*, db: Session = Depends(get_db), id: ID) -> bool:
     result = unwrap(db.get(MatchResult, id))
     db.delete(result)
