@@ -3,7 +3,7 @@ import tomllib
 from pathlib import Path
 from base64 import b64decode
 
-from pydantic import validator
+from pydantic import AnyUrl, validator
 
 from algobattle_web.util import BaseSchema
 
@@ -14,6 +14,7 @@ class Config(BaseSchema):
     admin_email: str
     storage_path: Path
     match_execution_interval: timedelta = timedelta(minutes=5)
+    frontend_base_url: AnyUrl
 
     @validator("secret_key")
     def parse_b64(cls, val) -> bytes:
