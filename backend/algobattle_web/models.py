@@ -373,11 +373,10 @@ class User(Base, unsafe_hash=True):
         except (JWTError, ExpiredSignatureError, NameError):
             return
 
-    @staticmethod
-    def login_token(email: str, lifetime: timedelta = timedelta(hours=1)) -> str:
+    def login_token(self, lifetime: timedelta = timedelta(hours=1)) -> str:
         payload = {
             "type": "login",
-            "email": email,
+            "email": self.email,
             "exp": datetime.now() + lifetime,
         }
         return jwt.encode(payload, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)
