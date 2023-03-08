@@ -5,7 +5,7 @@ import router from './router'
 import { useCookies } from "vue3-cookies"
 
 import "./assets/styles.scss"
-import { Configuration, UserApi } from "../typescript_client"
+import { Configuration, ContextApi, DocsApi, MatchApi, ProblemApi, ProgramApi, TeamApi, UserApi } from "../typescript_client"
 import type { AlgobattleWebModelsUserSchema } from "../typescript_client"
 
 const { cookies } = useCookies()
@@ -15,6 +15,12 @@ const configuration = new Configuration({
 })
 
 export const userApi = new UserApi(configuration)
+export const contextApi = new ContextApi(configuration)
+export const teamApi = new TeamApi(configuration)
+export const problemApi = new ProblemApi(configuration)
+export const docsApi = new DocsApi(configuration)
+export const programApi = new ProgramApi(configuration)
+export const matchApi = new MatchApi(configuration)
 
 
 export const store = reactive({
