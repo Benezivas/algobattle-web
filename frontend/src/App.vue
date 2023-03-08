@@ -39,7 +39,7 @@ onMounted(async () => {
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0 nav nav-pills">
+        <ul v-if="store.user.id" class="navbar-nav me-auto mb-2 mb-lg-0 nav nav-pills">
           <PageNavbarIcon link="/problems" icon="boxes">Problems</PageNavbarIcon>
           <PageNavbarIcon link="/programs" icon="file-earmark-code">Programs</PageNavbarIcon>
           <PageNavbarIcon link="/schedule" icon="calendar-week">Schedule</PageNavbarIcon>
@@ -47,7 +47,7 @@ onMounted(async () => {
           <PageNavbarIcon v-if="store.user.isAdmin" link="/admin/users" icon="people">Admin panel</PageNavbarIcon>
         </ul>
 
-        <div class="nav-item dropdown">
+        <div v-if="store.user.id" class="nav-item dropdown">
           <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             <i class="bi bi-person-circle me-2"></i> <strong>{{store.user.name}}</strong>
           </a>
