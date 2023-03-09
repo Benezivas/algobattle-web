@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import ProblemCard from '@/components/ProblemCard.vue';
 import { contextApi, problemApi, store } from '@/main';
-import type { AlgobattleWebModelsContextSchema, AlgobattleWebModelsProblemSchema } from 'typescript_client';
+import type { Context, Problem } from 'typescript_client';
 import { computed, onMounted, ref, watch, type Ref } from 'vue';
 
 let contexts: Ref<{
-    [key: string]: AlgobattleWebModelsContextSchema
+    [key: string]: Context
 }> = ref({})
 let selectedContext: Ref<string | undefined> = ref(undefined)
-const problems: Ref<{[key: string]: AlgobattleWebModelsProblemSchema}> = ref({})
+const problems: Ref<{[key: string]: Problem}> = ref({})
 
 onMounted(async () => {
   contexts.value = await contextApi.allContexts()
@@ -20,7 +20,7 @@ watch(selectedContext, async (newContext: string | undefined) => {
   problems.value = await problemApi.allProblems({context: newContext})
 })
 
-function inContext(problem: AlgobattleWebModelsProblemSchema) {
+function inContext(problem: Problem) {
     if (selectedContext.value == undefined) {
         return true
     } else {

@@ -5,8 +5,17 @@ import router from './router'
 import { useCookies } from "vue3-cookies"
 
 import "./assets/styles.scss"
-import { Configuration, ContextApi, DocsApi, MatchApi, ProblemApi, ProgramApi, TeamApi, UserApi, type UserWithSettings } from "../typescript_client"
-import type { AlgobattleWebModelsUserSchema } from "../typescript_client"
+import {
+    Configuration,
+    ContextApi,
+    DocsApi,
+    MatchApi,
+    ProblemApi,
+    ProgramApi,
+    TeamApi,
+    UserApi,
+    type UserWithSettings
+} from "../typescript_client"
 
 const { cookies } = useCookies()
 const configuration = new Configuration({
