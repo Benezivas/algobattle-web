@@ -3,9 +3,8 @@ from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
 from tempfile import SpooledTemporaryFile
-from typing import IO, Iterable, Any
+from typing import IO, ClassVar, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Sequence
-from enum import Enum
 from uuid import UUID, uuid4
 from pathlib import Path
 from urllib.parse import quote as urlencode
@@ -19,6 +18,7 @@ from sqlalchemy.sql import true as sql_true, or_, and_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
 from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, Session, DeclarativeBase, registry, MappedAsDataclass
 from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.sql.base import _NoArg
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
 from fastapi.encoders import jsonable_encoder
@@ -194,6 +194,7 @@ class File(RawBase, init=False):
                 return cls.parse_obj(value)
             else:
                 raise TypeError
+    Schema.__name__ = "DbFile"
 
 
 @listens_for(File, "after_insert")
@@ -228,6 +229,21 @@ class BaseNoID(RawBase):
 
     def __post_init__(self, db: Session) -> None:
         db.add(self)
+
+    _children: "ClassVar[list[type[BaseNoID]]]" = []
+
+    def __init_subclass__(
+            cls,
+            init: _NoArg | bool = _NoArg.NO_ARG,
+            repr: _NoArg | bool = _NoArg.NO_ARG,
+            eq: _NoArg | bool = _NoArg.NO_ARG,
+            order: _NoArg | bool = _NoArg.NO_ARG,
+            unsafe_hash: _NoArg | bool = _NoArg.NO_ARG,
+            match_args: _NoArg | bool = _NoArg.NO_ARG,
+            kw_only: _NoArg | bool = _NoArg.NO_ARG
+        ) -> None:
+        BaseNoID._children.append(cls)
+        return super().__init_subclass__(init, repr, eq, order, unsafe_hash, match_args, kw_only)
 
     class Schema(BaseSchema, ABC):
         pass
@@ -667,3 +683,6 @@ class MatchResult(Base, unsafe_hash=True):
 
     def visible(self, user: User) -> bool:
         return user.is_admin or len(set(user.teams).intersection(p.team for p in self.participants)) != 0
+
+for cls in BaseNoID._children:
+    cls.Schema.__name__ = cls.__name__
