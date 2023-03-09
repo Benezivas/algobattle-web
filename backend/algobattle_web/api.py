@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, Response
 from markdown import markdown
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from pydantic import Field, AnyUrl
+from pydantic import Field
 from pydantic.color import Color
 
 
@@ -42,7 +42,7 @@ from algobattle.problem import Problem as AlgProblem
 from backend.algobattle_web.config import SERVER_CONFIG
 from backend.algobattle_web.models import UserSettings
 
-from backend.algobattle_web.util import send_email
+from backend.algobattle_web.util import Wrapped, send_email
 
 
 class SchemaRoute(APIRoute):
@@ -610,28 +610,28 @@ def download_problem(*, db = Depends(get_db), user = Depends(curr_user), id: ID)
         return Response(file.getvalue(), headers={"content-disposition": disposition}, media_type="application/zip")
 
 
-@router.get("/problem/{id}/description_content", tags=["problem"])
-def problem_desc(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> str | None:
+@router.post("/problem/description_content", tags=["problem"])
+def problem_desc(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> Wrapped[str | None]:
     problem = unwrap(db.get(Problem, id))
     problem.assert_visible(user)
     if problem.description is None:
-        return None
+        return Wrapped(data=None)
     else:
         try:
             match problem.description.media_type:
                 case "text/plain":
                     with problem.description.open("r") as file:
-                        return f"<p>{file.read()}</p>"
+                        return Wrapped(data=f"<p>{file.read()}</p>")
                 case "text/html":
                     with problem.description.open("r") as file:
                         return file.read()
                 case "text/markdown":
                     with problem.description.open("r") as file:
-                        return markdown(cast(str, file.read()))
+                        return Wrapped(data=markdown(cast(str, file.read())))
                 case _:
-                    return "__DOWNLOAD_BUTTON__"
+                    return Wrapped(data="__DOWNLOAD_BUTTON__")
         except:
-            return "__DOWNLOAD_BUTTON__"
+            return Wrapped(data="__DOWNLOAD_BUTTON__")
 
 
 # *******************************************************************************
