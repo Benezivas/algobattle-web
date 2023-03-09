@@ -433,6 +433,17 @@ def all_problems(*, db = Depends(get_db), user = Depends(curr_user), context: ID
     return encode(problems)
 
 
+class ProblemInfo(BaseSchema):
+    problem: Problem.Schema
+    context: Context.Schema
+
+@router.get("/problem/{context_name}/{problem_name}", tags=["problem"], response_model=ProblemInfo)
+def problem_by_name(*, db = Depends(get_db), user = Depends(curr_user), context_name: str, problem_name: str):
+    problem = unwrap(db.scalars(select(Problem).filter(Problem.name == problem_name, Problem.context.name == context_name)).unique().first())
+    problem.assert_visible(user)
+    return {"problem": problem, "context": problem.context}
+
+
 class ProblemMetadata(BaseSchema):
     name: str
     problem_schema: str | None
