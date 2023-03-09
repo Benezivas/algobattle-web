@@ -74,7 +74,7 @@ const past_problems = computed(() => {
         <img src="/default_problem.png" style="height: 10.125rem; object-fit: contain" class="card-img-top" alt="">
         <div class="card-body d-flex flex-column">
           <h5 class="card-title mb-auto">New problem</h5>
-          <a href="/problems/create" class="btn btn-success mt-auto stretched-link">Create</a>
+          <RouterLink to="/problems/create" class="btn btn-success mt-auto stretched-link">Create</RouterLink>
         </div>
       </div>
     </div>

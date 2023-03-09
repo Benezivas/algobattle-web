@@ -5,7 +5,7 @@ import { store, userApi } from "./main"
 import LoginView from './views/LoginView.vue';
 import { useCookies } from "vue3-cookies"
 import { onMounted } from 'vue';
-import type { AlgobattleWebModelsUserSchema } from 'typescript_client';
+import type { UserWithSettings } from 'typescript_client';
 
 const router = useRouter()
 const { cookies } = useCookies()
@@ -30,7 +30,7 @@ onMounted(async () => {
 
 async function logout() {
   cookies.remove("user_token")
-  store.user = {} as AlgobattleWebModelsUserSchema
+  store.user = {} as UserWithSettings
 }
 
 </script>
@@ -38,9 +38,9 @@ async function logout() {
 <template>
   <nav class="navbar navbar-expand-md sticky-top bg-primary-subtle" data-bs-theme="dark">
     <div class="container-xxl">
-      <a href="/" class="navbar-brand">
+      <RouterLink to="/" class="navbar-brand">
         <span class="fs-4">Algobattle</span>
-      </a>
+      </RouterLink>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -58,8 +58,8 @@ async function logout() {
             <i class="bi bi-person-circle me-2"></i> <strong>{{store.user.name}}</strong>
           </a>
           <ul class="dropdown-menu">
-            <li v-if="store.user.teams"><a class="dropdown-item" href="/team">Team</a></li>
-            <li><a class="dropdown-item" href="/user">User</a></li>
+            <li v-if="store.user.teams"><RouterLink class="dropdown-item" to="/team">Team</RouterLink></li>
+            <li><RouterLink class="dropdown-item" to="/user">User</RouterLink></li>
             <li><hr class="dropdown-divider"></li>
             <li>
               <button class="dropdown-item" @click="logout">Log out</button>
