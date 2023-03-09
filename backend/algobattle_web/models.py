@@ -471,9 +471,6 @@ class Team(Base, unsafe_hash=True):
             return db.query(cls).filter(cls.name == identifier, cls.context_id == context.id).first()
 
 
-UserSettings.Schema.update_forward_refs()
-
-
 class Problem(Base, unsafe_hash=True):
     file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
     config_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
@@ -686,3 +683,4 @@ class MatchResult(Base, unsafe_hash=True):
 
 for cls in BaseNoID._children:
     cls.Schema.__name__ = cls.__name__
+UserSettings.Schema.update_forward_refs()
