@@ -439,7 +439,13 @@ class ProblemInfo(BaseSchema):
 
 @router.get("/problem/{context_name}/{problem_name}", tags=["problem"], response_model=ProblemInfo)
 def problem_by_name(*, db = Depends(get_db), user = Depends(curr_user), context_name: str, problem_name: str):
-    problem = unwrap(db.scalars(select(Problem).filter(Problem.name == problem_name, Problem.context.name == context_name)).unique().first())
+    problem = unwrap(db.scalars(
+        select(Problem)
+        .where(
+            Problem.name == problem_name,
+            Problem.context.has(Context.name == context_name),
+        )
+    ).unique().first())
     problem.assert_visible(user)
     return {"problem": problem, "context": problem.context}
 
