@@ -492,7 +492,7 @@ def add_problem(*, db: Session = Depends(get_db),
         end: datetime | None = Form(None),
         image: UploadFile | None = File(None),
         alt_text: str = Form(""),
-        short_description: str | None = Form(None),
+        short_description: str = Form(),
         colour: Color = Form(Color("#ffffff")),
     ) -> str:
     if file is None == problem_id is None:
@@ -540,41 +540,45 @@ def add_problem(*, db: Session = Depends(get_db),
 
 
 class ProblemEdit(BaseSchema):
-    name: str | Missing = missing
-    context: ID | Missing = missing
-    file: UploadFile | Missing = missing
-    config: UploadFile | Missing = missing
-    start: datetime | None | Missing = missing
-    end: datetime | None | Missing = missing
-    description: UploadFile | Literal["null"] | Missing = missing
-    short_description: str | None | Missing = missing
-    image: UploadFile | Literal["null"] | Missing = missing
-    alt: str | None | Missing = missing
-    problem_schema: str | None | Missing = missing
-    solution_schema: str | None | Missing = missing
-    colour: str | Missing = missing
+    name: str | None = None
+    context: ID | None = None
+    start: datetime | None = None
+    end: datetime | None = None
+    short_description: str | None = None
+    alt: str | None = None
+    problem_schema: str | None = None
+    solution_schema: str | None = None
+    colour: str | None = None
 
 
-#@admin.post("/problem/{id}/edit")
-def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit = Depends(ProblemEdit.from_form())) -> Problem:
+@admin.post("/problem/{id}/edit", tags=["problem"])
+def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit) -> Problem:
     problem = unwrap(db.get(Problem, id))
-    for key in ("name", "start", "end", "short_description", "problem_schema", "solution_schema", "colour"):
-        val = getattr(edit, key)
-        if present(val):
+    for key, val in edit.dict(exclude_unset=True).items():
+        if key == "context":
+            context_ = unwrap(db.get(Context, edit.context))
+            problem.context = context_
+        elif key == "alt":
+            if problem.image is None or edit.alt is None:
+                continue
+            problem.image.alt_text = edit.alt
+        else:
             setattr(problem, key, val)
-    for key in ("file", "config", "description", "image"):
-        val = getattr(edit, key)
-        if val == "null":
-            setattr(problem, key, None)
-        elif present(val):
-            setattr(problem, key, DbFile(val))
-    if problem.image and present(edit.alt):
-        problem.image.alt_text = edit.alt
 
     try:
         db.commit()
     except IntegrityError as e:
-        raise ValueTaken("name", edit.name if present(edit.name) else "") from e
+        raise ValueTaken("name", "") from e
+    return problem
+
+
+@admin.post("/problem/{id}/editFile", tags=["problem"])
+def edit_problem_file(*, db = Depends(get_db), id: ID, name: Literal["file", "config", "description", "image"] = Form(), file: UploadFile | None = File(None)) -> Problem:
+    problem = unwrap(db.get(Problem, id))
+    if file is None and name in ("file", "config"):
+        raise HTTPException(400)
+    setattr(problem, name, file)
+    db.commit()
     return problem
 
 
