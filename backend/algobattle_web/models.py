@@ -485,7 +485,7 @@ class Problem(Base, unsafe_hash=True):
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
     description: Mapped[File | None] = relationship(default=None, foreign_keys=description_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
-    short_description: Mapped[str | None] = mapped_column(default=None)
+    short_description: Mapped[str] = mapped_column(default="")
     image: Mapped[File | None] = relationship(default=None, foreign_keys=image_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     problem_schema: Mapped[str | None] = mapped_column(default=None)
     solution_schema: Mapped[str | None] = mapped_column(default=None)
@@ -501,7 +501,7 @@ class Problem(Base, unsafe_hash=True):
         start: datetime | None
         end: datetime | None
         description: File.Schema | None
-        short_description: str | None
+        short_description: str
         image: File.Schema | None
         problem_schema: str | None
         solution_schema: str | None
