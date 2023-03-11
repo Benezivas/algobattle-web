@@ -286,7 +286,7 @@ async function deleteProblem() {
           </thead>
           <tbody>
             <tr v-for="(doc, id) in docs">
-              <td>{{ teams[doc.team].name }}</td>
+              <td>{{ teams[doc.team]?.name }}</td>
               <td>
                 <a class="btn btn-primary btn-sm" :href="doc.file.location" title="Download file">Download <i class="bi bi-download ms-1"></i></a>
                 <button role="button" class="btn btn-warning btn-sm ms-2" title="Edit" @click="(e) => openDocEdit(id as string)">Edit <i class="bi bi-pencil ms-1"></i></button>
