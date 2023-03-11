@@ -227,7 +227,7 @@ async function deleteProblem() {
 
 <template>
   <template v-if="error != 'problem'">
-    <nav id="navbar" class="navbar bg-body-tertiary px-3 mb-3 sticky-top" style="top: 62px">
+    <nav id="navbar" class="navbar bg-body-tertiary px-3 mb-3">
       <a class="navbar-brand" href="#">
         {{problem.name + (store.user.isAdmin ? ` (${contexts[problem.context]?.name})`: "")}}
       </a>
