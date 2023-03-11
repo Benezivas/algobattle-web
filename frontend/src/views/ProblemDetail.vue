@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Modal } from "bootstrap"
-import { contextApi, docsApi, problemApi, store } from '@/main';
+import { contextApi, docsApi, problemApi, store, teamApi } from '@/main';
 import type { Context, Documentation, DbFile, Problem, AlgobattleWebModelsTeamSchema } from 'typescript_client';
 import { computed, onMounted, ref, type Ref } from 'vue';
 import { useRoute } from 'vue-router';
@@ -37,6 +37,7 @@ const contexts: Ref<{
 const selectedTeam: Ref<AlgobattleWebModelsTeamSchema | undefined> = ref(undefined)
 const docs: Ref<{[key: string]: Documentation}> = ref({})
 const description: Ref<string | undefined> = ref(undefined)
+const teams: Ref<{[key: string]: AlgobattleWebModelsTeamSchema}> = ref({})
 
 const route = useRoute()
 const error = ref(null as null | string)
@@ -66,6 +67,10 @@ onMounted(async () => {
     }
     docs.value = await docsApi.getDocs({getDocs: {problem: problem.value.id}})
     description.value = (await problemApi.problemDesc({id: problem.value.id})).data
+    teams.value = await teamApi.getTeams({requestBody: Object.values(docs.value).map((doc) => doc.team)})
+    if (selectedTeam.value) {
+      teams.value[selectedTeam.value.id] = selectedTeam.value
+    }
   } catch {
     error.value = "problem"
   }
@@ -138,6 +143,7 @@ async function removeDoc() {
     editDoc.fileSelect.value.value = ""
   }
   delete docs.value[editDoc.docId.value]
+  Modal.getOrCreateInstance("#docModal").hide()
 }
 
 let editProblem = ref(createProblemEdit(problem.value))
@@ -268,8 +274,27 @@ async function deleteProblem() {
         <a v-if="description == '__DONWLOAD_BUTTON__'" role="button" class="btn btn-primary btn-sm" :href="problem.description.location" title="Download file">Download description file <i class="bi bi-download ms-1"></i></a>
         <div v-else v-html="description"></div>
       </template>
-      <h4 id="documentation" class="mt-5">Documentation</h4>
-      <a v-if="ownDoc" role="button" class="btn btn-primary btn-sm mb-3" :href="ownDoc.file.location" title="Download documentation">Download documentation<i class="bi bi-download ms-1"></i></a>
+      <template v-if="ownDoc || store.user.isAdmin">
+        <h4 id="documentation" class="mt-5">Documentation</h4>
+        <a v-if="ownDoc && !store.user.isAdmin" role="button" class="btn btn-primary btn-sm mb-3" :href="ownDoc.file.location" title="Download documentation">Download documentation<i class="bi bi-download ms-1"></i></a>
+        <table v-else class="table">
+          <thead>
+            <tr>
+              <th>Team</th>
+              <th>File</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(doc, id) in docs">
+              <td>{{ teams[doc.team].name }}</td>
+              <td>
+                <a class="btn btn-primary btn-sm" :href="doc.file.location" title="Download file">Download <i class="bi bi-download ms-1"></i></a>
+                <button role="button" class="btn btn-warning btn-sm ms-2" title="Edit" @click="(e) => openDocEdit(id as string)">Edit <i class="bi bi-pencil ms-1"></i></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </template>
       <template v-if="problem.problemSchema">
         <h4 id="problem_schema" class="mt-5">Problem schema</h4>
         <pre><code>{{problem.problemSchema}}</code></pre>

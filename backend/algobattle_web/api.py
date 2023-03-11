@@ -704,6 +704,7 @@ def delete_docs(db: Session, user: User, problem_id: ID, team: Team):
     docs = unwrap(db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem)).unique().first())
     docs.assert_editable(user)
     db.delete(docs)
+    db.commit()
 
 
 class GetDocs(BaseSchema):
