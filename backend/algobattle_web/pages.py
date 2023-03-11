@@ -1,8 +1,8 @@
 "Module specifying the regular user pages."
 from typing import Collection
 
-from fastapi import APIRouter, Depends, Form, status, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends
+from fastapi.responses import HTMLResponse
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select, func
 
@@ -20,59 +20,12 @@ from algobattle_web.models import (
     User,
     encode,
 )
-from algobattle_web.templates import templated, templates
-from algobattle_web.util import send_email, unwrap
-from algobattle_web.dependencies import curr_user, curr_user_maybe, check_if_admin
+from algobattle_web.templates import templated
+from algobattle_web.util import unwrap
+from algobattle_web.dependencies import curr_user, check_if_admin
 
 router = APIRouter()
 admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)])
-
-
-@router.get("/")
-@templated
-def home_get():
-    return "home.jinja"
-
-
-@router.get("/login", response_class=HTMLResponse)
-def login_get(
-    request: Request, db: Session = Depends(get_db), token: str | None = None, user: User | None = Depends(curr_user_maybe)
-):
-    res = User.decode_login_token(db, token)
-    if isinstance(res, User):
-        response = RedirectResponse("/")
-        response.set_cookie(**res.cookie())
-        return response
-    else:
-        return templates.TemplateResponse(
-            "login.jinja",
-            {
-                "user": None,
-                "request": request,
-                "error": res.value,
-                "logged_in": user.name if user is not None else "",
-            },
-        )
-
-
-@router.post("/login", response_class=HTMLResponse)
-def login_post(request: Request, db: Session = Depends(get_db), email: str = Form()):
-    user = User.get(db, email)
-    if user is not None:
-        token = user.login_token()
-        send_email(email, f"{request.url_for('login_post')}?token={token}")
-        return templates.TemplateResponse("login.jinja", {"request": request, "user": None, "email_sent": True})
-    else:
-        return templates.TemplateResponse(
-            "login.jinja", {"request": request, "user": None, "email": email, "error": LoginError.UnregisteredUser.value}
-        )
-
-
-@router.post("/logout")
-def logout_post():
-    response = RedirectResponse("/login", status_code=status.HTTP_302_FOUND)
-    response.delete_cookie("user_token")
-    return response
 
 
 @router.get("/user", response_class=HTMLResponse)
@@ -85,37 +38,6 @@ def user_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
 @templated
 def team_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     return "team.jinja"
-
-
-@router.get("/problems")
-@templated
-def problems_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
-    if user.is_admin:
-        context = user.settings.selected_team.context_id if user.settings.selected_team else None
-        problems = db.scalars(select(Problem)).unique().all()
-    elif user.settings.selected_team is None:
-        return "problems.jinja", {"problems": {}, "contexts": {}, "selected_context": None}
-    else:
-        context = user.settings.selected_team.context_id
-        problems = db.scalars(select(Problem).filter(Problem.visible_sql(user), Problem.context_id == context)).unique().all()
-    contexts = db.scalars(select(Context).filter(Context.visible_sql(user))).unique().all()
-    return "problems.jinja", {"problems": encode(problems), "contexts": encode(contexts), "selected_context": str(context)}
-
-
-@router.get("/problems/{context_name}/{problem_name}")
-@templated
-def problems_details(*, db = Depends(get_db), user = Depends(curr_user), context_name: str, problem_name: str):
-    context = unwrap(db.scalars(select(Context).filter(Context.name == context_name)).unique().first())
-    problem = unwrap(db.scalars(select(Problem).filter(Problem.name == problem_name, Problem.context_id == context.id)).unique().first())
-    problem.assert_visible(user)
-    if user.is_admin:
-        contexts = Context.get_all(db)
-    else:
-        contexts = [context]
-    team = user.settings.selected_team
-    if team is not None:
-        team = team.encode()
-    return "problem_detail.jinja", {"problem": problem.encode(), "selected_team": team, "contexts": encode(contexts)}
 
 
 @admin.get("/problems/create")
