@@ -11,8 +11,8 @@ const route = useRoute()
 
 <template>
   <li class="nav-item mx-2">
-    <RouterLink :to="link" class="nav-link align-middle" :class="{active: route.name == link}" :aria-current="route.name == link">
-      <i class="bi" :class="['bi-' + icon]"></i> <span class="ms-1"><slot/></span>
+    <RouterLink :to="link" class="nav-link align-middle" :class="{active: route.path.startsWith(link)}" :aria-current="route.path.startsWith(link)">
+      <i class="me-1 bi" :class="['bi-' + icon]"></i><slot/>
     </RouterLink>
   </li>
 </template>

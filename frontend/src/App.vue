@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterView, useRouter } from 'vue-router'
-import PageNavbarIcon from './components/PageNavbarIcon.vue';
+import PageNavbarIcon from './components/HomeNavbarIcon.vue';
 import { store, userApi } from "./main"
 import LoginView from './views/LoginView.vue';
 import { useCookies } from "vue3-cookies"
