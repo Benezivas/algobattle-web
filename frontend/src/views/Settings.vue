@@ -16,7 +16,7 @@ const error = ref("")
 
 onMounted(async () => {
   teams.value = await teamApi.getTeams({requestBody: store.user.teams})
-  contexts.value = await contextApi.getContexts({requestBody: [...new Set(Object.values(teams.value).map(t => t.context))]})
+  contexts.value = await contextApi.getContexts({requestBody: Object.values(teams.value).map(t => t.context)})
 })
 
 async function saveEdit() {

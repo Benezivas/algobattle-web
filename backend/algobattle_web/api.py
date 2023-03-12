@@ -253,7 +253,7 @@ def all_contexts(*, db = Depends(get_db), user = Depends(curr_user)) -> dict[ID,
     return encode(contexts)
 
 
-@router.get("/context", tags=["context"])
+@router.post("/context", tags=["context"])
 def get_contexts(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, Context.Schema]:
     contexts = db.scalars(
         select(Context)
