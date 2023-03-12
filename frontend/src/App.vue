@@ -50,7 +50,7 @@ async function logout() {
           <PageNavbarIcon link="/programs" icon="file-earmark-code">Programs</PageNavbarIcon>
           <PageNavbarIcon link="/schedule" icon="calendar-week">Schedule</PageNavbarIcon>
           <PageNavbarIcon link="/results" icon="bar-chart-line">Results</PageNavbarIcon>
-          <PageNavbarIcon v-if="store.user.isAdmin" link="/admin/users" icon="people">Admin panel</PageNavbarIcon>
+          <PageNavbarIcon v-if="store.user.isAdmin" link="/admin" icon="people">Admin panel</PageNavbarIcon>
         </ul>
 
         <div v-if="store.user.id" class="nav-item dropdown">
