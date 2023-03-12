@@ -148,32 +148,31 @@ def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
 
 
 class EditUser(BaseSchema):
-    name: str | Missing = Field(missing, min_length=1)
-    email: str | Missing = Field(missing, min_length=1)
-    is_admin: bool | Missing = missing
-    teams: dict[ID, bool] | Missing = missing
+    name: str | None = Field(None, min_length=1)
+    email: str | None = Field(None, min_length=1)
+    is_admin: bool | None = None
+    teams: dict[ID, bool] = {}
 
 
 @admin.post("/user/{id}/edit", tags=["user"])
 def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     user = unwrap(User.get(db, id))
-    edit_email = edit.email if present(edit.email) else user.email
-    if db.scalars(select(User).filter(User.email == edit_email, User.id != id)).unique().first() is not None:
-        raise ValueTaken("email", user.email, id)
 
     for key, val in edit.dict(exclude_unset=True).items():
         if key != "teams":
             setattr(user, key, val)
-    if present(edit.teams):
-        for id, add in edit.teams.items():
-            team = unwrap(db.get(Team, id))
-            if add and team not in user.teams:
-                user.teams.append(team)
-            elif not add and team in user.teams:
-                user.teams.remove(team)
-            else:
-                raise ValueError
-    db.commit()
+    for id, add in edit.teams.items():
+        team = unwrap(db.get(Team, id))
+        if add and team not in user.teams:
+            user.teams.append(team)
+        elif not add and team in user.teams:
+            user.teams.remove(team)
+        else:
+            raise ValueError
+    try:
+        db.commit()
+    except IntegrityError as e:
+        raise ValueTaken("email", user.email, id) from e
     return user
 
 
@@ -186,8 +185,8 @@ def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 
 class EditSelf(BaseSchema):
-    name: str | Missing = missing
-    email: str | Missing = missing
+    name: str | None = None
+    email: str | None = None
 
 
 @router.post("/user/self/edit", tags=["user"])
@@ -199,7 +198,7 @@ def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user),
 
 
 class EditSettings(BaseSchema):
-    selected_team: ID | Missing = missing
+    selected_team: ID | None = None
 
 
 @router.post("/user/self/settings", tags=["user"])
@@ -277,18 +276,18 @@ def create_context(*, db: Session = Depends(get_db), context: CreateContext) -> 
 
 
 class EditContext(BaseSchema):
-    name: str | Missing = missing
+    name: str | None = None
 
 
 @admin.post("/context/{id}/edit", tags=["context"])
 def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditContext) -> Context:
-    context = unwrap(Context.get(db, id))
-    edit_name = data.name if present(data.name) else context.name
-    if db.scalars(select(Context).filter(Context.name == edit_name, Context.id != id)).unique().first() is not None:
-        raise ValueTaken("name", context.name)
-    if present(data.name):
+    context = unwrap(Context.get(db, id))    
+    if data.name is not None:
         context.name = data.name
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as e:
+        raise ValueTaken("name", context.name) from e
     return context
 
 
@@ -357,31 +356,30 @@ def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
 
 
 class EditTeam(BaseSchema):
-    name: str | Missing = Field(missing, min_length=1)
-    context: ID | Missing = missing
-    members: dict[ID, bool] | Missing = missing
+    name: str | None = Field(None, min_length=1)
+    context: ID | None = None
+    members: dict[ID, bool] = {}
 
 
 @admin.post("/team/{id}/edit", tags=["team"])
 def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
     team = unwrap(Team.get(db, id))
-    edit_context = edit.context if present(edit.context) else team.context.id
-    if db.scalars(select(Team).filter(Team.name == edit.name, Team.context_id == edit_context, Team.id != id)).unique().first() is not None:
-        raise ValueTaken("name", team.name)
-    if present(edit.name):
+    if edit.name is not None:
         team.name = edit.name
-    if present(edit.context):
+    if edit.context is not None:
         team.context_id = edit.context
-    if present(edit.members):
-        for id, add in edit.members.items():
-            user = unwrap(db.get(User, id))
-            if add and user not in team.members:
-                team.members.append(user)
-            elif not add and user in team.members:
-                team.members.remove(user)
-            else:
-                raise ValueError
-    db.commit()
+    for id, add in edit.members.items():
+        user = unwrap(db.get(User, id))
+        if add and user not in team.members:
+            team.members.append(user)
+        elif not add and user in team.members:
+            team.members.remove(user)
+        else:
+            raise ValueError
+    try:
+        db.commit()
+    except IntegrityError as e:
+        raise ValueTaken("name", team.name) from e
     return team
 
 
@@ -776,9 +774,9 @@ def add_program(
 
 
 class ProgramEdit(BaseSchema):
-    name: str | Missing = missing
-    role: Program.Role | Missing = missing
-    problem: ID | Missing = missing
+    name: str | None = None
+    role: Program.Role | None = None
+    problem: ID | None = None
 
 
 #@router.post("/program/{id}/edit", tags=["program"])
@@ -787,11 +785,11 @@ def edit_own_program(
 ) -> Program:
     program = unwrap(db.get(Program, id))
     program.assert_editable(user)
-    if present(edit.name):
+    if edit.name is not None:
         program.name = edit.name
-    if present(edit.role):
+    if edit.role is not None:
         program.role = cast(Program.Role, edit.role)
-    if present(edit.problem):
+    if edit.problem is not None:
         program.problem_id = edit.problem
     db.commit()
     return program
