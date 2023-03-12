@@ -574,11 +574,17 @@ def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit) ->
 
 
 @admin.post("/problem/{id}/editFile", tags=["problem"])
-def edit_problem_file(*, db = Depends(get_db), id: ID, name: Literal["file", "config", "description", "image"] = Form(), file: UploadFile | None = File(None)) -> Problem:
+def edit_problem_file(
+    *,
+    db = Depends(get_db),
+    id: ID,
+    name: Literal["file", "config", "description", "image"] = Form(),
+    file: UploadFile | None = File(None),
+    ) -> Problem:
     problem = unwrap(db.get(Problem, id))
     if file is None and name in ("file", "config"):
         raise HTTPException(400)
-    setattr(problem, name, file)
+    setattr(problem, name, DbFile.maybe(file))
     db.commit()
     return problem
 
