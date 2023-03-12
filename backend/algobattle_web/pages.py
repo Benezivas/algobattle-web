@@ -28,18 +28,6 @@ router = APIRouter()
 admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)])
 
 
-@router.get("/user", response_class=HTMLResponse)
-@templated
-def user_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
-    return "user.jinja", {"teams": encode(user.teams), "settings": user.settings.encode()}
-
-
-@router.get("/team")
-@templated
-def team_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
-    return "team.jinja"
-
-
 @router.get("/programs")
 @templated
 def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
