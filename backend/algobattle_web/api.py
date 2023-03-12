@@ -479,7 +479,7 @@ def get_problem(*, db = Depends(get_db), context: str, problem: str):
 
 
 @admin.post("/problem/create", tags=["problem"])
-def add_problem(*, db: Session = Depends(get_db), 
+def create_problem(*, db: Session = Depends(get_db), 
         file: UploadFile | None = File(None),
         problem_id: ID | None = Form(None),
         name: str = Form(),
@@ -494,7 +494,7 @@ def add_problem(*, db: Session = Depends(get_db),
         alt_text: str = Form(""),
         short_description: str = Form(),
         colour: Color = Form(Color("#ffffff")),
-    ) -> str:
+    ) -> Wrapped[str]:
     if file is None == problem_id is None:
         raise HTTPException(400)
     if file is not None:
@@ -532,11 +532,12 @@ def add_problem(*, db: Session = Depends(get_db),
         short_description=short_description,
         colour=colour.as_hex(),
     )
+    db.add(prob)
     try:
         db.commit()
     except IntegrityError as e:
         raise ValueTaken("name", name) from e
-    return f"/problems/{prob.context.name}/{prob.name}"
+    return Wrapped(data=f"/problems/{prob.context.name}/{prob.name}")
 
 
 class ProblemEdit(BaseSchema):
