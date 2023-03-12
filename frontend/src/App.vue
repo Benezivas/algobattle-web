@@ -58,8 +58,7 @@ async function logout() {
             <i class="bi bi-person-circle me-2"></i> <strong>{{store.user.name}}</strong>
           </a>
           <ul class="dropdown-menu">
-            <li v-if="store.user.teams"><RouterLink class="dropdown-item" to="/team">Team</RouterLink></li>
-            <li><RouterLink class="dropdown-item" to="/user">User</RouterLink></li>
+            <li><RouterLink class="dropdown-item" to="settings">Settings</RouterLink></li>
             <li><hr class="dropdown-divider"></li>
             <li>
               <button class="dropdown-item" @click="logout">Log out</button>

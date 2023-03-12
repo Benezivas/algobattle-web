@@ -1,37 +1,46 @@
-<script setup lang="ts">
+<script setup lang="ts">import { contextApi, store, teamApi, userApi } from '@/main';
+import type { AlgobattleWebModelsTeamSchema, Context } from 'typescript_client';
+import { onMounted, ref } from 'vue';
 
+
+const userEdit = ref({
+  name: store.user.name,
+  email: store.user.email,
+  settings: {
+    selectedTeam: store.user.settings.selectedTeam?.id,
+  },
+})
+const teams = ref<{[key: string]: AlgobattleWebModelsTeamSchema}>({})
+const contexts = ref<{[key: string]: Context}>({})
+const error = ref("")
+
+onMounted(async () => {
+  teams.value = await teamApi.getTeams({requestBody: store.user.teams})
+  contexts.value = await contextApi.getContexts({requestBody: [...new Set(Object.values(teams.value).map(t => t.context))]})
+})
+
+async function saveEdit() {
+  const newUser = await userApi.editSelf({editSelf: {name: userEdit.value.name, email: userEdit.value.email}})
+  Object.assign(store.user, newUser)
+  store.user.settings = await userApi.editSettings({editSettings: {selectedTeam: userEdit.value.settings.selectedTeam}})
+  error.value = "success"
+}
 </script>
 
 <template>
-  <div class="d-flex justify-content-between">
-    <h3>User data</h3>
-    <button type="button" class="btn btn-sm btn-warning float-end" data-bs-toggle="tooltip" title="Edit" @click="toggle_editing"><i class="bi bi-pencil"></i></button>
+  <div class="alert alert-success" role="alert" v-if="error == 'success'">
+    Changes have been saved.
   </div>
-  <form @submit.prevent="edit_data">
-    <table class="table">
-      <tr>
-        <td>Email address</td>
-        <td>
-          <input v-if="editing" class="e-em form-control form-control-sm" name="email" type="email" v-model="store.user.email">
-          <div v-else>${store.user.email}</div>
-        </td>
-      </tr>
-      <tr>
-        <td>Name</td>
-        <td>
-          <input v-if="editing" class="e-em form-control form-control-sm" name="name" type="text" v-model="store.user.name">
-          <div v-else>${store.user.name}</div>
-        </td>
-      </tr>
-    </table>
-    <button v-if="editing" type="submit" class="btn btn-primary">Submit</button>
-  </form>
-  <h3 class="mt-5">Settings</h3>
-  <form @submit.prevent="submit_settings">
-    <label for="team" class="form-label">Selected team</label>
-    <select class="form-select form-select-sm w-em" name="selected_team" required="required" v-model="store.settings.selected_team">
-      <option v-for="(team, id) in store.teams" :value="id">${team.name}</option>
-    </select>
-    <button type="submit" class="btn btn-primary my-3">Submit changes</button>
-  </form>
+  <h3>User data</h3>
+  <label class="form-label" for="nameInput">Name</label>
+  <input type="text" class="form-control w-em mb-2" id="nameInput" v-model="userEdit.name">
+  <label class="form-label" for="emailInput">Email address</label>
+  <input type="email" class="form-control w-em mb-2" id="emailInput" v-model="userEdit.email">
+  <h3 class="mt-5">User settings</h3>
+  <label for="selectedTeam" class="form-label">Selected team</label>
+  <select class="form-select w-em" name="selectedTeam" v-model="userEdit.settings.selectedTeam">
+    <option :value="undefined">Select a team</option>
+    <option v-for="(team, id) in teams" :value="id">{{team.name + ` (${contexts[team.context]?.name})`}}</option>
+  </select>
+  <button type="submit" class="btn btn-primary mt-4" @click="saveEdit">Save changes</button>
 </template>
