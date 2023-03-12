@@ -40,14 +40,6 @@ def team_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
     return "team.jinja"
 
 
-@admin.get("/problems/create")
-@templated
-def problem_create(*, db = Depends(get_db)):
-    problems = db.scalars(select(Problem)).unique().all()
-    encoded = [{"name": f"{p.name} ({p.context.name})", "id": p.id} for p in problems]
-    contexts = db.scalars(select(Context)).unique().all()
-    return "problem_create.jinja", {"problems": jsonable_encoder(encoded), "contexts": encode(contexts)}
-
 @router.get("/programs")
 @templated
 def programs_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
