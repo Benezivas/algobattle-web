@@ -549,7 +549,7 @@ class ProblemEdit(BaseSchema):
     alt: str | None = None
     problem_schema: str | None = None
     solution_schema: str | None = None
-    colour: str | None = None
+    colour: Color | None = None
 
 
 @admin.post("/problem/{id}/edit", tags=["problem"])
@@ -563,6 +563,8 @@ def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit) ->
             if problem.image is None or edit.alt is None:
                 continue
             problem.image.alt_text = edit.alt
+        elif key == "colour" and edit.colour is not None:
+            problem.colour = edit.colour.as_hex()
         else:
             setattr(problem, key, val)
 

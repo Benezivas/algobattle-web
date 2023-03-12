@@ -7,6 +7,7 @@ from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 
 from pydantic import BaseModel, BaseConfig, Extra
+from pydantic.color import Color
 from pydantic.generics import GenericModel
 from fastapi import UploadFile, File, Form, HTTPException
 
@@ -15,6 +16,9 @@ class BaseSchema(BaseModel):
     class Config(BaseConfig):
         orm_mode = True
         extra = Extra.forbid
+        json_encoders = {
+            Color: Color.as_hex,
+        }
 
     @classmethod
     def from_form(cls: type[Self]):
