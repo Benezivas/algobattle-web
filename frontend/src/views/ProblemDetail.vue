@@ -206,17 +206,19 @@ async function submitEdit() {
   }
   Modal.getOrCreateInstance("#problemModal").hide()
 }
-function checkName() {
+async function checkName() {
   const context = contexts.value[editProblem.value.context]
   if (!context) {
     return
   }
   try {
-    problemApi.problemByName({contextName: context.name, problemName: editProblem.value.name})
-    error.value = "name"
-  } catch {
-    error.value = null
-  }
+    const prob = await problemApi.problemByName({contextName: context.name, problemName: editProblem.value.name})
+    if (prob.problem.id != problem.value.id) {
+      error.value = "name"
+      return
+    }
+  } catch {}
+  error.value = null
 }
 async function deleteProblem() {
   if (!confirmDeleteProblem.value) {
@@ -259,6 +261,7 @@ async function deleteProblem() {
           <ul class="list-group list-group-flush bg-body-tertiary w-em">
             <li class="list-group-item bg-body-tertiary">{{problem.name}}</li>
             <li v-if="store.user.isAdmin" class="list-group-item bg-body-tertiary">{{contexts[problem.context]?.name}}</li>
+            <li v-if="problem.shortDescription" class="list-group-item bg-body-tertiary">{{ problem.shortDescription }}</li>
             <li v-if="problem.start" class="list-group-item bg-body-tertiary">Start: {{problem.start.toLocaleString()}}</li>
             <li v-if="problem.end" class="list-group-item bg-body-tertiary">End: {{problem.end.toLocaleString()}}</li>
             <li class="list-group-item bg-body-tertiary">
@@ -340,7 +343,7 @@ async function deleteProblem() {
   
   <div class="modal fade" id="problemModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-      <form class="modal-content" @submit.prevent="submitEdit">
+      <form class="modal-content" @submit.prevent="submitEdit" novalidate>
         <div class="modal-header">
           <h1 class="modal-title fs-5" id="modalLabel">Edit problem</h1>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
