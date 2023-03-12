@@ -20,7 +20,7 @@ import {
 const { cookies } = useCookies()
 const configuration = new Configuration({
     basePath: "http://127.0.0.1:8000",
-    apiKey: () => cookies.get("user_token"),
+    apiKey: () => cookies.get("algobattle_user_token"),
 })
 
 export const userApi = new UserApi(configuration)

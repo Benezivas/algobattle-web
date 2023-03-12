@@ -22,14 +22,14 @@ onMounted(async () => {
   }
   if (login_token) {
     const data = await userApi.getToken({loginToken: login_token})
-    cookies.set("user_token", data.token, data.expires)
+    cookies.set("algobattle_user_token", data.token, data.expires)
     store.user = await userApi.getSelf()
     router.replace({path: route.path})
   }
 })
 
 async function logout() {
-  cookies.remove("user_token")
+  cookies.remove("algobattle_user_token")
   store.user = {} as UserWithSettings
 }
 

@@ -4,7 +4,7 @@ from fastapi.security import APIKeyHeader
 from algobattle_web.models import User, Session, get_db
 
 
-def curr_user_maybe(db: Session = Depends(get_db), user_token: str | None = Depends(APIKeyHeader(name="user_token"))) -> User | None:
+def curr_user_maybe(db: Session = Depends(get_db), user_token: str | None = Depends(APIKeyHeader(name="X-User-Token"))) -> User | None:
     return User.decode_token(db, user_token)
 
 
