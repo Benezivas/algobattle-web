@@ -685,6 +685,8 @@ def docs_edit(
         file: UploadFile,
     ) -> Documentation | None:
     problem.assert_editable(user)
+    if problem.context != team.context:
+        raise HTTPException(400)
     docs = db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem)).unique().first()
     if docs is None:
         docs = Documentation(db, team, problem, DbFile(file))

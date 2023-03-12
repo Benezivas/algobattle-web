@@ -50,6 +50,7 @@ const ownDoc = computed(() => {
     return docList.length != 0 ? docList[0] : null
   }
 })
+const now = new Date()
 
 
 onMounted(async () => {
@@ -144,6 +145,9 @@ async function removeDoc() {
   }
   delete docs.value[editDoc.docId.value]
   Modal.getOrCreateInstance("#docModal").hide()
+}
+function docEditable() {
+  return selectedTeam.value?.context === problem.value.context && (store.user.isAdmin || !problem.value.end || problem.value.end >= now)
 }
 
 let editProblem = ref(createProblemEdit(problem.value))
@@ -263,7 +267,7 @@ async function deleteProblem() {
             <li v-if="store.user.isAdmin" class="list-group-item bg-body-tertiary">
               <button role="button" class="btn btn-warning btn-sm" title="Edit problem" @click="openEdit">Edit problem<i class="bi bi-pencil ms-1"></i></button>
             </li>
-            <li v-if="selectedTeam" class="list-group-item bg-body-tertiary">
+            <li v-if="docEditable()" class="list-group-item bg-body-tertiary">
               <button role="button" class="btn btn-warning btn-sm" title="Edit documentation" @click="(e) => openDocEdit(null)">Edit documentation<i class="bi bi-pencil ms-1"></i></button>
             </li>
           </ul>
