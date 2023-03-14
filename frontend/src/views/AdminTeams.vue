@@ -229,7 +229,7 @@ async function checkName() {
             <option v-for="(context, id) in contexts" :value="id" :selected="id == editData.context">{{ context.name }}</option>
           </select>
           <label for="members" class="form-label mb-0">Members</label>
-          <div class="d-flex flex-row mb-1">
+          <div class="d-flex flex-row mb-1 members-box">
             <HoverBadgeVue v-for="(id, i) in editData.members" type="remove" @click="() => editData.members.splice(i, 1)">{{ users[id].name }}</HoverBadgeVue>
           </div>
           <div class="card mt-2">
@@ -245,7 +245,7 @@ async function checkName() {
                   <input type="text" class="form-control form-control-sm" id="searchEmail" v-model="userSearchData.email" @input="userSearch">
                 </div>
               </div>
-              <div class="d-flex flex-row">
+              <div class="d-flex flex-row members-box">
                 <HoverBadgeVue v-for="user in userSearchData.result" type="add" @click="() => editData.members.push(user.id)">{{ user.name }}</HoverBadgeVue>
               </div>
             </div>
@@ -263,3 +263,9 @@ async function checkName() {
     </div>
   </div>
 </template>
+
+<style>
+.members-box {
+  min-height: 1.5rem;
+}
+</style>
