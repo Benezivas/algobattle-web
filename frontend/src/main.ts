@@ -17,6 +17,8 @@ import {
     type UserWithSettings
 } from "../typescript_client"
 
+export type ModelDict<T> = {[key: string]: T}
+
 const { cookies } = useCookies()
 const configuration = new Configuration({
     basePath: "http://127.0.0.1:8000",
