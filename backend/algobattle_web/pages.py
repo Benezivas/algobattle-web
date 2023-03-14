@@ -138,33 +138,5 @@ def users_get(
     return "admin_users.jinja", {"users": encode(users), "teams": encode(teams), "contexts": encode(contexts), "page": page + 1, "max_page": users_count // limit + 1}
 
 
-@admin.get("/admin/teams", response_class=HTMLResponse)
-@templated
-def teams_get(
-        db: Session = Depends(get_db),
-        name: str | None = None,
-        context: ID | None = None,
-        page: int = 1,
-        limit: int = 25,
-    ):
-    filters = []
-    page = max(page - 1, 0)
-    if name is not None:
-        filters.append(Team.name.contains(name, autoescape=True))
-    if context is not None:
-        unwrap(db.get(Context, context))
-        filters.append(Team.context_id == context)
-    teams = db.scalars(
-        select(Team)
-        .filter(*filters)
-        .limit(limit)
-        .offset(page * limit)
-    ).unique().all()
-    team_count = db.scalar(select(func.count()).select_from(Team).filter(*filters)) or 0
-    contexts = db.query(Context).all()
-    users = [user for team in teams for user in team.members]
-    return "admin_teams.jinja", {"teams": encode(teams), "contexts": encode(contexts), "users": encode(users), "page": page + 1, "max_page": team_count // limit + 1}
-
-
 # * has to be executed after all route defns
 router.include_router(admin)
