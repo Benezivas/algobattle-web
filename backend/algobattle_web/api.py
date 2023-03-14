@@ -328,11 +328,15 @@ def search_team(
     context: ID | None = None,
     limit: int = 25,
     page: int = 1,
+    exact_name: bool = False,
     ) -> TeamSearch:
     filters = []
-    if name:
-        filters.append(Team.name.contains(name, autoescape=True))
-    if context:
+    if name is not None:
+        if exact_name:
+            filters.append(Team.name == name)
+        else:
+            filters.append(Team.name.contains(name, autoescape=True))
+    if context is not None:
         filters.append(Team.context_id == context)
     page = max(page - 1, 0)
     teams = db.scalars(
