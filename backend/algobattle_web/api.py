@@ -12,7 +12,7 @@ from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse, Response
 from markdown import markdown
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from pydantic import Field
 from pydantic.color import Color
@@ -313,7 +313,14 @@ def get_teams(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID])
     return encode(teams)
 
 
-@admin.get("/team/search", tags=["team"], response_model=list[Team.Schema])
+class TeamSearch(BaseSchema):
+    page: int
+    max_page: int
+    teams: dict[ID, Team.Schema]
+    users: dict[ID, User.Schema]
+
+
+@admin.get("/team/search", tags=["team"])
 def search_team(
     *,
     db = Depends(get_db),
@@ -321,21 +328,31 @@ def search_team(
     context: ID | None = None,
     limit: int = 25,
     page: int = 1,
-    ):
+    ) -> TeamSearch:
     filters = []
-    if name is not None:
+    if name:
         filters.append(Team.name.contains(name, autoescape=True))
-    if context is not None:
-        unwrap(db.get(Context, context))
+    if context:
         filters.append(Team.context_id == context)
     page = max(page - 1, 0)
-    users = db.scalars(
+    teams = db.scalars(
         select(Team)
-        .filter(*filters)
+        .where(*filters)
         .limit(limit)
         .offset(page * limit)
     ).unique().all()
-    return users
+    team_count = db.scalar(
+        select(func.count())
+        .select_from(Team)
+        .where(*filters)
+    ) or 0
+    users = [user for team in teams for user in team.members]
+    return TeamSearch(
+        page=page + 1,
+        max_page=team_count // limit + 1,
+        teams=encode(teams),
+        users=encode(users),
+    )
 
 
 class CreateTeam(BaseSchema):
