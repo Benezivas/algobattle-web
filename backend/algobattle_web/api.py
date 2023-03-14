@@ -93,7 +93,7 @@ def get_user(*, db = Depends(get_db), user = Depends(curr_user), users: list[ID]
     )
 
 @admin.get("/user/search", tags=["user"], response_model=list[User.Schema])
-def get_users(
+def search_users(
     *,
     db = Depends(get_db),
     name: str | None = None,
@@ -375,7 +375,7 @@ def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
 class EditTeam(BaseSchema):
     name: str | None = Field(None, min_length=1)
     context: ID | None = None
-    members: dict[ID, bool] = {}
+    members: dict[ID, Literal["add", "remove"]] = {}
 
 
 @admin.post("/team/{id}/edit", tags=["team"])
@@ -385,11 +385,11 @@ def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
         team.name = edit.name
     if edit.context is not None:
         team.context_id = edit.context
-    for id, add in edit.members.items():
+    for id, action in edit.members.items():
         user = unwrap(db.get(User, id))
-        if add and user not in team.members:
+        if action =="add" and user not in team.members:
             team.members.append(user)
-        elif not add and user in team.members:
+        elif action == "remove" and user in team.members:
             team.members.remove(user)
         else:
             raise ValueError
