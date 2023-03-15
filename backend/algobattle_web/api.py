@@ -209,7 +209,7 @@ def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_us
 
 
 @router.post("/user/login", tags=["user"])
-def login(*, request: Request, db = Depends(get_db), email: str = Body(), target_url: str = Body()) -> None:
+def login(*, db = Depends(get_db), email: str = Body(), target_url: str = Body()) -> None:
     user = unwrap(User.get(db, email))
     token = user.login_token()
     url = SERVER_CONFIG.frontend_base_url + target_url + f"?login_token={token}"
@@ -337,6 +337,7 @@ def search_team(
     teams = db.scalars(
         select(Team)
         .where(*filters)
+        .order_by(Team.context_id)
         .limit(limit)
         .offset(page * limit)
     ).unique().all()
