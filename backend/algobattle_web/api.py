@@ -105,8 +105,6 @@ def search_users(
     page: int = 1,
     ):
     filters = []
-    where = []
-    teams_filters = []
     if name is not None:
         filters.append(User.name.contains(name, autoescape=True))
     if email is not None:
@@ -114,17 +112,14 @@ def search_users(
     if is_admin is not None:
         filters.append(User.is_admin == is_admin)
     if context is not None:
-        _context = unwrap(db.get(Context, context))
-        where.append(User.teams.any(Team.context_id == _context.id))
-        teams_filters.append(Team.context_id == _context.id)
+        filters.append(User.teams.any(Team.context_id == context))
     if team is not None:
-        where.append(User.teams.any(Team.id == team))
+        filters.append(User.teams.any(Team.id == team))
     page = max(page - 1, 0)
     users = db.scalars(
         select(User)
-        .filter(*filters)
-        .where(*where)
-        .order_by(User.is_admin.desc())
+        .where(*filters)
+        .order_by(User.is_admin.desc(), User.name.asc())
         .limit(limit)
         .offset(page * limit)
     ).unique().all()
