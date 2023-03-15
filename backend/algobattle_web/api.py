@@ -6,7 +6,7 @@ from uuid import UUID
 from zipfile import ZipFile
 from urllib.parse import quote
 
-from fastapi import APIRouter, Body, Depends, Request, status, HTTPException, UploadFile, Form, File, BackgroundTasks
+from fastapi import APIRouter, Body, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
