@@ -39,6 +39,14 @@ async function search(page: number = 1) {
   currPage.value = result.page
   maxPage.value = result.maxPage
 }
+async function clearSearch() {
+  searchData.value = {
+    name: "",
+    context: "",
+    limit: 25,
+  }
+  search()
+}
 
 const error = ref("")
 const editData = ref<AlgobattleWebModelsTeamSchema>(emptyTeam())
@@ -76,7 +84,7 @@ async function userSearch() {
     limit: editData.value.members.length + 5,
     page: 1,
   })
-  userSearchData.value.result = result.filter(u => !editData.value.members.includes(u.id)).slice(0, 5)
+  userSearchData.value.result = Object.values(result.users).filter(u => !editData.value.members.includes(u.id)).slice(0, 5)
 }
 async function sendData() {
   if (error.value) {
@@ -189,7 +197,7 @@ async function checkName() {
           <div class="col">
             <label for="contextFilter" class="form-label mb-1">Context</label>
             <select class="form-select w-em" id="contextFilter" v-model="searchData.context">
-              <option :value="null"></option>
+              <option value=""></option>
               <option v-for="(context, id) in contexts" :value="id">{{ context.name }}</option>
             </select>
           </div>
@@ -200,8 +208,8 @@ async function checkName() {
             <input class="form-control w-em" id="limitFilter" type="number" min="1" max="200" step="1" v-model="searchData.limit">
           </div>
           <div class="col text-end align-self-end">
-            <a v-if="isFiltered" class="btn btn-secondary me-2" href="teams" role="button">Clear</a>
-            <a class="btn btn-primary" @click="e => search()" role="button">Apply</a>
+            <button v-if="isFiltered" class="btn btn-secondary me-2" @click="clearSearch">Clear</button>
+            <button class="btn btn-primary" @click="e => search()">Apply</button>
           </div>
         </div>
       </div>
