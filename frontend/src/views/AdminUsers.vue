@@ -24,7 +24,7 @@ const filterData = ref({
 const isFiltered = computed(() => {
   return filterData.value.name != ""
   || filterData.value.email != ""
-  || filterData.value.email !== undefined
+  || filterData.value.isAdmin !== undefined
   || filterData.value.context != ""
   || filterData.value.team != ""
   || filterData.value.limit != 25
