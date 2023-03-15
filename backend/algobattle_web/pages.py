@@ -2,16 +2,13 @@
 from typing import Collection
 
 from fastapi import APIRouter, Depends
-from fastapi.responses import HTMLResponse
 from fastapi.encoders import jsonable_encoder
-from sqlalchemy import select, func
+from sqlalchemy import select
 
 from algobattle_web.models import (
-    ID,
     Base,
     get_db,
     Session,
-    Context,
     MatchResult,
     Problem,
     Program,
@@ -21,11 +18,9 @@ from algobattle_web.models import (
     encode,
 )
 from algobattle_web.templates import templated
-from algobattle_web.util import unwrap
-from algobattle_web.dependencies import curr_user, check_if_admin
+from algobattle_web.dependencies import curr_user
 
 router = APIRouter()
-admin = APIRouter(tags=["admin"], dependencies=[Depends(check_if_admin)])
 
 
 @router.get("/programs")
@@ -91,52 +86,3 @@ def results_get(db: Session = Depends(get_db), user: User = Depends(curr_user)):
         "programs": encode(p for p in programs if p is not None),
         "problems": encode(problems),
     }
-
-
-# *******************************************************************************
-# * Admin panel
-# *******************************************************************************
-
-
-@admin.get("/admin/users", response_class=HTMLResponse)
-@templated
-def users_get(
-        db: Session = Depends(get_db),
-        name: str | None = None,
-        email: str | None = None,
-        is_admin: bool | None = None,
-        context: ID | None = None,
-        team: ID | None = None,
-        page: int = 1,
-        limit: int = 25,
-    ):
-    filters = []
-    where = []
-    if name is not None:
-        filters.append(User.name.contains(name, autoescape=True))
-    if email is not None:
-        filters.append(User.email.contains(email, autoescape=True))
-    if is_admin is not None:
-        filters.append(User.is_admin == is_admin)
-    if context is not None:
-        _context = unwrap(db.get(Context, context))
-        where.append(User.teams.any(Team.context_id == _context.id))
-    if team is not None:
-        where.append(User.teams.any(Team.id == team))
-    page = max(page - 1, 0)
-    users = db.scalars(
-        select(User)
-        .filter(*filters)
-        .where(*where)
-        .order_by(User.is_admin.desc())
-        .limit(limit)
-        .offset(page * limit)
-    ).unique().all()
-    users_count = db.scalar(select(func.count()).select_from(User).filter(*filters)) or 0
-    teams = [team for user in users for team in user.teams]
-    contexts = db.scalars(select(Context)).unique().all()
-    return "admin_users.jinja", {"users": encode(users), "teams": encode(teams), "contexts": encode(contexts), "page": page + 1, "max_page": users_count // limit + 1}
-
-
-# * has to be executed after all route defns
-router.include_router(admin)
