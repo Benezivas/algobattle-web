@@ -391,10 +391,13 @@ class CreateTeam(BaseSchema):
 def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
     tournament = unwrap(Tournament.get(db, team.tournament))
     members = [unwrap(db.get(User, id)) for id in team.members]
-    if db.scalars(select(Team).filter(Team.name == team.name, Team.tournament_id == team.tournament)).unique().first() is not None:
-        raise ValueTaken("name", team.name)
+    if len(members) != len(set(members)):
+        raise HTTPException(400)
     _team = Team(db, team.name, tournament, members)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as e:
+        raise ValueTaken("name", team.name) from e
     return _team
 
 
