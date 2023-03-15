@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import AdminUsers from "./AdminUsers.vue"
 import AdminTeams from "./AdminTeams.vue"
-import AdminContexts from "./AdminContexts.vue"
+import AdminTournaments from "./AdminTournaments.vue"
 
 const tab = ref("users")
 </script>
@@ -16,11 +16,11 @@ const tab = ref("users")
       <button class="nav-link" :class="{active: tab == 'teams'}" :aria-current="tab == 'teams'" @click="e => tab = 'teams'">Teams</button>
     </li>
     <li class="nav-item">
-      <button class="nav-link" :class="{active: tab == 'contexts'}" :aria-current="tab == 'contexts'" @click="e => tab = 'contexts'">Contexts</button>
+      <button class="nav-link" :class="{active: tab == 'tournaments'}" :aria-current="tab == 'tournaments'" @click="e => tab = 'tournaments'">Tournaments</button>
     </li>
   </ul>
 
   <AdminUsers v-if="tab == 'users'" />
   <AdminTeams v-if="tab == 'teams'" />
-  <AdminContexts v-if="tab == 'contexts'" />
+  <AdminTournaments v-if="tab == 'tournaments'" />
 </template>

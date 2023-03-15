@@ -7,7 +7,7 @@ import { useCookies } from "vue3-cookies"
 import "./assets/styles.scss"
 import {
     Configuration,
-    ContextApi,
+    TournamentApi,
     DocsApi,
     MatchApi,
     ProblemApi,
@@ -26,7 +26,7 @@ const configuration = new Configuration({
 })
 
 export const userApi = new UserApi(configuration)
-export const contextApi = new ContextApi(configuration)
+export const tournamentApi = new TournamentApi(configuration)
 export const teamApi = new TeamApi(configuration)
 export const problemApi = new ProblemApi(configuration)
 export const docsApi = new DocsApi(configuration)

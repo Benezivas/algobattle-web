@@ -26,7 +26,7 @@ from algobattle_web.models import (
     get_db,
     Session,
     ID,
-    Context,
+    Tournament,
     Documentation,
     MatchResult,
     Problem,
@@ -107,7 +107,7 @@ def search_users(
     name: str | None = None,
     email: str | None = None,
     is_admin: bool | None = None,
-    context: ID | None = None,
+    tournament: ID | None = None,
     team: ID | None = None,
     limit: int = 25,
     page: int = 1,
@@ -126,8 +126,8 @@ def search_users(
             filters.append(User.email.contains(email, autoescape=True))
     if is_admin is not None:
         filters.append(User.is_admin == is_admin)
-    if context is not None:
-        filters.append(User.teams.any(Team.context_id == context))
+    if tournament is not None:
+        filters.append(User.teams.any(Team.tournament_id == tournament))
     if team is not None:
         filters.append(User.teams.any(Team.id == team))
     page = max(page - 1, 0)
@@ -255,67 +255,67 @@ def get_token(*, db = Depends(get_db), login_token: str) -> TokenData:
 
 
 # *******************************************************************************
-# * Context
+# * Tournament
 # *******************************************************************************
 
 
-@router.post("/context/all", tags=["context"])
-def all_contexts(*, db = Depends(get_db), user = Depends(curr_user)) -> dict[ID, Context.Schema]:
+@router.post("/tournament/all", tags=["tournament"])
+def all_tournaments(*, db = Depends(get_db), user = Depends(curr_user)) -> dict[ID, Tournament.Schema]:
     if user.is_admin:
-        contexts = db.scalars(
-            select(Context)
+        tournaments = db.scalars(
+            select(Tournament)
         ).unique().all()
     else:
         team = user.settings.selected_team
         if team is not None:
-            contexts = [team.context]
+            tournaments = [team.tournament]
         else:
-            contexts = []
-    return encode(contexts)
+            tournaments = []
+    return encode(tournaments)
 
 
-@router.post("/context", tags=["context"])
-def get_contexts(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, Context.Schema]:
-    contexts = db.scalars(
-        select(Context)
-        .where(Context.id.in_(ids), Context.visible_sql(user))
+@router.post("/tournament", tags=["tournament"])
+def get_tournaments(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, Tournament.Schema]:
+    tournaments = db.scalars(
+        select(Tournament)
+        .where(Tournament.id.in_(ids), Tournament.visible_sql(user))
     ).unique().all()
-    return encode(contexts)
+    return encode(tournaments)
 
 
-class CreateContext(BaseSchema):
+class CreateTournament(BaseSchema):
     name: str = Field(min_length=1)
 
 
-@admin.post("/context/create", tags=["context"])
-def create_context(*, db: Session = Depends(get_db), context: CreateContext) -> Context:
-    if db.scalars(select(Context).filter(Context.name == context.name)).unique().first() is not None:
-        raise ValueTaken("name", context.name)
-    _context = Context(db, context.name)
+@admin.post("/tournament/create", tags=["tournament"])
+def create_tournament(*, db: Session = Depends(get_db), tournament: CreateTournament) -> Tournament:
+    if db.scalars(select(Tournament).filter(Tournament.name == tournament.name)).unique().first() is not None:
+        raise ValueTaken("name", tournament.name)
+    _tournament = Tournament(db, tournament.name)
     db.commit()
-    return _context
+    return _tournament
 
 
-class EditContext(BaseSchema):
+class EditTournament(BaseSchema):
     name: str | None = None
 
 
-@admin.post("/context/{id}/edit", tags=["context"])
-def edit_context(*, db: Session = Depends(get_db), id: ID, data: EditContext) -> Context:
-    context = unwrap(Context.get(db, id))    
+@admin.post("/tournament/{id}/edit", tags=["tournament"])
+def edit_tournament(*, db: Session = Depends(get_db), id: ID, data: EditTournament) -> Tournament:
+    tournament = unwrap(Tournament.get(db, id))    
     if data.name is not None:
-        context.name = data.name
+        tournament.name = data.name
     try:
         db.commit()
     except IntegrityError as e:
-        raise ValueTaken("name", context.name) from e
-    return context
+        raise ValueTaken("name", tournament.name) from e
+    return tournament
 
 
-@admin.post("/context/{id}/delete", tags=["context"])
-def delete_context(*, db: Session = Depends(get_db), id: ID) -> bool:
-    context = unwrap(Context.get(db, id))
-    db.delete(context)
+@admin.post("/tournament/{id}/delete", tags=["tournament"])
+def delete_tournament(*, db: Session = Depends(get_db), id: ID) -> bool:
+    tournament = unwrap(Tournament.get(db, id))
+    db.delete(tournament)
     db.commit()
     return True
 
@@ -346,7 +346,7 @@ def search_team(
     *,
     db = Depends(get_db),
     name: str | None = None,
-    context: ID | None = None,
+    tournament: ID | None = None,
     limit: int = 25,
     page: int = 1,
     exact_name: bool = False,
@@ -357,13 +357,13 @@ def search_team(
             filters.append(Team.name == name)
         else:
             filters.append(Team.name.contains(name, autoescape=True))
-    if context is not None:
-        filters.append(Team.context_id == context)
+    if tournament is not None:
+        filters.append(Team.tournament_id == tournament)
     page = max(page - 1, 0)
     teams = db.scalars(
         select(Team)
         .where(*filters)
-        .order_by(Team.context_id.asc(), Team.name.asc())
+        .order_by(Team.tournament_id.asc(), Team.name.asc())
         .limit(limit)
         .offset(page * limit)
     ).unique().all()
@@ -383,24 +383,24 @@ def search_team(
 
 class CreateTeam(BaseSchema):
     name: str = Field(min_length=1)
-    context: ID
+    tournament: ID
     members: list[ID]
 
 
 @admin.post("/team/create", tags=["team"])
 def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
-    context = unwrap(Context.get(db, team.context))
+    tournament = unwrap(Tournament.get(db, team.tournament))
     members = [unwrap(db.get(User, id)) for id in team.members]
-    if db.scalars(select(Team).filter(Team.name == team.name, Team.context_id == team.context)).unique().first() is not None:
+    if db.scalars(select(Team).filter(Team.name == team.name, Team.tournament_id == team.tournament)).unique().first() is not None:
         raise ValueTaken("name", team.name)
-    _team = Team(db, team.name, context, members)
+    _team = Team(db, team.name, tournament, members)
     db.commit()
     return _team
 
 
 class EditTeam(BaseSchema):
     name: str | None = Field(None, min_length=1)
-    context: ID | None = None
+    tournament: ID | None = None
     members: dict[ID, Literal["add", "remove"]] = {}
 
 
@@ -409,8 +409,8 @@ def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
     team = unwrap(Team.get(db, id))
     if edit.name is not None:
         team.name = edit.name
-    if edit.context is not None:
-        team.context_id = edit.context
+    if edit.tournament is not None:
+        team.tournament_id = edit.tournament
     for id, action in edit.members.items():
         user = unwrap(db.get(User, id))
         if action =="add" and user not in team.members:
@@ -463,10 +463,10 @@ def get_problems(*, db = Depends(get_db), user = Depends(curr_user), ids: list[I
 
 
 @router.post("/problem/all", tags=["problem"])
-def all_problems(*, db = Depends(get_db), user = Depends(curr_user), context: ID | None = None) -> dict[ID, Problem.Schema]:
+def all_problems(*, db = Depends(get_db), user = Depends(curr_user), tournament: ID | None = None) -> dict[ID, Problem.Schema]:
     filters = []
-    if context is not None:
-        filters.append(Problem.context_id == context)
+    if tournament is not None:
+        filters.append(Problem.tournament_id == tournament)
     problems = db.scalars(
         select(Problem)
         .where(*filters, Problem.visible_sql(user))
@@ -476,19 +476,19 @@ def all_problems(*, db = Depends(get_db), user = Depends(curr_user), context: ID
 
 class ProblemInfo(BaseSchema):
     problem: Problem.Schema
-    context: Context.Schema
+    tournament: Tournament.Schema
 
-@router.get("/problem/{context_name}/{problem_name}", tags=["problem"], response_model=ProblemInfo)
-def problem_by_name(*, db = Depends(get_db), user = Depends(curr_user), context_name: str, problem_name: str):
+@router.get("/problem/{tournament_name}/{problem_name}", tags=["problem"], response_model=ProblemInfo)
+def problem_by_name(*, db = Depends(get_db), user = Depends(curr_user), tournament_name: str, problem_name: str):
     problem = unwrap(db.scalars(
         select(Problem)
         .where(
             Problem.name == problem_name,
-            Problem.context.has(Context.name == context_name),
+            Problem.tournament.has(Tournament.name == tournament_name),
         )
     ).unique().first())
     problem.assert_visible(user)
-    return {"problem": problem, "context": problem.context}
+    return {"problem": problem, "tournament": problem.tournament}
 
 
 class ProblemMetadata(BaseSchema):
@@ -514,9 +514,9 @@ def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None)
         return unwrap(db.get(Problem, problem_id))
 
 
-@admin.get("/problem/{context}/{problem}", tags=["problem"], response_model=Problem.Schema)
-def get_problem(*, db = Depends(get_db), context: str, problem: str):
-    return unwrap(db.scalars(select(Problem).join(Context).where(Problem.name == problem, Context.name == context)).unique().first())
+@admin.get("/problem/{tournament}/{problem}", tags=["problem"], response_model=Problem.Schema)
+def get_problem(*, db = Depends(get_db), tournament: str, problem: str):
+    return unwrap(db.scalars(select(Problem).join(Tournament).where(Problem.name == problem, Tournament.name == tournament)).unique().first())
 
 
 @admin.post("/problem/create", tags=["problem"])
@@ -527,7 +527,7 @@ def create_problem(*, db: Session = Depends(get_db),
         description: UploadFile | None = File(None),
         problem_schema: str | None = Form(None),
         solution_schema: str | None = Form(None),
-        context: ID = Form(),
+        tournament: ID = Form(),
         config: UploadFile | None = File(None),
         start: datetime | None = Form(None),
         end: datetime | None = Form(None),
@@ -549,7 +549,7 @@ def create_problem(*, db: Session = Depends(get_db),
     else:
         desc = None
 
-    _context = unwrap(db.get(Context, context))
+    _tournament = unwrap(db.get(Tournament, tournament))
     if config is None:
         config = UploadFile("config.toml")
 
@@ -565,7 +565,7 @@ def create_problem(*, db: Session = Depends(get_db),
         description=desc,
         problem_schema=problem_schema,
         solution_schema=solution_schema,
-        context=_context,
+        tournament=_tournament,
         config=DbFile(config),
         start=start,
         end=end,
@@ -578,12 +578,12 @@ def create_problem(*, db: Session = Depends(get_db),
         db.commit()
     except IntegrityError as e:
         raise ValueTaken("name", name) from e
-    return Wrapped(data=f"/problems/{prob.context.name}/{prob.name}")
+    return Wrapped(data=f"/problems/{prob.tournament.name}/{prob.name}")
 
 
 class ProblemEdit(BaseSchema):
     name: str | None = None
-    context: ID | None = None
+    tournament: ID | None = None
     start: datetime | None = None
     end: datetime | None = None
     short_description: str | None = None
@@ -597,9 +597,9 @@ class ProblemEdit(BaseSchema):
 def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit) -> Problem:
     problem = unwrap(db.get(Problem, id))
     for key, val in edit.dict(exclude_unset=True).items():
-        if key == "context":
-            context_ = unwrap(db.get(Context, edit.context))
-            problem.context = context_
+        if key == "tournament":
+            tournament_ = unwrap(db.get(Tournament, edit.tournament))
+            problem.tournament = tournament_
         elif key == "alt":
             if problem.image is None or edit.alt is None:
                 continue
@@ -728,7 +728,7 @@ def docs_edit(
         file: UploadFile,
     ) -> Documentation | None:
     problem.assert_editable(user)
-    if problem.context != team.context:
+    if problem.tournament != team.tournament:
         raise HTTPException(400)
     docs = db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem)).unique().first()
     if docs is None:

@@ -1,28 +1,28 @@
 <script setup lang="ts">
 import HoverBadgeVue from '@/components/HoverBadge.vue';
-import { contextApi, teamApi, userApi, type ModelDict } from '@/main';
+import { tournamentApi, teamApi, userApi, type ModelDict } from '@/main';
 import { Modal } from 'bootstrap';
-import type { AlgobattleWebModelsTeamSchema, Context, User } from 'typescript_client';
+import type { AlgobattleWebModelsTeamSchema, Tournament, User } from 'typescript_client';
 import { computed, onMounted, ref } from 'vue';
 
 
 const teams = ref<ModelDict<AlgobattleWebModelsTeamSchema>>({})
 const users = ref<ModelDict<User>>({})
-const contexts = ref<ModelDict<Context>>({})
+const tournaments = ref<ModelDict<Tournament>>({})
 const currPage = ref(1)
 const maxPage = ref(1)
 
 const searchData = ref({
   name: "",
-  context: "",
+  tournament: "",
   limit: 25,
 })
 const isFiltered = computed(() => {
-  return searchData.value.name != "" || searchData.value.context != "" || searchData.value.limit != 25
+  return searchData.value.name != "" || searchData.value.tournament != "" || searchData.value.limit != 25
 })
 let modal: Modal
 onMounted(async () => {
-  contexts.value = await contextApi.allContexts()
+  tournaments.value = await tournamentApi.allTournaments()
   modal = Modal.getOrCreateInstance("#teamModal")
   search()
 })
@@ -30,7 +30,7 @@ onMounted(async () => {
 async function search(page: number = 1) {
   const result = await teamApi.searchTeam({
     name: searchData.value.name || undefined,
-    context: searchData.value.context || undefined,
+    tournament: searchData.value.tournament || undefined,
     limit: searchData.value.limit,
     page: page,
   })
@@ -42,7 +42,7 @@ async function search(page: number = 1) {
 async function clearSearch() {
   searchData.value = {
     name: "",
-    context: "",
+    tournament: "",
     limit: 25,
   }
   search()
@@ -61,7 +61,7 @@ function emptyTeam(): AlgobattleWebModelsTeamSchema {
   return {
     id: "",
     name: "",
-    context: "",
+    tournament: "",
     members: [],
   }
 }
@@ -99,7 +99,7 @@ async function sendData() {
         id: editData.value.id,
         editTeam: {
           name: editData.value.name,
-          context: editData.value.context,
+          tournament: editData.value.tournament,
           members: Object.fromEntries(newMembers.map(id => [id, "add"]).concat(deletedMembers.map(id => [id, "remove"])))
         }
       })
@@ -107,7 +107,7 @@ async function sendData() {
       const newTeam = await teamApi.createTeam({
         createTeam: {
           name: editData.value.name,
-          context: editData.value.context,
+          tournament: editData.value.tournament,
           members: editData.value.members,
         }
       })
@@ -132,7 +132,7 @@ async function deleteTeam() {
 async function checkName() {
   const result = await teamApi.searchTeam({
     name: editData.value.name,
-    context: editData.value.context,
+    tournament: editData.value.tournament,
     limit: 1,
     exactName: true,
   })
@@ -150,7 +150,7 @@ async function checkName() {
     <thead>
       <tr>
         <th scope="col">Name</th>
-        <th scope="col">Context</th>
+        <th scope="col">Tournament</th>
         <th scope="col">Members</th>
         <th scope="col"></th>
       </tr>
@@ -158,7 +158,7 @@ async function checkName() {
     <tbody>
       <tr v-for="(team, id) in teams" :team="team" :key="id">
         <td>{{ team.name }}</td>
-        <td>{{ contexts[team.context].name }}</td>
+        <td>{{ tournaments[team.tournament].name }}</td>
         <td>{{ team.members.map(u => users[u].name).join(", ") }}</td>
         <td class="text-end">
           <button type="button" class="btn btn-sm btn-warning" title="Edit team" @click="e => openModal(team)"><i class="bi bi-pencil"></i></button>
@@ -195,10 +195,10 @@ async function checkName() {
             <input class="form-control w-em" id="nameFilter" type="text" v-model="searchData.name">
           </div>
           <div class="col">
-            <label for="contextFilter" class="form-label mb-1">Context</label>
-            <select class="form-select w-em" id="contextFilter" v-model="searchData.context">
+            <label for="tournamentFilter" class="form-label mb-1">Tournament</label>
+            <select class="form-select w-em" id="tournamentFilter" v-model="searchData.tournament">
               <option value=""></option>
-              <option v-for="(context, id) in contexts" :value="id">{{ context.name }}</option>
+              <option v-for="(tournament, id) in tournaments" :value="id">{{ tournament.name }}</option>
             </select>
           </div>
         </div>
@@ -230,11 +230,11 @@ async function checkName() {
           <label for="name" class="form-label">Name</label>
           <input class="form-control w-em" type="text" v-model="editData.name" required :class="{'is-invalid': error == 'name'}" @change="checkName">
           <div class="invalid-feedback">
-            Another team with the same name already exists in this context
+            Another team with the same name already exists in this tournament
           </div>
-          <label for="context" class="form-label">Context</label>
-          <select class="form-select w-em mb-3" name="context" v-model="editData.context" :required="editData.id != ''" @change="checkName">
-            <option v-for="(context, id) in contexts" :value="id" :selected="id == editData.context">{{ context.name }}</option>
+          <label for="tournament" class="form-label">Tournament</label>
+          <select class="form-select w-em mb-3" name="tournament" v-model="editData.tournament" :required="editData.id != ''" @change="checkName">
+            <option v-for="(tournament, id) in tournaments" :value="id" :selected="id == editData.tournament">{{ tournament.name }}</option>
           </select>
           <label for="members" class="form-label mb-0">Members</label>
           <div class="d-flex flex-row mb-1 members-box">
@@ -262,7 +262,7 @@ async function checkName() {
         <div class="modal-footer">
           <button v-if="confirmDelete" type="button" class="btn btn-secondary" @click="(e) => confirmDelete = false">Cancel</button>
           <button v-if="editData.id" type="button" class="btn btn-danger ms-2" @click="deleteTeam">
-            {{confirmDelete ? "Confirm deletion" : "Delete context"}}
+            {{confirmDelete ? "Confirm deletion" : "Delete tournament"}}
           </button>
           <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Discard</button>
           <button type="submit" class="btn btn-primary">{{ editData.id ? "Save" : "Create" }}</button>

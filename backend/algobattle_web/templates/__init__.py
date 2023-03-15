@@ -23,14 +23,14 @@ S = TypeVar("S")
 RetType = Tuple[str, dict[str, Any]] | str
 
 def templated(fn: Callable[P, Awaitable[RetType] | RetType]) -> Callable[Concatenate[Request, User, P], Response | Awaitable[Response]]:
-    """Adds the `request: Request` and `user: User = Depends(curr_user)` parameters and passes them to the context of the template."""
+    """Adds the `request: Request` and `user: User = Depends(curr_user)` parameters and passes them to the tournament of the template."""
     if iscoroutinefunction(fn):
         return templated_async(fn)
     else:
         return templated_sync(cast(Callable[P, RetType], fn))
 
 def templated_async(fn: Callable[P, Awaitable[Tuple[str, dict[str, Any]] | str]]) -> Callable[Concatenate[Request, User, P], Awaitable[Response]]:
-    """Adds the `request: Request` and `user: User = Depends(curr_user)` parameters and passes them to the context of the template."""
+    """Adds the `request: Request` and `user: User = Depends(curr_user)` parameters and passes them to the tournament of the template."""
     async def inner(request: Request, user: User, *args: P.args, **kwargs: P.kwargs) -> Response:
         if "request" in orig_params:
             kwargs["request"] = request
@@ -43,7 +43,7 @@ def templated_async(fn: Callable[P, Awaitable[Tuple[str, dict[str, Any]] | str]]
     return fixed_inner
 
 def templated_sync(fn: Callable[P, Tuple[str, dict[str, Any]] | str]) -> Callable[Concatenate[Request, User, P], Response]:
-    """Adds the `request: Request` and `user: User = Depends(curr_user)` parameters and passes them to the context of the template."""
+    """Adds the `request: Request` and `user: User = Depends(curr_user)` parameters and passes them to the tournament of the template."""
     def inner(request: Request, user: User, *args: P.args, **kwargs: P.kwargs) -> Response:
         if "request" in orig_params:
             kwargs["request"] = request
@@ -57,12 +57,12 @@ def templated_sync(fn: Callable[P, Tuple[str, dict[str, Any]] | str]) -> Callabl
 
 def _make_template(request: Request, user: User, ret: Tuple[str, dict[str, Any]] | str) -> Response:
     if isinstance(ret, tuple):
-        template_file, context = ret
+        template_file, tournament = ret
     else:
-        template_file, context = ret, {}
+        template_file, tournament = ret, {}
 
-    new_context: dict[str, Any] = {"request": request, "user": user.encode()}
-    return templates.TemplateResponse(template_file, new_context | context)
+    new_tournament: dict[str, Any] = {"request": request, "user": user.encode()}
+    return templates.TemplateResponse(template_file, new_tournament | tournament)
 
 def _fix_signature(inner: Callable[P, S], fn: Callable[R, Any]) -> Tuple[Callable[P, S], set[str]]:
     # we need to get the annotations as actual objects and not strings,

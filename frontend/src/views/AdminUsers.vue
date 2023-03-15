@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import HoverBadgeVue from '@/components/HoverBadge.vue';
-import { contextApi, teamApi, userApi, type ModelDict } from '@/main'
+import { tournamentApi, teamApi, userApi, type ModelDict } from '@/main'
 import { Modal } from 'bootstrap'
-import type { AlgobattleWebModelsTeamSchema as Team, User, Context } from 'typescript_client'
+import type { AlgobattleWebModelsTeamSchema as Team, User, Tournament } from 'typescript_client'
 import { computed, onMounted, ref } from 'vue'
 
 
 const teams = ref<ModelDict<Team>>({})
 const users = ref<ModelDict<User>>({})
-const contexts = ref<ModelDict<Context>>({})
+const tournaments = ref<ModelDict<Tournament>>({})
 const currPage = ref(1)
 const maxPage = ref(1)
 let modal: Modal
@@ -17,7 +17,7 @@ const filterData = ref({
   name: "",
   email: "",
   isAdmin: undefined as boolean | undefined,
-  context: "",
+  tournament: "",
   team: "",
   limit: 25,
 })
@@ -25,19 +25,19 @@ const isFiltered = computed(() => {
   return filterData.value.name != ""
   || filterData.value.email != ""
   || filterData.value.isAdmin !== undefined
-  || filterData.value.context != ""
+  || filterData.value.tournament != ""
   || filterData.value.team != ""
   || filterData.value.limit != 25
 })
 onMounted(async () => {
-  contexts.value = await contextApi.allContexts()
+  tournaments.value = await tournamentApi.allTournaments()
   modal = Modal.getOrCreateInstance("#userModal")
   search()
 })
 async function search(page: number = 1) {
   const result = await userApi.searchUsers({
     name: filterData.value.name || undefined,
-    context: filterData.value.context || undefined,
+    tournament: filterData.value.tournament || undefined,
     limit: filterData.value.limit,
     page: page,
   })
@@ -51,7 +51,7 @@ async function clearSearch() {
     name: "",
     email: "",
     isAdmin: undefined as boolean | undefined,
-    context: "",
+    tournament: "",
     team: "",
     limit: 25,
   }
@@ -63,7 +63,7 @@ const error = ref("")
 const editData = ref<User>(emptyUser())
 const teamSearchData = ref({
   name: "",
-  context: "",
+  tournament: "",
   result: [] as Team[],
 })
 const confirmDelete = ref(false)
@@ -77,7 +77,7 @@ function emptyUser(): User {
   }
 }
 function teamName(team: Team) {
-  return `${team.name} (${contexts.value[team.context].name})`
+  return `${team.name} (${tournaments.value[team.tournament].name})`
 }
 
 function openModal(user: User | undefined) {
@@ -86,7 +86,7 @@ function openModal(user: User | undefined) {
   error.value = ""
   teamSearchData.value = {
     name: "",
-    context: "",
+    tournament: "",
     result: [],
   }
   searchTeam()
@@ -95,7 +95,7 @@ function openModal(user: User | undefined) {
 async function searchTeam() {
   const result = await teamApi.searchTeam({
     name: teamSearchData.value.name || undefined,
-    context: teamSearchData.value.context || undefined,
+    tournament: teamSearchData.value.tournament || undefined,
     limit: editData.value.teams.length + 5,
     page: 1,
   })
@@ -232,10 +232,10 @@ async function checkEmail() {
         </div>
         <div class="row mb-3">
           <div class="col">
-            <label for="contextFilter" class="form-label mb-1">Context</label>
-            <select class="form-select w-em" id="contextFilter" v-model="filterData.context">
+            <label for="tournamentFilter" class="form-label mb-1">Tournament</label>
+            <select class="form-select w-em" id="tournamentFilter" v-model="filterData.tournament">
               <option :value="null"></option>
-              <option v-for="(context, id) in contexts" :value="id">{{ context.name }}</option>
+              <option v-for="(tournament, id) in tournaments" :value="id">{{ tournament.name }}</option>
             </select>
           </div>
           <div class="col">
@@ -291,10 +291,10 @@ async function checkEmail() {
               <h6 class="card-subtitle mb-2"> Add team</h6>
               <div class="row mb-2">
                 <div class="col">
-                  <label for="searchContext" class="form-label">Context</label>
-                  <select class="form-select form-select-sm" id="searchContext" v-model="teamSearchData.context" @change="searchTeam">
-                    <option value="" :selected="teamSearchData.context == ''">Any</option>
-                    <option v-for="(context, id) in contexts" :value="id" :selected="id == teamSearchData.context">{{ context.name }}</option>
+                  <label for="searchTournament" class="form-label">Tournament</label>
+                  <select class="form-select form-select-sm" id="searchTournament" v-model="teamSearchData.tournament" @change="searchTeam">
+                    <option value="" :selected="teamSearchData.tournament == ''">Any</option>
+                    <option v-for="(tournament, id) in tournaments" :value="id" :selected="id == teamSearchData.tournament">{{ tournament.name }}</option>
                   </select>
                 </div>
                 <div class="col">
@@ -311,7 +311,7 @@ async function checkEmail() {
         <div class="modal-footer">
           <button v-if="confirmDelete" type="button" class="btn btn-secondary" @click="(e) => confirmDelete = false">Cancel</button>
           <button v-if="editData.id" type="button" class="btn btn-danger ms-2" @click="deleteUser">
-            {{confirmDelete ? "Confirm deletion" : "Delete context"}}
+            {{confirmDelete ? "Confirm deletion" : "Delete tournament"}}
           </button>
           <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Discard</button>
           <button type="submit" class="btn btn-primary">{{ editData.id ? "Save" : "Create" }}</button>

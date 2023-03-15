@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import type { AlgobattleWebModelsContextSchema, AlgobattleWebModelsProblemSchema } from 'typescript_client';
+import type { AlgobattleWebModelsTournamentSchema, AlgobattleWebModelsProblemSchema } from 'typescript_client';
 import { computed } from 'vue';
 
 const props = defineProps<{
   problem: AlgobattleWebModelsProblemSchema,
-  context: AlgobattleWebModelsContextSchema,
+  tournament: AlgobattleWebModelsTournamentSchema,
 }>()
 
 const problem_url = computed(() => {
-  const contextStr = encodeURIComponent(props.context.name)
+  const tournamentStr = encodeURIComponent(props.tournament.name)
   const name = encodeURIComponent(props.problem.name)
-  return `/problems/${contextStr}/${name}`
+  return `/problems/${tournamentStr}/${name}`
 })
 
 </script>

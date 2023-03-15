@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Modal } from "bootstrap"
-import { contextApi, docsApi, problemApi, store, teamApi } from '@/main';
-import type { Context, Documentation, DbFile, Problem, AlgobattleWebModelsTeamSchema } from 'typescript_client';
+import { tournamentApi, docsApi, problemApi, store, teamApi } from '@/main';
+import type { Tournament, Documentation, DbFile, Problem, AlgobattleWebModelsTeamSchema } from 'typescript_client';
 import { computed, onMounted, ref, type Ref } from 'vue';
 import { useRoute } from 'vue-router';
 import router from "@/router";
@@ -16,7 +16,7 @@ interface DbFileEdit {
 }
 interface ProblemEdit {
   name: string,
-  context: string,
+  tournament: string,
   file: DbFileEdit,
   config: DbFileEdit,
   start?: Date,
@@ -31,8 +31,8 @@ interface ProblemEdit {
 }
 
 const problem = ref({} as Problem)
-const contexts: Ref<{
-    [key: string]: Context
+const tournaments: Ref<{
+    [key: string]: Tournament
 }> = ref({})
 const selectedTeam: Ref<AlgobattleWebModelsTeamSchema | undefined> = ref(undefined)
 const docs: Ref<{[key: string]: Documentation}> = ref({})
@@ -58,13 +58,13 @@ onMounted(async () => {
   try {
     const problemInfo = await problemApi.problemByName({
       problemName: route.params.problemName as string,
-      contextName: route.params.contextName as string,
+      tournamentName: route.params.tournamentName as string,
     })
     problem.value = problemInfo.problem
     if (store.user.isAdmin) {
-      contexts.value = await contextApi.allContexts()
+      tournaments.value = await tournamentApi.allTournaments()
     } else {
-      contexts.value = {[problemInfo.context.id]: problemInfo.context}
+      tournaments.value = {[problemInfo.tournament.id]: problemInfo.tournament}
     }
     docs.value = await docsApi.getDocs({getDocs: {problem: problem.value.id}})
     description.value = (await problemApi.problemDesc({id: problem.value.id})).data
@@ -147,7 +147,7 @@ async function removeDoc() {
   Modal.getOrCreateInstance("#docModal").hide()
 }
 function docEditable() {
-  return selectedTeam.value?.context === problem.value.context && (store.user.isAdmin || !problem.value.end || problem.value.end >= now)
+  return selectedTeam.value?.tournament === problem.value.tournament && (store.user.isAdmin || !problem.value.end || problem.value.end >= now)
 }
 
 let editProblem = ref(createProblemEdit(problem.value))
@@ -175,7 +175,7 @@ async function submitEdit() {
       id: problem.value.id,
       problemEdit: {
         name: prob.name,
-        context: prob.context,
+        tournament: prob.tournament,
         start: prob.start,
         end: prob.end,
         shortDescription: prob.shortDescription,
@@ -207,12 +207,12 @@ async function submitEdit() {
   Modal.getOrCreateInstance("#problemModal").hide()
 }
 async function checkName() {
-  const context = contexts.value[editProblem.value.context]
-  if (!context) {
+  const tournament = tournaments.value[editProblem.value.tournament]
+  if (!tournament) {
     return
   }
   try {
-    const prob = await problemApi.problemByName({contextName: context.name, problemName: editProblem.value.name})
+    const prob = await problemApi.problemByName({tournamentName: tournament.name, problemName: editProblem.value.name})
     if (prob.problem.id != problem.value.id) {
       error.value = "name"
       return
@@ -235,7 +235,7 @@ async function deleteProblem() {
   <template v-if="error != 'problem'">
     <nav id="navbar" class="navbar bg-body-tertiary px-3 mb-3">
       <a class="navbar-brand" href="#">
-        {{problem.name + (store.user.isAdmin ? ` (${contexts[problem.context]?.name})`: "")}}
+        {{problem.name + (store.user.isAdmin ? ` (${tournaments[problem.tournament]?.name})`: "")}}
       </a>
       <ul class="nav nav-pills">
         <li v-if="problem.description" class="nav-item">
@@ -260,7 +260,7 @@ async function deleteProblem() {
         <div class="col-md-3">
           <ul class="list-group list-group-flush bg-body-tertiary w-em">
             <li class="list-group-item bg-body-tertiary">{{problem.name}}</li>
-            <li v-if="store.user.isAdmin" class="list-group-item bg-body-tertiary">{{contexts[problem.context]?.name}}</li>
+            <li v-if="store.user.isAdmin" class="list-group-item bg-body-tertiary">{{tournaments[problem.tournament]?.name}}</li>
             <li v-if="problem.shortDescription" class="list-group-item bg-body-tertiary">{{ problem.shortDescription }}</li>
             <li v-if="problem.start" class="list-group-item bg-body-tertiary">Start: {{problem.start.toLocaleString()}}</li>
             <li v-if="problem.end" class="list-group-item bg-body-tertiary">End: {{problem.end.toLocaleString()}}</li>
@@ -313,7 +313,7 @@ async function deleteProblem() {
     </div>
   </template>
   <div v-else class="alert alert-danger" role="alert">
-    There is no problem with this name in this context.
+    There is no problem with this name in this tournament.
     <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
 
@@ -351,9 +351,9 @@ async function deleteProblem() {
         <div class="modal-body row">
           <div class="col-md-6">
             <div class="mb-3">
-              <label for="context_sel" class="form-label">Context</label>
-              <select class="form-select w-em" id="context_sel" name="context" required v-model="editProblem.context" @change="checkName">
-                <option v-for="(context, id) in contexts" :value="id">{{context.name}}</option>
+              <label for="tournament_sel" class="form-label">Tournament</label>
+              <select class="form-select w-em" id="tournament_sel" name="tournament" required v-model="editProblem.tournament" @change="checkName">
+                <option v-for="(tournament, id) in tournaments" :value="id">{{tournament.name}}</option>
               </select>
               <div class="invalid-feedback">
               </div>
@@ -373,7 +373,7 @@ async function deleteProblem() {
               <label for="prob_name" class="form-label">Name</label>
               <input type="text" class="form-control w-em" name="name" id="prob_name" v-model="editProblem.name" required @input="checkName" :class="{'is-invalid': error == 'name'}"/>
               <div class="invalid-feedback">
-                A problem with this name already exists in this context.
+                A problem with this name already exists in this tournament.
               </div>
             </div>
             <div class="mb-3">

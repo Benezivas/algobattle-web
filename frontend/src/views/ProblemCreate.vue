@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import FileInput from '../components/FileInput.vue';
-import { contextApi, problemApi } from '@/main';
+import { tournamentApi, problemApi } from '@/main';
 import router from '@/router';
-import type { Context, Problem } from 'typescript_client';
+import type { Tournament, Problem } from 'typescript_client';
 import { computed, onMounted, ref } from 'vue';
 
 
 const page = ref(0)
 const error = ref("")
 const problems = ref<{[key: string]: Problem}>({})
-const contexts = ref<{[key: string]: Context}>({})
+const tournaments = ref<{[key: string]: Tournament}>({})
 const data = ref({
   file: undefined as File | undefined,
   copyFrom: undefined as string | undefined,
 
   name: "",
-  context: "",
+  tournament: "",
   problemSchema: "",
   solutionSchema: "",
   config: undefined as File | undefined,
@@ -35,7 +35,7 @@ const imageUrl = computed(() => {
 
 onMounted(async () => {
   problems.value = await problemApi.allProblems()
-  contexts.value = await contextApi.allContexts()
+  tournaments.value = await tournamentApi.allTournaments()
 })
 
 async function sendFile() {
@@ -60,7 +60,7 @@ async function createProblem() {
   }
 }
 function checkName() {
-  if (Object.values(problems.value).filter(prob => prob.name == data.value.name && prob.context == data.value.context).length != 0) {
+  if (Object.values(problems.value).filter(prob => prob.name == data.value.name && prob.tournament == data.value.tournament).length != 0) {
     error.value = "name"
   } else {
     error.value = ""
@@ -107,7 +107,7 @@ function checkName() {
             <label for="prob_select" class="form-label">Or copy an already existing one</label>
             <select class="form-select w-em" id="prob_select" @change="(e) => data.file = undefined" v-model="data.copyFrom">
               <option selected value=""></option>
-              <option v-for="(problem, id) in problems" :value="id">{{problem.name + ` (${contexts[problem.context]?.name})`}}</option>
+              <option v-for="(problem, id) in problems" :value="id">{{problem.name + ` (${tournaments[problem.tournament]?.name})`}}</option>
             </select>
             <div class="d-flex mt-3">
               <button class="btn btn-primary ms-auto" type="submit">Next</button>
@@ -117,9 +117,9 @@ function checkName() {
 
           <form v-if="page == 1" id="settings_form" ref="settings_form" class="card-body" @submit.prevent="(e) => page++">
             <div class="mb-3">
-              <label for="context_sel" class="form-label">Context</label>
-              <select class="form-select w-em" id="context_sel" name="context" required v-model="data.context" @change="checkName">
-                <option v-for="(context, id) in contexts" :value="id">{{context.name}}</option>
+              <label for="tournament_sel" class="form-label">Tournament</label>
+              <select class="form-select w-em" id="tournament_sel" name="tournament" required v-model="data.tournament" @change="checkName">
+                <option v-for="(tournament, id) in tournaments" :value="id">{{tournament.name}}</option>
               </select>
               <div class="invalid-feedback">
               </div>
@@ -128,7 +128,7 @@ function checkName() {
               <label for="prob_name" class="form-label">Name</label>
               <input type="text" class="form-control w-em" id="prob_name" v-model="data.name" required @input="checkName" :class="{'is-invalid': error == 'name'}"/>
               <div class="invalid-feedback">
-                A problem with this name already exists in this context.
+                A problem with this name already exists in this tournament.
               </div>
             </div>
             <div class="mb-3">

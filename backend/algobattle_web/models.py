@@ -415,17 +415,17 @@ class UserSettings(Base, unsafe_hash=True):
         selected_team: "Team.Schema | None"
 
 
-class Context(Base, unsafe_hash=True):
+class Tournament(Base, unsafe_hash=True):
     name: Mapped[str] = mapped_column(unique=True)
 
-    teams: Mapped[list["Team"]] = relationship(back_populates="context", init=False)
+    teams: Mapped[list["Team"]] = relationship(back_populates="tournament", init=False)
 
     class Schema(Base.Schema):
         name: str
 
     @classmethod
     def get(cls, db: Session, identifier: str | ID) -> Self | None:
-        """Queries the database for the context with the given id or name."""
+        """Queries the database for the tournament with the given id or name."""
         if isinstance(identifier, UUID):
             return db.get(cls, identifier)
         else:
@@ -434,15 +434,15 @@ class Context(Base, unsafe_hash=True):
 
 class Team(Base, unsafe_hash=True):
     name: Mapped[str]
-    context: Mapped[Context] = relationship(back_populates="teams", uselist=False, lazy="joined")
-    context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
+    tournament: Mapped[Tournament] = relationship(back_populates="teams", uselist=False, lazy="joined")
+    tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
     members: Mapped[list[User]] = relationship(secondary=team_members, back_populates="teams", lazy="joined", default_factory=list)
 
-    __table_args__ = (UniqueConstraint("name", "context_id"),)
+    __table_args__ = (UniqueConstraint("name", "tournament_id"),)
 
     class Schema(Base.Schema):
         name: str
-        context: ObjID
+        tournament: ObjID
         members: list[ObjID]
 
     def __str__(self) -> str:
@@ -456,19 +456,19 @@ class Team(Base, unsafe_hash=True):
 
     @overload
     @classmethod
-    def get(cls, db: Session, identifier: str, context: Context) -> Self | None:
-        """Queries the database for the team with the given name in that context."""
+    def get(cls, db: Session, identifier: str, tournament: Tournament) -> Self | None:
+        """Queries the database for the team with the given name in that tournament."""
         ...
 
     @classmethod
-    def get(cls, db: Session, identifier: str | ID, context: Context | None = None) -> Self | None:
-        """Queries the database for the team with the given id or name and context."""
+    def get(cls, db: Session, identifier: str | ID, tournament: Tournament | None = None) -> Self | None:
+        """Queries the database for the team with the given id or name and tournament."""
         if isinstance(identifier, UUID):
             return db.get(cls, identifier)
         else:
-            if context is None:
-                raise ValueError("If the team is given by its name, you have to specify a context!")
-            return db.query(cls).filter(cls.name == identifier, cls.context_id == context.id).first()
+            if tournament is None:
+                raise ValueError("If the team is given by its name, you have to specify a tournament!")
+            return db.query(cls).filter(cls.name == identifier, cls.tournament_id == tournament.id).first()
 
 
 class Problem(Base, unsafe_hash=True):
@@ -478,8 +478,8 @@ class Problem(Base, unsafe_hash=True):
     image_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
 
     name: Mapped[str]
-    context: Mapped[Context] = relationship()
-    context_id: Mapped[ID] = mapped_column(ForeignKey("contexts.id"), init=False)
+    tournament: Mapped[Tournament] = relationship()
+    tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
     file: Mapped[File] = relationship(foreign_keys=file_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     config: Mapped[File] = relationship(foreign_keys=config_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     start: Mapped[datetime | None] = mapped_column(default=None)
@@ -491,11 +491,11 @@ class Problem(Base, unsafe_hash=True):
     solution_schema: Mapped[str | None] = mapped_column(default=None)
     colour: Mapped[str] = mapped_column(default=None)
 
-    __table_args__ = (UniqueConstraint("name", "context_id"),)
+    __table_args__ = (UniqueConstraint("name", "tournament_id"),)
 
     class Schema(Base.Schema):
         name: str
-        context: ObjID
+        tournament: ObjID
         file: File.Schema
         config: File.Schema
         start: datetime | None

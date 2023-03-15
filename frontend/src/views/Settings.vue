@@ -1,5 +1,5 @@
-<script setup lang="ts">import { contextApi, store, teamApi, userApi } from '@/main';
-import type { AlgobattleWebModelsTeamSchema, Context } from 'typescript_client';
+<script setup lang="ts">import { tournamentApi, store, teamApi, userApi } from '@/main';
+import type { AlgobattleWebModelsTeamSchema, Tournament } from 'typescript_client';
 import { onMounted, ref } from 'vue';
 
 
@@ -11,12 +11,12 @@ const userEdit = ref({
   },
 })
 const teams = ref<{[key: string]: AlgobattleWebModelsTeamSchema}>({})
-const contexts = ref<{[key: string]: Context}>({})
+const tournaments = ref<{[key: string]: Tournament}>({})
 const error = ref("")
 
 onMounted(async () => {
   teams.value = await teamApi.getTeams({requestBody: store.user.teams})
-  contexts.value = await contextApi.getContexts({requestBody: Object.values(teams.value).map(t => t.context)})
+  tournaments.value = await tournamentApi.getTournaments({requestBody: Object.values(teams.value).map(t => t.tournament)})
 })
 
 async function saveEdit() {
@@ -40,7 +40,7 @@ async function saveEdit() {
   <label for="selectedTeam" class="form-label">Selected team</label>
   <select class="form-select w-em" name="selectedTeam" v-model="userEdit.settings.selectedTeam">
     <option :value="undefined">Select a team</option>
-    <option v-for="(team, id) in teams" :value="id">{{team.name + ` (${contexts[team.context]?.name})`}}</option>
+    <option v-for="(team, id) in teams" :value="id">{{team.name + ` (${tournaments[team.tournament]?.name})`}}</option>
   </select>
   <button type="submit" class="btn btn-primary mt-4" @click="saveEdit">Save changes</button>
 </template>

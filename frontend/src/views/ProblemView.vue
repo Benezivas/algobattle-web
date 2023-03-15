@@ -1,31 +1,31 @@
 <script setup lang="ts">
 import ProblemCard from '@/components/ProblemCard.vue';
-import { contextApi, problemApi, store } from '@/main';
-import type { Context, Problem } from 'typescript_client';
+import { tournamentApi, problemApi, store } from '@/main';
+import type { Tournament, Problem } from 'typescript_client';
 import { computed, onMounted, ref, watch, type Ref } from 'vue';
 
-let contexts: Ref<{
-    [key: string]: Context
+let tournaments: Ref<{
+    [key: string]: Tournament
 }> = ref({})
-let selectedContext: Ref<string | undefined> = ref(undefined)
+let selectedTournament: Ref<string | undefined> = ref(undefined)
 const problems: Ref<{[key: string]: Problem}> = ref({})
 
 onMounted(async () => {
-  contexts.value = await contextApi.allContexts()
-  selectedContext.value = store.user.settings.selectedTeam?.context
+  tournaments.value = await tournamentApi.allTournaments()
+  selectedTournament.value = store.user.settings.selectedTeam?.tournament
 })
 
-watch(selectedContext, async (newContext: string | undefined, oldContext: string | undefined) => {
-  if (newContext != oldContext) {
-    problems.value = await problemApi.allProblems({context: newContext})
+watch(selectedTournament, async (newTournament: string | undefined, oldTournament: string | undefined) => {
+  if (newTournament != oldTournament) {
+    problems.value = await problemApi.allProblems({tournament: newTournament})
   }
 })
 
-function inContext(problem: Problem) {
-    if (selectedContext.value == undefined) {
+function inTournament(problem: Problem) {
+    if (selectedTournament.value == undefined) {
         return true
     } else {
-        return problem.context == selectedContext.value
+        return problem.tournament == selectedTournament.value
     }
 }
 const now = new Date()
@@ -33,7 +33,7 @@ const now = new Date()
 const future_problems = computed(() => {
   return Object.fromEntries(Object.entries(problems.value)
     .filter(([id, problem]) => 
-    inContext(problem)
+    inTournament(problem)
       && problem.start != null
       && problem.start > now
     ))
@@ -42,7 +42,7 @@ const future_problems = computed(() => {
 const current_problems = computed(() => {
   return Object.fromEntries(Object.entries(problems.value)
     .filter(([id, problem]) =>
-    inContext(problem)
+    inTournament(problem)
       && (problem.start == null || problem.start <= now)
       && (problem.end == null || problem.end > now)
     ))
@@ -51,7 +51,7 @@ const current_problems = computed(() => {
 const past_problems = computed(() => {
   return Object.fromEntries(Object.entries(problems.value)
     .filter(([id, problem]) =>
-    inContext(problem)
+    inTournament(problem)
       && problem.end != null
       && problem.end < now
     ))
@@ -61,16 +61,16 @@ const past_problems = computed(() => {
 <template>
   <template v-if="store.user.isAdmin">
     <div class="mb-5">
-      <label for="context_select" class="form-label">Select context</label>
-      <select id="context_select" class="form-select w-em" v-model="selectedContext">
+      <label for="tournament_select" class="form-label">Select tournament</label>
+      <select id="tournament_select" class="form-select w-em" v-model="selectedTournament">
         <option :value="undefined" selected>All</option>
-        <option v-for="(context, id) in contexts" :value="id">{{context.name}}</option>
+        <option v-for="(tournament, id) in tournaments" :value="id">{{tournament.name}}</option>
       </select>
     </div>
     
     <h3>Upcoming</h3>
     <div class="d-flex flex-wrap mb-5">
-      <ProblemCard v-for="(problem, id) in future_problems" :problem="problem" :context="contexts[problem.context]" :key="id" />
+      <ProblemCard v-for="(problem, id) in future_problems" :problem="problem" :tournament="tournaments[problem.tournament]" :key="id" />
       <div class="card border border-success-subtle m-2" style="width: 18rem; height: 24rem;">
         <img src="/default_problem.png" style="height: 10.125rem; object-fit: contain" class="card-img-top" alt="">
         <div class="card-body d-flex flex-column">
@@ -82,10 +82,10 @@ const past_problems = computed(() => {
   </template>
   <h3 v-if="Object.keys(current_problems).length != 0">Current</h3>
   <div class="d-flex flex-wrap mb-5">
-    <ProblemCard v-for="(problem, id) in current_problems" :problem="problem" :context="contexts[problem.context]" :key="id" />
+    <ProblemCard v-for="(problem, id) in current_problems" :problem="problem" :tournament="tournaments[problem.tournament]" :key="id" />
   </div>
   <h3 v-if="Object.keys(past_problems).length != 0">Past</h3>
   <div class="d-flex flex-wrap">
-    <ProblemCard v-for="(problem, id) in past_problems" :problem="problem" :context="contexts[problem.context]" :key="id" />
+    <ProblemCard v-for="(problem, id) in past_problems" :problem="problem" :tournament="tournaments[problem.tournament]" :key="id" />
   </div>
 </template>

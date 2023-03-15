@@ -25,7 +25,7 @@ const router = createRouter({
       component: () => import('../views/ProblemView.vue')
     },
     {
-        path: "/problems/:contextName/:problemName",
+        path: "/problems/:tournamentName/:problemName",
         component: () => import("../views/ProblemDetail.vue"),
     },
     {
