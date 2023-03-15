@@ -13,11 +13,12 @@ const problems: Ref<{[key: string]: Problem}> = ref({})
 onMounted(async () => {
   contexts.value = await contextApi.allContexts()
   selectedContext.value = store.user.settings.selectedTeam?.context
-  problems.value = await problemApi.allProblems({context: selectedContext.value})
 })
 
-watch(selectedContext, async (newContext: string | undefined) => {
-  problems.value = await problemApi.allProblems({context: newContext})
+watch(selectedContext, async (newContext: string | undefined, oldContext: string | undefined) => {
+  if (newContext != oldContext) {
+    problems.value = await problemApi.allProblems({context: newContext})
+  }
 })
 
 function inContext(problem: Problem) {
