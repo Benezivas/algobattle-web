@@ -92,7 +92,15 @@ def get_user(*, db = Depends(get_db), user = Depends(curr_user), users: list[ID]
         .where(User.id.in_(users), User.visible_sql(user))
     )
 
-@admin.get("/user/search", tags=["user"], response_model=list[User.Schema])
+
+class UserSearch(BaseSchema):
+    page: int
+    max_page: int
+    users: dict[ID, User.Schema]
+    teams: dict[ID, Team.Schema]
+
+
+@admin.get("/user/search", tags=["user"])
 def search_users(
     *,
     db = Depends(get_db),
@@ -103,7 +111,7 @@ def search_users(
     team: ID | None = None,
     limit: int = 25,
     page: int = 1,
-    ):
+    ) -> UserSearch:
     filters = []
     if name is not None:
         filters.append(User.name.contains(name, autoescape=True))
@@ -123,7 +131,18 @@ def search_users(
         .limit(limit)
         .offset(page * limit)
     ).unique().all()
-    return users
+    user_count = db.scalar(
+        select(func.count())
+        .select_from(User)
+        .where(*filters)
+    ) or 0
+    teams = {team for user in users for team in user.teams}
+    return UserSearch(
+        page=page + 1,
+        max_page=user_count // limit + 1,
+        users=encode(users),
+        teams=encode(teams),
+    )
 
 
 class CreateUser(BaseSchema):
