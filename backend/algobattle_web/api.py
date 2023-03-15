@@ -356,7 +356,7 @@ def search_team(
     teams = db.scalars(
         select(Team)
         .where(*filters)
-        .order_by(Team.context_id)
+        .order_by(Team.context_id.asc(), Team.name.asc())
         .limit(limit)
         .offset(page * limit)
     ).unique().all()
