@@ -111,12 +111,19 @@ def search_users(
     team: ID | None = None,
     limit: int = 25,
     page: int = 1,
+    exact_search: bool = False,
     ) -> UserSearch:
     filters = []
     if name is not None:
-        filters.append(User.name.contains(name, autoescape=True))
+        if exact_search:
+            filters.append(User.name == name)
+        else:
+            filters.append(User.name.contains(name, autoescape=True))
     if email is not None:
-        filters.append(User.email.contains(email, autoescape=True))
+        if exact_search:
+            filters.append(User.email == name)
+        else:
+            filters.append(User.email.contains(email, autoescape=True))
     if is_admin is not None:
         filters.append(User.is_admin == is_admin)
     if context is not None:
@@ -136,7 +143,7 @@ def search_users(
         .select_from(User)
         .where(*filters)
     ) or 0
-    teams = {team for user in users for team in user.teams}
+    teams = [team for user in users for team in user.teams]
     return UserSearch(
         page=page + 1,
         max_page=user_count // limit + 1,
@@ -165,7 +172,7 @@ class EditUser(BaseSchema):
     name: str | None = Field(None, min_length=1)
     email: str | None = Field(None, min_length=1)
     is_admin: bool | None = None
-    teams: dict[ID, bool] = {}
+    teams: dict[ID, Literal["add", "remove"]] = {}
 
 
 @admin.post("/user/{id}/edit", tags=["user"])
@@ -175,11 +182,11 @@ def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     for key, val in edit.dict(exclude_unset=True).items():
         if key != "teams":
             setattr(user, key, val)
-    for id, add in edit.teams.items():
+    for id, action in edit.teams.items():
         team = unwrap(db.get(Team, id))
-        if add and team not in user.teams:
+        if action == "add" and team not in user.teams:
             user.teams.append(team)
-        elif not add and team in user.teams:
+        elif action == "remove" and team in user.teams:
             user.teams.remove(team)
         else:
             raise ValueError
