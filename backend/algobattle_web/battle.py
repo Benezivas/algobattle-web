@@ -1,16 +1,14 @@
-from __future__ import annotations
 from datetime import datetime
-import logging
 from pathlib import Path
 from time import sleep
 from zipfile import ZipFile
+from anyio import run
 from sqlalchemy import select
 
 from algobattle.team import TeamInfo, TeamHandler
-from algobattle.match import Match
+from algobattle.match import Match, BaseConfig
 from algobattle.util import TempDir
 from algobattle.problem import Problem
-from algobattle.cli import Config
 from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, SessionLocal
 from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.util import unwrap
@@ -23,70 +21,45 @@ def _extract_to(source: Path, target: Path) -> Path:
     return target
 
 
-def _setup_logging(logging_path: Path, *, verbose: bool = True, silent: bool = False):
-    common_logging_level = logging.DEBUG if verbose else logging.INFO
-    logging_path.mkdir(exist_ok=True)
-    t = datetime.now()
-    logging_path = logging_path / f"{t.year:04d}-{t.month:02d}-{t.day:02d}_{t.hour:02d}-{t.minute:02d}-{t.second:02d}.log"
-
-    logging.basicConfig(
-            handlers=[logging.FileHandler(logging_path, 'w', 'utf-8')],
-            level=common_logging_level,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%H:%M:%S',
-            force=True,
-        )
-    logger = logging.getLogger('algobattle')
-
-    return logger, logging_path
-
-
 def run_match(db: Session, scheduled_match: ScheduledMatch):
     with TempDir() as folder:
-        logger, logging_path = _setup_logging(folder, verbose=True, silent=True)
         if scheduled_match.config is None:
-            config = scheduled_match.problem.config
+            config_file = scheduled_match.problem.config
         else:
-            config = scheduled_match.config
-        problem_path = _extract_to(scheduled_match.problem.file.path, folder / "problem")
-            
-        team_info: list[TeamInfo] = []
+            config_file = scheduled_match.config
+        config = BaseConfig.from_file(config_file.path)
+        config.teams = {}
+        problem = Problem.import_from_path(scheduled_match.problem.file.path)
+
         paricipants: set[ResultParticipant] = set()
         for participant in scheduled_match.participants:
             if participant.generator is None:
                 gen = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "generator")).unique().first())
             else:
                 gen = participant.generator
-            gen_path = _extract_to(gen.file.path, folder / participant.team.name / "generator")
+            gen_path = _extract_to(gen.file.path, folder / participant.team.id.hex / "generator")
             
             if participant.solver is None:
                 sol = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "solver")).unique().first())
             else:
                 sol = participant.solver
-            sol_path = _extract_to(sol.file.path, folder / participant.team.name / "solver")
+            sol_path = _extract_to(sol.file.path, folder / participant.team.id.hex / "solver")
 
-            team_info.append(TeamInfo(participant.team.name, gen_path, sol_path))
+            config.teams[participant.team.name] = TeamInfo(generator=gen_path, solver=sol_path)
             paricipants.add(ResultParticipant(db, participant.team, gen, sol, 0))
-        db_result = MatchResult(db, "running", datetime.now(), scheduled_match.problem, paricipants, File(config))
+        db_result = MatchResult(db, "running", datetime.now(), scheduled_match.problem, paricipants, config_file)
         db.commit()
 
-        config = Config.from_file(config.path)
-        problem = Problem.import_from_path(problem_path)
-        with TeamHandler.build(team_info, problem, config.docker, config.execution.safe_build) as teams:
-            result = Match.run(config.match, config.battle_config, problem, teams)
-            points = result.calculate_points()
-            
-            logger.info('#' * 78)
-            logger.info(str(result))
-            for team, pts in points.items():
-                logger.info(f"Team {team} gained {pts:.1f} points.")
+        result = run(Match.run, config, problem)
+        points = result.calculate_points(config.match.points)
 
-            for participant in db_result.participants:
-                participant.points = points[participant.team.name]
-            db_result.status = "complete"
-            logging.shutdown()
-            db_result.logs = File(logging_path, move=True)
-            db.commit()
+        for participant in db_result.participants:
+            participant.points = points[participant.team.name]
+        db_result.status = "complete"
+        with open(folder / "results.json", "x") as f:
+            f.write(result.json())
+        db_result.logs = File(folder / "result.json", move=True)
+        db.commit()
 
 
 def run_scheduled_matches():
