@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from algobattle.team import TeamInfo
 from algobattle.match import Match, BaseConfig
-from algobattle.util import TempDir
+from algobattle.util import TempDir, Role
 from algobattle.problem import Problem
 from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, SessionLocal
 from algobattle_web.config import SERVER_CONFIG
@@ -34,13 +34,13 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         paricipants: set[ResultParticipant] = set()
         for participant in scheduled_match.participants:
             if participant.generator is None:
-                gen = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "generator")).unique().first())
+                gen = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == Role.generator)).unique().first())
             else:
                 gen = participant.generator
             gen_path = _extract_to(gen.file.path, folder / participant.team.id.hex / "generator")
             
             if participant.solver is None:
-                sol = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == "solver")).unique().first())
+                sol = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == Role.solver)).unique().first())
             else:
                 sol = participant.solver
             sol_path = _extract_to(sol.file.path, folder / participant.team.id.hex / "solver")
