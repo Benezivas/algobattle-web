@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 
+from algobattle.util import Role
 from algobattle_web.models import (
     Base,
     get_db,
@@ -48,10 +49,10 @@ def schedule_get(db: Session = Depends(get_db), user: User = Depends(curr_user))
         programs = {
             team.id: {
                 "generators": {
-                    prog.id: prog.encode() for prog in progs if prog.team == team and prog.role == "generator"
+                    prog.id: prog.encode() for prog in progs if prog.team == team and prog.role == Role.generator
                 },
                 "solvers": {
-                    prog.id: prog.encode() for prog in progs if prog.team == team and prog.role == "solver"
+                    prog.id: prog.encode() for prog in progs if prog.team == team and prog.role == Role.solver
                 },
             }
             for team in teams

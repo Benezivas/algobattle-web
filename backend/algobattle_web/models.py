@@ -12,7 +12,7 @@ from shutil import copyfileobj, copyfile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey, Column, select, String, create_engine, DateTime, inspect
+from sqlalchemy import Table, ForeignKey, Column, select, create_engine, DateTime, inspect
 from sqlalchemy.event import listens_for
 from sqlalchemy.sql import true as sql_true, or_, and_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
@@ -561,15 +561,13 @@ class Program(Base, unsafe_hash=True):
     name: Mapped[str]
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
-    role: Mapped[ProgramRole] = mapped_column(String)
+    role: Mapped[ProgramRole]
     file: Mapped[File] = relationship(cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
     problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"), init=False)
     creation_time: Mapped[datetime] = mapped_column(default_factory=datetime.now)
     user_editable: Mapped[bool] = mapped_column(default=True)
-
-    Role = ProgramRole
 
     class Schema(Base.Schema):
         name: str

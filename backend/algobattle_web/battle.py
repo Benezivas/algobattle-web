@@ -5,7 +5,7 @@ from zipfile import ZipFile
 from anyio import run
 from sqlalchemy import select
 
-from algobattle.team import TeamInfo, TeamHandler
+from algobattle.team import TeamInfo
 from algobattle.match import Match, BaseConfig
 from algobattle.util import TempDir
 from algobattle.problem import Problem

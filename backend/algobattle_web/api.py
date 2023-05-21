@@ -18,6 +18,8 @@ from pydantic import Field
 from pydantic.color import Color
 
 
+from algobattle.util import TempDir, Role
+from algobattle.problem import Problem as AlgProblem
 from algobattle_web.battle import run_match
 from algobattle_web.models import (
     File as DbFile,
@@ -37,8 +39,6 @@ from algobattle_web.models import (
 )
 from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present
 from algobattle_web.dependencies import curr_user, check_if_admin
-from algobattle.util import TempDir
-from algobattle.problem import Problem as AlgProblem
 from backend.algobattle_web.config import SERVER_CONFIG
 from backend.algobattle_web.models import UserSettings
 
@@ -798,7 +798,7 @@ def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs, 
 
 class ProgramCreate(BaseSchema):
     name: str
-    role: Program.Role
+    role: Role
     file: UploadFile
     problem: ID
 
@@ -821,7 +821,7 @@ def add_program(
 
 class ProgramEdit(BaseSchema):
     name: str | None = None
-    role: Program.Role | None = None
+    role: Role | None = None
     problem: ID | None = None
 
 
@@ -834,7 +834,7 @@ def edit_own_program(
     if edit.name is not None:
         program.name = edit.name
     if edit.role is not None:
-        program.role = cast(Program.Role, edit.role)
+        program.role = edit.role
     if edit.problem is not None:
         program.problem_id = edit.problem
     db.commit()
