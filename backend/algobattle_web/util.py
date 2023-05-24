@@ -131,8 +131,8 @@ def guess_mimetype(info: str | Path) -> str:
     if guess:
         return guess
     if isinstance(info, Path):
-        info = info.name
-    return _extension_map.get(info.split(".")[-1], "application/octet-stream")
+        info = info.suffix
+    return _extension_map.get(info, "application/octet-stream")
 
 
 class Wrapped(BaseSchema, GenericModel, Generic[T]):
