@@ -1,15 +1,14 @@
 """Util functions."""
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generic, Never, Self, TypeGuard, TypeVar
-from inspect import Parameter, Signature, signature
+from typing import Any, Generic, Never, TypeGuard, TypeVar
 from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 
 from pydantic import BaseModel, BaseConfig, Extra
 from pydantic.color import Color
 from pydantic.generics import GenericModel
-from fastapi import UploadFile, File, Form, HTTPException
+from fastapi import HTTPException
 
 
 class BaseSchema(BaseModel):
@@ -19,26 +18,6 @@ class BaseSchema(BaseModel):
         json_encoders = {
             Color: Color.as_hex,
         }
-
-    @classmethod
-    def from_form(cls: type[Self]):
-        """Constructs a a function that can be used as a dependency for parsing this schema from form data."""
-
-        def builder(**kwargs) -> Self:
-            return cls(**{key: val for key, val in kwargs.items() if present(val)})
-
-        new_sig = []
-        for param in signature(cls).parameters.values():
-            default = param.default if param.default is not Parameter.empty else None
-            getter = File if param.annotation == UploadFile else Form
-            new_sig.append(
-                Parameter(
-                    param.name, Parameter.POSITIONAL_OR_KEYWORD, annotation=param.annotation, default=getter(default=default)
-                )
-            )
-
-        builder.__signature__ = Signature(new_sig)
-        return builder
 
 
 class Missing(BaseSchema):
