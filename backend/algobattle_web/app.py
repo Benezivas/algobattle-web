@@ -12,7 +12,6 @@ from uvicorn import run
 from algobattle_web.models import Base, SessionLocal, engine, User
 from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.api import router as api, SchemaRoute
-from algobattle_web.pages import router as pages
 from algobattle_web.battle import main as battle_main
 from algobattle_web.util import PermissionExcpetion, ValueTaken
 
@@ -56,7 +55,6 @@ async def val_taken_err(request: Request, e: ValueTaken):
     )
 
 app.include_router(api)
-app.include_router(pages)
 for route in app.routes:
     if isinstance(route, SchemaRoute):
         route.operation_id = route.name
