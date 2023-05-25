@@ -164,9 +164,9 @@ def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
     _teams = [unwrap(db.get(Team, id)) for id in user.teams]
     if db.scalars(select(User).filter(User.email == user.email)).unique().first() is not None:
         raise ValueTaken("email", user.email)
+    new = User(db=db, email=user.email, name=user.name, is_admin=user.is_admin, teams=_teams)
     db.commit()
-    return User(db=db, email=user.email, name=user.name, is_admin=user.is_admin, teams=_teams)
-
+    return new
 
 class EditUser(BaseSchema):
     name: str | None = Field(None, min_length=1)
@@ -235,11 +235,11 @@ def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_us
 
 
 @router.post("/user/login", tags=["user"])
-def login(*, db = Depends(get_db), email: str = Body(), target_url: str = Body()) -> None:
+def login(*, db = Depends(get_db), email: str = Body(), target_url: str = Body(), tasks: BackgroundTasks) -> None:
     user = unwrap(User.get(db, email))
     token = user.login_token()
     url = SERVER_CONFIG.frontend_base_url + target_url + f"?login_token={token}"
-    send_email(email, url)
+    tasks.add_task(send_email, email, url)
 
 
 class TokenData(BaseSchema):
