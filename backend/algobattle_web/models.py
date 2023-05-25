@@ -3,7 +3,7 @@ from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
 from tempfile import SpooledTemporaryFile
-from typing import IO, ClassVar, Iterable, Any, TypeAlias, TypeVar
+from typing import IO, ClassVar, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Sequence
 from uuid import UUID, uuid4
 from pathlib import Path

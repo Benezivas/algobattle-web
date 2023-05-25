@@ -12,7 +12,7 @@ from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse, Response
 from markdown import markdown
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from pydantic import Field
 from pydantic.color import Color
