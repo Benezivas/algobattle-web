@@ -167,7 +167,7 @@ function openEdit() {
   Modal.getOrCreateInstance("#problemModal").show()
 }
 async function submitEdit() {
-  try {
+  //try {
     const prob = editProblem.value
     problem.value = await problemApi.editProblem({
       id: problem.value.id,
@@ -183,10 +183,11 @@ async function submitEdit() {
         colour: prob.colour,
       }
     })
-  } catch {
+  /*} catch {
+    throw
     error.value = "name"
     return
-  }
+  }*/
   for (const key of ["file", "config", "description", "image"] as (keyof ProblemEdit)[]) {
     try {
       const editFile = editProblem.value[key] as DbFileEdit

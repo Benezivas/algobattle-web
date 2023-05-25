@@ -18,6 +18,9 @@ import {
 } from "../typescript_client"
 
 export type ModelDict<T> = {[key: string]: T}
+export interface InputFileEvent extends InputEvent {
+  target: HTMLInputElement;
+}
 
 const { cookies } = useCookies()
 const configuration = new Configuration({
