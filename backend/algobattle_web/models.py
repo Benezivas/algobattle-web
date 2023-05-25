@@ -3,7 +3,7 @@ from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
 from tempfile import SpooledTemporaryFile
-from typing import IO, ClassVar, Iterable, Any
+from typing import IO, ClassVar, Iterable, Any, TypeAlias, TypeVar
 from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Sequence
 from uuid import UUID, uuid4
 from pathlib import Path
@@ -568,6 +568,13 @@ class Program(Base, unsafe_hash=True):
     problem_id: Mapped[UUID] = mapped_column(ForeignKey("problems.id"), init=False)
     creation_time: Mapped[datetime] = mapped_column(default_factory=datetime.now)
     user_editable: Mapped[bool] = mapped_column(default=True)
+
+    @classmethod
+    def visible_sql(cls, user: User) -> _ColumnExpressionArgument[bool]:
+        if user.is_admin:
+            return sql_true
+        else:
+            return cls.team_id == user.settings.selected_team_id
 
     class Schema(Base.Schema):
         name: str

@@ -12,7 +12,7 @@ from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse, Response
 from markdown import markdown
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.exc import IntegrityError
 from pydantic import Field
 from pydantic.color import Color
@@ -674,6 +674,7 @@ def problem_desc(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> 
     if problem.description is None:
         return Wrapped(data=None)
     else:
+        print(problem.description.media_type)
         try:
             match problem.description.media_type:
                 case "text/plain":
@@ -728,7 +729,7 @@ def docs_edit(
         user: User,
         problem: Problem,
         team: Team,
-        file: UploadFile,
+        file: UploadFile = File(),
     ) -> Documentation | None:
     problem.assert_editable(user)
     if problem.tournament != team.tournament:
@@ -796,57 +797,77 @@ def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs, 
 # *******************************************************************************
 
 
-class ProgramCreate(BaseSchema):
-    name: str
-    role: Role
-    file: UploadFile
-    problem: ID
+class ProgramResults(BaseSchema):
+    programs: dict[ID, Program.Schema]
+    teams: dict[ID, Team.Schema]
+    problems: dict[ID, Problem.Schema]
+    page: int
+    max_page: int
 
 
-@router.post("/program/create", tags=["program"])
-def add_program(
+@router.get("/program/search", tags=["program"])
+def search_program(
+    *,
+    db = Depends(get_db),
+    user: User = Depends(curr_user),
+    name: str | None = None,
+    team: ID | None = None,
+    role: Role | None = None,
+    limit: int = 25,
+    page: int = 1,
+    ) -> ProgramResults:
+    if user.is_admin:
+        problems = Problem.get_all(db)
+    else:
+        assert user.settings.selected_team is not None
+        problems = db.scalars(select(Problem).where(Problem.visible_sql(user),
+                    Problem.tournament_id == user.settings.selected_team.tournament_id)).unique().all()
+    filters = [Program.visible_sql(user)]
+    if name is not None:
+        filters.append(Program.name.contains(name, autoescape=True))
+    if team is not None:
+        filters.append(Program.team == team)
+    if role is not None:
+        filters.append(Program.role == role)
+    page = max(page - 1, 0)
+    programs = db.scalars(
+        select(Program)
+        .where(*filters)
+        .order_by(Program.creation_time.desc())
+        .limit(limit)
+        .offset(page * limit)
+    ).unique().all()
+    total_count = db.scalar(
+        select(func.count())
+        .select_from(Program)
+        .where(*filters)
+    ) or 0
+    teams = [program.team for program in programs]
+    return ProgramResults(
+        programs=encode(programs),
+        teams=encode(teams),
+        problems=encode(problems),
+        page=page + 1,
+        max_page=total_count // limit + 1,
+    )
+
+
+@router.post("/program/upload", tags=["program"])
+def upload_program(
     *,
     db: Session = Depends(get_db),
     user: User = Depends(curr_user),
-    data: ProgramCreate = Depends(ProgramCreate.from_form()),
+    name: str = Form(""),
+    role: Role = Form(),
+    problem: ID = Form(),
+    file: UploadFile = File(),
 ) -> Program:
     team = unwrap(user.settings.selected_team)
-    problem = unwrap(db.get(Problem, data.problem))
-    problem.assert_visible(user)
-    file = DbFile(data.file)
-    prog = Program(db, data.name, team, data.role, file, problem)
+    problem_obj = unwrap(db.get(Problem, problem))
+    problem_obj.assert_visible(user)
+    prog = Program(db, name, team, role, DbFile(file), problem_obj)
     db.commit()
     return prog
-
-
-class ProgramEdit(BaseSchema):
-    name: str | None = None
-    role: Role | None = None
-    problem: ID | None = None
-
-
-#@router.post("/program/{id}/edit", tags=["program"])
-def edit_own_program(
-    *, db: Session = Depends(get_db), user: User = Depends(curr_user), id: ID, edit: ProgramEdit = Depends(ProgramEdit.from_form())
-) -> Program:
-    program = unwrap(db.get(Program, id))
-    program.assert_editable(user)
-    if edit.name is not None:
-        program.name = edit.name
-    if edit.role is not None:
-        program.role = edit.role
-    if edit.problem is not None:
-        program.problem_id = edit.problem
-    db.commit()
-    return program
-
-
-@admin.post("/program/{id}/user_editable", tags=["program"])
-def edit_program(*, db: Session = Depends(get_db), id: ID, user_editable: bool) -> Program:
-    program = unwrap(db.get(Program, id))
-    program.user_editable = user_editable
-    db.commit()
-    return program
 
 
 @router.post("/program/{id}/delete", tags=["program"])
