@@ -13,11 +13,10 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "algobattle",
+    "algobattle-base",
     "uvicorn",
     # until https://github.com/tiangolo/fastapi/pull/5978 is accepted
-    "fastapi @ git+https://github.com/ImogenBits/fastapi.git",
-    "jinja2",
+    "fastapi @ git+https://github.com/ImogenBits/fastapi.git@pydantic_orm",
     "python-jose[cryptography]",
     "python-multipart",
     "sqlalchemy >= 2.0.0b1",

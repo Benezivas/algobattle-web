@@ -36,13 +36,12 @@ from algobattle_web.models import (
     ScheduledMatch,
     Team,
     User,
+    UserSettings,
 )
-from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present
+from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present, Wrapped, send_email
 from algobattle_web.dependencies import curr_user, check_if_admin
-from backend.algobattle_web.config import SERVER_CONFIG
-from backend.algobattle_web.models import UserSettings
-
-from backend.algobattle_web.util import Wrapped, send_email
+from algobattle_web.config import SERVER_CONFIG
+from algobattle_web.models import UserSettings
 
 
 class SchemaRoute(APIRoute):

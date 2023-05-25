@@ -1,10 +1,8 @@
-from pathlib import Path
 from multiprocessing import Process
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError, HTTPException
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn import run
@@ -61,13 +59,11 @@ for route in app.routes:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[SERVER_CONFIG.frontend_base_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 
 
 def main():

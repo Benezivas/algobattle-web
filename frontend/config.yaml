@@ -1,0 +1,13 @@
+default:
+  hardening:
+    # Map of CSP directives, which will be added to all HTTP responses for HTML and JavaScript documents
+    content_security_policy:
+      base-uri: "'self'"
+      block-all-mixed-content: true
+      default-src: "*"
+      form-action: "'self'"
+      frame-ancestors: "'self'"
+      frame-src: "*"
+      object-src: "*"
+      script-src: "*"
+      style-src: "*"
