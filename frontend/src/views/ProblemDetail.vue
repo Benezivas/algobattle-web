@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { Modal } from "bootstrap"
-import { tournamentApi, docsApi, problemApi, store, teamApi } from '@/main';
+import { tournamentApi, docsApi, problemApi, store, teamApi, type InputFileEvent } from '@/main';
 import type { Tournament, Documentation, DbFile, Problem, AlgobattleWebModelsTeamSchema } from 'typescript_client';
 import { computed, onMounted, ref, type Ref } from 'vue';
 import { useRoute } from 'vue-router';
 import router from "@/router";
 import FileEditRow from "@/components/FileEditRow.vue";
 
-interface InputFileEvent extends InputEvent {
-  target: HTMLInputElement;
-}
+
 interface DbFileEdit {
   location?: string,
   edit?: File | null,
@@ -278,7 +276,7 @@ async function deleteProblem() {
       </div>
       <template v-if="problem.description">
         <h4 id="description" class="mt-5">Description</h4>
-        <a v-if="description == '__DONWLOAD_BUTTON__'" role="button" class="btn btn-primary btn-sm" :href="problem.description.location" title="Download file">Download description file <i class="bi bi-download ms-1"></i></a>
+        <a v-if="description == '__DOWNLOAD_BUTTON__'" role="button" class="btn btn-primary btn-sm" :href="problem.description.location" title="Download file">Download description file <i class="bi bi-download ms-1"></i></a>
         <div v-else v-html="description"></div>
       </template>
       <template v-if="ownDoc || store.user.isAdmin">
