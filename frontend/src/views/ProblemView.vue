@@ -13,6 +13,7 @@ const problems: Ref<{[key: string]: Problem}> = ref({})
 onMounted(async () => {
   tournaments.value = await tournamentApi.allTournaments()
   selectedTournament.value = store.user.settings.selectedTeam?.tournament
+  problems.value = await problemApi.allProblems({tournament: selectedTournament.value})
 })
 
 watch(selectedTournament, async (newTournament: string | undefined, oldTournament: string | undefined) => {
