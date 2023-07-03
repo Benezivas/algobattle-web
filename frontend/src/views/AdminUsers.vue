@@ -311,7 +311,7 @@ async function checkEmail() {
         <div class="modal-footer">
           <button v-if="confirmDelete" type="button" class="btn btn-secondary" @click="(e) => confirmDelete = false">Cancel</button>
           <button v-if="editData.id" type="button" class="btn btn-danger ms-2" @click="deleteUser">
-            {{confirmDelete ? "Confirm deletion" : "Delete tournament"}}
+            {{confirmDelete ? "Confirm deletion" : "Delete user"}}
           </button>
           <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Discard</button>
           <button type="submit" class="btn btn-primary">{{ editData.id ? "Save" : "Create" }}</button>
