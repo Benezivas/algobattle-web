@@ -915,7 +915,7 @@ def create_schedule(
     name: str = "",
     time: datetime,
     problem: ID,
-    points: float = 0,
+    points: float,
     ) -> ScheduledMatch:
     problem_ = unwrap(db.get(Problem, problem))
     schedule = ScheduledMatch(db, time=time, problem=problem_, name=name, points=points)
