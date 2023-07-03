@@ -2,7 +2,7 @@
 import HoverBadgeVue from '@/components/HoverBadge.vue';
 import { tournamentApi, teamApi, userApi, type ModelDict } from '@/main'
 import { Modal } from 'bootstrap'
-import type { AlgobattleWebModelsTeamSchema as Team, User, Tournament } from 'typescript_client'
+import type { Team, User, Tournament } from 'typescript_client'
 import { computed, onMounted, ref } from 'vue'
 
 

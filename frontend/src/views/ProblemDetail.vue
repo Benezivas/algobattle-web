@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Modal } from "bootstrap"
 import { tournamentApi, docsApi, problemApi, store, teamApi, type InputFileEvent } from '@/main';
-import type { Tournament, Documentation, DbFile, Problem, AlgobattleWebModelsTeamSchema } from 'typescript_client';
+import type { Tournament, Documentation, DbFile, Problem, Team } from 'typescript_client';
 import { computed, onMounted, ref, type Ref } from 'vue';
 import { useRoute } from 'vue-router';
 import router from "@/router";
@@ -32,10 +32,10 @@ const problem = ref({} as Problem)
 const tournaments: Ref<{
     [key: string]: Tournament
 }> = ref({})
-const selectedTeam: Ref<AlgobattleWebModelsTeamSchema | undefined> = ref(undefined)
+const selectedTeam: Ref<Team | undefined> = ref(undefined)
 const docs: Ref<{[key: string]: Documentation}> = ref({})
 const description: Ref<string | undefined> = ref(undefined)
-const teams: Ref<{[key: string]: AlgobattleWebModelsTeamSchema}> = ref({})
+const teams: Ref<{[key: string]: Team}> = ref({})
 
 const route = useRoute()
 const error = ref(null as null | string)

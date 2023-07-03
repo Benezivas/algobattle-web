@@ -855,9 +855,9 @@ def upload_program(
     *,
     db: Session = Depends(get_db),
     user: User = Depends(curr_user),
-    name: str = Form(""),
-    role: Role = Form(),
-    problem: ID = Form(),
+    name: str = "",
+    role: Role,
+    problem: ID,
     file: UploadFile = File(),
 ) -> Program:
     team = unwrap(user.settings.selected_team)

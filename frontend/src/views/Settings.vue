@@ -1,5 +1,5 @@
 <script setup lang="ts">import { tournamentApi, store, teamApi, userApi } from '@/main';
-import type { AlgobattleWebModelsTeamSchema, Tournament } from 'typescript_client';
+import type { Team, Tournament } from 'typescript_client';
 import { onMounted, ref } from 'vue';
 
 
@@ -10,7 +10,7 @@ const userEdit = ref({
     selectedTeam: store.user.settings.selectedTeam?.id,
   },
 })
-const teams = ref<{[key: string]: AlgobattleWebModelsTeamSchema}>({})
+const teams = ref<{[key: string]: Team}>({})
 const tournaments = ref<{[key: string]: Tournament}>({})
 const error = ref("")
 

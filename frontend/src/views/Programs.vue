@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { store, type ModelDict, programApi, type InputFileEvent } from "@/main";
 import { Modal } from "bootstrap";
-import type { Problem, Program, AlgobattleWebModelsTeamSchema as Team, Role } from "typescript_client";
+import type { Problem, Program, Team, Role } from "typescript_client";
 import type { UploadProgramRequest } from "typescript_client/apis/ProgramApi";
 import { onMounted, ref } from "vue";
 
@@ -28,7 +28,9 @@ async function search(
   maxPage.value = ret.maxPage;
 }
 
-const newProgData = ref<Partial<UploadProgramRequest>>({});
+const newProgData = ref<Partial<UploadProgramRequest>>({
+  name: "",
+});
 async function openModal() {
   Modal.getOrCreateInstance("#uploadProgram").show()
 }
@@ -43,15 +45,7 @@ async function uploadProgram() {
   || !newProgData.value.problem || !newProgData.value.role) {
     return
   }
-  if (!newProgData.value.name) {
-    newProgData.value.name = "";
-  }
-  const newProgram = await programApi.uploadProgram({
-    name: newProgData.value.name,
-    role: newProgData.value.role,
-    problem: newProgData.value.problem,
-    file: newProgData.value.file,
-  });
+  const newProgram = await programApi.uploadProgram(newProgData.value as UploadProgramRequest);
   programs.value[newProgram.id] = newProgram;
 }
 
@@ -109,7 +103,6 @@ onMounted(search);
             <div class="mb-3">
               <label for="problem_sel" class="form-label">Problem</label>
               <select class="form-select w-em" id="problem_sel" name="problem" required v-model="newProgData.problem">
-                <option :value="undefined">Select problem</option>
                 <option v-for="(problem, id) in problems" :value="id">{{problem.name}}</option>
               </select>
             </div>
@@ -122,14 +115,13 @@ onMounted(search);
             <div class="mb-3">
               <label for="role_sel" class="form-label">Role</label>
               <select class="form-select w-em" id="role_sel" name="role" required v-model="newProgData.role">
-                <option :value="undefined">Select role</option>
                 <option value="generator">Generator</option>
                 <option value="solver">Solver</option>
               </select>
             </div>
             <div class="mb-3">  
               <label for="file_select" class="form-label mt-3">Select new program file</label>
-              <input type="file" class="form-control w-em" id="file_select" @change="(e) => selectFile(e as any)"/>
+              <input type="file" class="form-control w-em" id="file_select" @change="(e) => selectFile(e as any)" required/>
             </div>
           </div>
 
