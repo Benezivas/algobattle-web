@@ -917,14 +917,12 @@ def create_schedule(
     name: str = "",
     time: datetime,
     problem: ID,
-    config: UploadFile | None = File(None),
     teams: set[ID],
     points: float = 0,
     ) -> ScheduledMatch:
     problem_ = unwrap(db.get(Problem, problem))
-    config_ = DbFile(config) if config is not None else None
     teams_ = {unwrap(db.get(Team, id)) for id in teams}
-    schedule = ScheduledMatch(db, time=time, problem=problem_, config=config_, teams=teams_, name=name, points=points)
+    schedule = ScheduledMatch(db, time=time, problem=problem_, teams=teams_, name=name, points=points)
     db.commit()
     return schedule
 
@@ -937,7 +935,6 @@ def edit_schedule(
     name: str | Missing = missing,
     time: datetime | Missing = missing,
     problem: ID | Missing = missing,
-    config: UploadFile | None | Missing = File(missing),
     points: float | Missing = missing,
     add_teams: list[ID] = [],
     remove_teams: list[ID] = [],
@@ -947,8 +944,6 @@ def edit_schedule(
         match.name = name
     if present(problem):
         match.problem = unwrap(db.get(Problem, problem))
-    if present(config):
-        match.config = None
     if present(points):
         match.points = points
     if present(time):

@@ -22,10 +22,7 @@ def _extract_to(source: Path, target: Path) -> Path:
 
 def run_match(db: Session, scheduled_match: ScheduledMatch):
     with TempDir() as folder:
-        if scheduled_match.config is None:
-            config_file = scheduled_match.problem.config
-        else:
-            config_file = scheduled_match.config
+        config_file = scheduled_match.problem.config
         config = BaseConfig.from_file(config_file.path)
         config.teams = {}
         problem = Problem.import_from_path(scheduled_match.problem.file.path)
