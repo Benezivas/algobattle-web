@@ -20,10 +20,8 @@ from pydantic.color import Color
 
 from algobattle.util import TempDir, Role
 from algobattle.problem import Problem as AlgProblem
-from algobattle_web.battle import run_match
 from algobattle_web.models import (
     File as DbFile,
-    MatchParticipant,
     encode,
     get_db,
     Session,
@@ -882,76 +880,55 @@ def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), 
 # *******************************************************************************
 
 
-class ScheduledMatchCreate(BaseSchema):
-    name: str = ""
-    time: datetime
-    problem: ID
-    config: ID | None
-    participants: dict[ID, MatchParticipant.Schema]
-    points: float = 0
-
-
 @admin.post("/match/schedule/create", tags=["match"])
-def create_schedule(*, db: Session = Depends(get_db), data: ScheduledMatchCreate, background_tasks: BackgroundTasks) -> ScheduledMatch:
-    problem = unwrap(db.get(Problem, data.problem))
-    config = None
-    schedule = ScheduledMatch(db, data.time, problem, config, data.name, data.points)
-    for team_id, info in data.participants.items():
-        team = unwrap(db.get(Team, team_id))
-        gen = unwrap(db.get(Program, info.generator)) if info.generator is not None else None
-        sol = unwrap(db.get(Program, info.solver)) if info.solver is not None else None
-        schedule.participants.add(MatchParticipant(db, schedule, team, gen, sol))
-
-    #! Prototype
-    if schedule.time <= datetime.now():
-        background_tasks.add_task(run_match, db, schedule)
+def create_schedule(
+    *,
+    db: Session = Depends(get_db),
+    name: str = "",
+    time: datetime,
+    problem: ID,
+    config: UploadFile | None = File(None),
+    teams: set[ID],
+    points: float = 0,
+    ) -> ScheduledMatch:
+    problem_ = unwrap(db.get(Problem, problem))
+    config_ = DbFile(config) if config is not None else None
+    teams_ = {unwrap(db.get(Team, id)) for id in teams}
+    schedule = ScheduledMatch(db, time=time, problem=problem_, config=config_, teams=teams_, name=name, points=points)
     db.commit()
     return schedule
 
 
-class ScheduleEdit(BaseSchema):
-    class Participant(BaseSchema):
-        generator: ID | None | Missing = missing
-        solver: ID | None | Missing = missing
-
-    name: str | Missing = missing
-    time: datetime | Missing = missing
-    problem: ID | Missing = missing
-    config: ID | None | Missing = missing
-    points: float | Missing = missing
-    participants: dict[ID, Participant | None] | Missing = missing
-
-
 @admin.post("/match/schedule/{id}/edit", tags=["match"])
-def edit_schedule(*, db: Session = Depends(get_db), id: ID, edit: ScheduleEdit) -> ScheduledMatch:
+def edit_schedule(
+    *,
+    db: Session = Depends(get_db),
+    id: ID,
+    name: str | Missing = missing,
+    time: datetime | Missing = missing,
+    problem: ID | Missing = missing,
+    config: UploadFile | None | Missing = File(missing),
+    points: float | Missing = missing,
+    add_teams: list[ID] = [],
+    remove_teams: list[ID] = [],
+    ) -> ScheduledMatch:
     match = unwrap(db.get(ScheduledMatch, id))
-    if present(edit.name):
-        match.name = edit.name
-    if present(edit.problem):
-        match.problem = unwrap(db.get(Problem, edit.problem))
-    if present(edit.config):
+    if present(name):
+        match.name = name
+    if present(problem):
+        match.problem = unwrap(db.get(Problem, problem))
+    if present(config):
         match.config = None
-    if present(edit.points):
-        match.points = edit.points
-    if present(edit.participants):
-        participants = {p.team: p for p in match.participants}
-        for team_id, info in edit.participants.items():
-            team = unwrap(db.get(Team, team_id))
-            if info is None:
-                if team not in participants:
-                    raise ValueError
-                match.participants.discard(participants[team])
-            elif team not in participants:
-                if not present(info.generator) or not present(info.solver):
-                    raise ValueError
-                gen = db.get(Program, info.generator) if info.generator is not None else None
-                sol = db.get(Program, info.solver) if info.solver is not None else None
-                match.participants.add(MatchParticipant(db, match, team, gen, sol))
-            else:
-                if present(info.generator):
-                    participants[team].generator = unwrap(db.get(Program, info.generator))
-                if present(info.solver):
-                    participants[team].solver = unwrap(db.get(Program, info.solver))
+    if present(points):
+        match.points = points
+    if present(time):
+        match.time = time
+    for team_id in add_teams:
+        team = unwrap(db.get(Team, team_id))
+        match.teams.add(team)
+    for team_id in remove_teams:
+        team = unwrap(db.get(Team, team_id))
+        match.teams.discard(team)
     db.commit()
     return match
 

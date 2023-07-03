@@ -585,21 +585,6 @@ class Program(Base, unsafe_hash=True):
         user_editable: bool
 
 
-class MatchParticipant(BaseNoID, unsafe_hash=True):
-    match: Mapped["ScheduledMatch"] = relationship(back_populates="participants")
-    match_id: Mapped[ID] = mapped_column(ForeignKey("scheduledmatches.id"), primary_key=True, init=False)
-    team: Mapped[Team] = relationship()
-    team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), primary_key=True, init=False)
-    generator_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"), init=False)
-    generator: Mapped[Program | None] = relationship(foreign_keys=[generator_id])
-    solver_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"), init=False)
-    solver: Mapped[Program | None] = relationship(foreign_keys=[solver_id])
-
-    class Schema(BaseNoID.Schema):
-        generator: ObjID | None
-        solver: ObjID | None
-
-
 class ScheduledMatch(Base, unsafe_hash=True):
     __tablename__ = "scheduledmatches"  # type: ignore
 
@@ -608,29 +593,18 @@ class ScheduledMatch(Base, unsafe_hash=True):
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
     config: Mapped[File | None] = relationship(cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     config_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
-    participants: Mapped[set[MatchParticipant]] = relationship(init=False, default=set, cascade="all, delete")
+    teams: Mapped[set[Team]] = relationship(default_factory=list, cascade="all, delete")
+    team_ids: Mapped[set[ID]] = mapped_column(ForeignKey("teams.id"), init=False)
     name: Mapped[str] = mapped_column(default="")
-    points: Mapped[float] = mapped_column(default=0)
-
+    points: Mapped[float] = mapped_column(default=100)
 
     class Schema(Base.Schema):
         name: str
         time: datetime
         problem: ObjID
         config: File.Schema | None
-        participants: dict[ObjID, MatchParticipant.Schema]
+        teams: set[ObjID]
         points: float
-
-        @validator("participants")
-        def val_teams(cls, val):
-            if not isinstance(val, set):
-                raise ValueError
-            out = {}
-            for v in val:
-                if not isinstance(v, MatchParticipant):
-                    raise ValueError
-                out[v.team_id] = MatchParticipant.Schema.from_orm(val)
-            return out
 
 
 class ResultParticipant(BaseNoID, unsafe_hash=True):

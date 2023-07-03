@@ -31,29 +31,22 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         problem = Problem.import_from_path(scheduled_match.problem.file.path)
 
         paricipants: set[ResultParticipant] = set()
-        for participant in scheduled_match.participants:
-            if participant.generator is None:
-                gen = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == Role.generator)).unique().first())
-            else:
-                gen = participant.generator
-            gen_path = _extract_to(gen.file.path, folder / participant.team.id.hex / "generator")
-            
-            if participant.solver is None:
-                sol = unwrap(db.scalars(select(Program).where(Program.team_id == participant.team_id, Program.role == Role.solver)).unique().first())
-            else:
-                sol = participant.solver
-            sol_path = _extract_to(sol.file.path, folder / participant.team.id.hex / "solver")
+        for team in scheduled_match.teams:
+            gen = unwrap(db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.generator)).unique().first())
+            gen_path = _extract_to(gen.file.path, folder / team.id.hex / "generator")
+            sol = unwrap(db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.solver)).unique().first())
+            sol_path = _extract_to(sol.file.path, folder / team.id.hex / "solver")
 
-            config.teams[participant.team.name] = TeamInfo(generator=gen_path, solver=sol_path)
-            paricipants.add(ResultParticipant(db, participant.team, gen, sol, 0))
+            config.teams[team.name] = TeamInfo(generator=gen_path, solver=sol_path)
+            paricipants.add(ResultParticipant(db, team, gen, sol, 0))
         db_result = MatchResult(db, "running", datetime.now(), scheduled_match.problem, paricipants, config_file)
         db.commit()
 
         result = run(Match.run, config, problem)
         points = result.calculate_points(config.match.points)
 
-        for participant in db_result.participants:
-            participant.points = points[participant.team.name]
+        for team in db_result.participants:
+            team.points = points[team.team.name]
         db_result.status = "complete"
         with open(folder / "results.json", "x") as f:
             f.write(result.json())
