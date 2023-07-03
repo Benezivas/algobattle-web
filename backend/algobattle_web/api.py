@@ -1,6 +1,7 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
 from io import BytesIO
+from itertools import chain
 from typing import Any, Callable, Literal, cast
 from uuid import UUID
 from zipfile import ZipFile
@@ -878,6 +879,35 @@ def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), 
 # *******************************************************************************
 # * Match
 # *******************************************************************************
+
+
+class ScheduleInfo(BaseSchema):
+    matches: dict[ID, ScheduledMatch.Schema]
+    teams: dict[ID, Team.Schema]
+    problems: dict[ID, Problem.Schema]
+
+
+@router.get("/match/schedule/get", tags=["match"])
+def scheduled_matches(
+    *,
+    db: Session = Depends(get_db),
+    user: User = Depends(curr_user),
+    tournament: str | None = None,
+    ) -> ScheduleInfo:
+    if tournament is None:
+        tournament_ = unwrap(user.settings.selected_team).tournament
+    else:
+        tournament_ = unwrap(db.get(Tournament, tournament))
+    matches = db.scalars(
+        select(ScheduledMatch)
+        .join(ScheduledMatch.problem)
+        .where(Problem.tournament_id == tournament_.id, Problem.visible_sql(user))
+    ).unique().all()
+    return ScheduleInfo(
+        matches=encode(matches),
+        teams=encode(chain.from_iterable(match.teams for match in matches)),
+        problems=encode(match.problem for match in matches)
+    )
 
 
 @admin.post("/match/schedule/create", tags=["match"])
