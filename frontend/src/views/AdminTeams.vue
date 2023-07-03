@@ -2,11 +2,11 @@
 import HoverBadgeVue from '@/components/HoverBadge.vue';
 import { tournamentApi, teamApi, userApi, type ModelDict } from '@/main';
 import { Modal } from 'bootstrap';
-import type { AlgobattleWebModelsTeamSchema, Tournament, User } from 'typescript_client';
-import { computed, onMounted, ref } from 'vue';
+import type { AlgobattleWebModelsTeamSchema as Team, Tournament, User } from 'typescript_client';
+import { computed, onMounted, ref, toRaw } from 'vue';
 
 
-const teams = ref<ModelDict<AlgobattleWebModelsTeamSchema>>({})
+const teams = ref<ModelDict<Team>>({})
 const users = ref<ModelDict<User>>({})
 const tournaments = ref<ModelDict<Tournament>>({})
 const currPage = ref(1)
@@ -49,7 +49,7 @@ async function clearSearch() {
 }
 
 const error = ref("")
-const editData = ref<AlgobattleWebModelsTeamSchema>(emptyTeam())
+const editData = ref(emptyTeam())
 const userSearchData = ref({
   name: "",
   email: "",
@@ -57,7 +57,7 @@ const userSearchData = ref({
 })
 const confirmDelete = ref(false)
 
-function emptyTeam(): AlgobattleWebModelsTeamSchema {
+function emptyTeam(): Team {
   return {
     id: "",
     name: "",
@@ -65,8 +65,8 @@ function emptyTeam(): AlgobattleWebModelsTeamSchema {
     members: [],
   }
 }
-function openModal(team: AlgobattleWebModelsTeamSchema | undefined) {
-  editData.value = team || emptyTeam()
+function openModal(team: Team | undefined) {
+  editData.value = team ? structuredClone(toRaw(team)) : emptyTeam();
   confirmDelete.value = false
   error.value = ""
   userSearchData.value = {
@@ -85,6 +85,9 @@ async function userSearch() {
     page: 1,
   })
   userSearchData.value.result = Object.values(result.users).filter(u => !editData.value.members.includes(u.id)).slice(0, 5)
+  for (const user of userSearchData.value.result) {
+    users.value[user.id] = user
+  }
 }
 async function sendData() {
   if (error.value) {
@@ -228,16 +231,16 @@ async function checkName() {
         </div>
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
-          <input class="form-control w-em" type="text" v-model="editData.name" required :class="{'is-invalid': error == 'name'}" @change="checkName">
+          <input id="name" class="form-control w-em" type="text" v-model="editData.name" required :class="{'is-invalid': error == 'name'}" @change="checkName">
           <div class="invalid-feedback">
             Another team with the same name already exists in this tournament
           </div>
           <label for="tournament" class="form-label">Tournament</label>
-          <select class="form-select w-em mb-3" name="tournament" v-model="editData.tournament" :required="editData.id != ''" @change="checkName">
+          <select class="form-select w-em mb-3" id="tournament" v-model="editData.tournament" :required="editData.id != ''" @change="checkName">
             <option v-for="(tournament, id) in tournaments" :value="id" :selected="id == editData.tournament">{{ tournament.name }}</option>
           </select>
           <label for="members" class="form-label mb-0">Members</label>
-          <div class="d-flex flex-row mb-1 members-box">
+          <div id="members" class="d-flex flex-row mb-1 members-box">
             <HoverBadgeVue v-for="(id, i) in editData.members" type="remove" @click="() => editData.members.splice(i, 1)">{{ users[id].name }}</HoverBadgeVue>
           </div>
           <div class="card mt-2">
