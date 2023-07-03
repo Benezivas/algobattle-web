@@ -26,8 +26,7 @@ from pydantic import validator
 from pydantic.color import Color
 
 from algobattle.docker_util import Role as ProgramRole
-from algobattle_web.config import SERVER_CONFIG
-from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion, guess_mimetype
+from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion, guess_mimetype, SERVER_CONFIG
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]

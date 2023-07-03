@@ -1,11 +1,16 @@
 """Util functions."""
+from base64 import b64decode
 from dataclasses import dataclass
+from datetime import timedelta
+from email.message import EmailMessage
 from pathlib import Path
+from smtplib import SMTP
+import tomllib
 from typing import Any, Generic, Never, TypeGuard, TypeVar
 from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 
-from pydantic import BaseModel, BaseConfig, Extra
+from pydantic import AnyUrl, BaseModel, BaseConfig, Extra, validator
 from pydantic.color import Color
 from pydantic.generics import GenericModel
 from fastapi import HTTPException
@@ -62,8 +67,53 @@ class ObjID(UUID):
     def __repr__(self) -> str:
         return f"ObjID({super().__repr__()})"
 
+
+class _EmailConfig(BaseSchema):
+    address: str
+    server: str
+    port: int
+    username: str
+    password: str
+
+
+class Config(BaseSchema):
+    algorithm: str = "HS256"
+    secret_key: bytes
+    database_url: str
+    admin_email: str
+    storage_path: Path
+    match_execution_interval: timedelta = timedelta(minutes=5)
+    frontend_base_url: AnyUrl
+    backend_base_url: AnyUrl
+    server_email: _EmailConfig
+
+    @validator("secret_key")
+    def parse_b64(cls, val) -> bytes:
+        return b64decode(val)
+
+
+try:
+    with open(Path(__file__).parent / "config.toml", "rb") as f:
+        toml_dict = tomllib.load(f)
+    SERVER_CONFIG = Config.parse_obj(toml_dict)
+except (KeyError, OSError):
+    raise SystemExit("Badly formatted or missing config.toml!")
+
+
 def send_email(email: str, content: str):
     print(f"sending email to {email}: {content}")
+    msg = EmailMessage()
+    msg["Subject"] = "Algobattle login"
+    msg["From"] = SERVER_CONFIG.server_email.address
+    msg["To"] = email
+    msg.set_content(content)
+
+    server = SMTP(SERVER_CONFIG.server_email.server, SERVER_CONFIG.server_email.port)
+    server.ehlo()
+    server.starttls()
+    server.login(SERVER_CONFIG.server_email.username, SERVER_CONFIG.server_email.password)
+    server.sendmail(SERVER_CONFIG.server_email.username, email, msg.as_string())
+    server.close()
 
 
 T = TypeVar("T")

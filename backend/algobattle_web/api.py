@@ -38,9 +38,8 @@ from algobattle_web.models import (
     User,
     UserSettings,
 )
-from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present, Wrapped, send_email
+from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present, Wrapped, send_email, SERVER_CONFIG
 from algobattle_web.dependencies import curr_user, check_if_admin
-from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.models import UserSettings
 
 

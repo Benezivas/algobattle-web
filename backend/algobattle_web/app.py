@@ -8,10 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from uvicorn import run
 
 from algobattle_web.models import Base, SessionLocal, engine, User
-from algobattle_web.config import SERVER_CONFIG
 from algobattle_web.api import router as api, SchemaRoute
 from algobattle_web.battle import main as battle_main
-from algobattle_web.util import PermissionExcpetion, ValueTaken
+from algobattle_web.util import PermissionExcpetion, ValueTaken, SERVER_CONFIG
 
 
 Base.metadata.create_all(bind=engine)

@@ -10,8 +10,7 @@ from algobattle.match import Match, BaseConfig
 from algobattle.util import TempDir, Role
 from algobattle.problem import Problem
 from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, SessionLocal
-from algobattle_web.config import SERVER_CONFIG
-from algobattle_web.util import unwrap
+from algobattle_web.util import unwrap, SERVER_CONFIG
 
 
 def _extract_to(source: Path, target: Path) -> Path:
