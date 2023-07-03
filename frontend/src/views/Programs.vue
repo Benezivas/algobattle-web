@@ -31,8 +31,12 @@ async function search(
 const newProgData = ref<Partial<UploadProgramRequest>>({
   name: "",
 });
+let modal: Modal;
 async function openModal() {
-  Modal.getOrCreateInstance("#uploadProgram").show()
+  newProgData.value = {
+    name: "",
+  }
+  modal.show();
 }
 function selectFile(event: InputFileEvent) {
   const files = event.target.files || event.dataTransfer?.files
@@ -47,9 +51,13 @@ async function uploadProgram() {
   }
   const newProgram = await programApi.uploadProgram(newProgData.value as UploadProgramRequest);
   programs.value[newProgram.id] = newProgram;
+  modal.hide();
 }
 
-onMounted(search);
+onMounted(() => {
+  search();
+  modal = Modal.getOrCreateInstance("#uploadProgram");
+});
 </script>
 
 <template>
