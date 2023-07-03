@@ -883,7 +883,6 @@ def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), 
 
 class ScheduleInfo(BaseSchema):
     matches: dict[ID, ScheduledMatch.Schema]
-    teams: dict[ID, Team.Schema]
     problems: dict[ID, Problem.Schema]
 
 
@@ -905,7 +904,6 @@ def scheduled_matches(
     ).unique().all()
     return ScheduleInfo(
         matches=encode(matches),
-        teams=encode(chain.from_iterable(match.teams for match in matches)),
         problems=encode(match.problem for match in matches)
     )
 
@@ -917,12 +915,10 @@ def create_schedule(
     name: str = "",
     time: datetime,
     problem: ID,
-    teams: set[ID],
     points: float = 0,
     ) -> ScheduledMatch:
     problem_ = unwrap(db.get(Problem, problem))
-    teams_ = {unwrap(db.get(Team, id)) for id in teams}
-    schedule = ScheduledMatch(db, time=time, problem=problem_, teams=teams_, name=name, points=points)
+    schedule = ScheduledMatch(db, time=time, problem=problem_, name=name, points=points)
     db.commit()
     return schedule
 
@@ -936,8 +932,6 @@ def edit_schedule(
     time: datetime | Missing = missing,
     problem: ID | Missing = missing,
     points: float | Missing = missing,
-    add_teams: list[ID] = [],
-    remove_teams: list[ID] = [],
     ) -> ScheduledMatch:
     match = unwrap(db.get(ScheduledMatch, id))
     if present(name):
@@ -948,12 +942,6 @@ def edit_schedule(
         match.points = points
     if present(time):
         match.time = time
-    for team_id in add_teams:
-        team = unwrap(db.get(Team, team_id))
-        match.teams.add(team)
-    for team_id in remove_teams:
-        team = unwrap(db.get(Team, team_id))
-        match.teams.discard(team)
     db.commit()
     return match
 

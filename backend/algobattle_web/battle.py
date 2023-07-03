@@ -28,7 +28,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         problem = Problem.import_from_path(scheduled_match.problem.file.path)
 
         paricipants: set[ResultParticipant] = set()
-        for team in scheduled_match.teams:
+        for team in scheduled_match.problem.tournament.teams:
             gen = unwrap(db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.generator)).unique().first())
             gen_path = _extract_to(gen.file.path, folder / team.id.hex / "generator")
             sol = unwrap(db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.solver)).unique().first())

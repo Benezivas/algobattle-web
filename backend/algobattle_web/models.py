@@ -591,8 +591,6 @@ class ScheduledMatch(Base, unsafe_hash=True):
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
-    teams: Mapped[set[Team]] = relationship(default_factory=list, cascade="all, delete")
-    team_ids: Mapped[set[ID]] = mapped_column(ForeignKey("teams.id"), init=False)
     name: Mapped[str] = mapped_column(default="")
     points: Mapped[float] = mapped_column(default=100)
 
@@ -600,7 +598,6 @@ class ScheduledMatch(Base, unsafe_hash=True):
         name: str
         time: datetime
         problem: ObjID
-        teams: set[ObjID]
         points: float
 
 
