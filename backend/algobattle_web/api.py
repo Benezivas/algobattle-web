@@ -928,19 +928,19 @@ def edit_schedule(
     *,
     db: Session = Depends(get_db),
     id: ID,
-    name: str | Missing = missing,
-    time: datetime | Missing = missing,
-    problem: ID | Missing = missing,
-    points: float | Missing = missing,
+    name: str | None = None,
+    time: datetime | None = None,
+    problem: ID | None = None,
+    points: float | None = None,
     ) -> ScheduledMatch:
     match = unwrap(db.get(ScheduledMatch, id))
-    if present(name):
+    if name is not None:
         match.name = name
-    if present(problem):
+    if problem is not None:
         match.problem = unwrap(db.get(Problem, problem))
-    if present(points):
+    if points is not None:
         match.points = points
-    if present(time):
+    if time is not None:
         match.time = time
     db.commit()
     return match
