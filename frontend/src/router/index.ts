@@ -39,6 +39,11 @@ const router = createRouter({
         component: () => import("../views/Programs.vue"),
     },
     {
+        path: "/schedule",
+        name: "schedule",
+        component: () => import("../views/Schedule.vue"),
+    },
+    {
         path: "/:pathMatch(.*)",
         name: "notFound",
         component: () => import("../views/NotFound.vue")
