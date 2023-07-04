@@ -6,7 +6,7 @@ from email.message import EmailMessage
 from pathlib import Path
 from smtplib import SMTP
 import tomllib
-from typing import Any, Generic, Never, TypeGuard, TypeVar
+from typing import Any, Generic, TypeVar
 from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 
@@ -23,26 +23,6 @@ class BaseSchema(BaseModel):
         json_encoders = {
             Color: Color.as_hex,
         }
-
-
-class Missing(BaseSchema):
-    """Marker class for fields that weren't present in the parsed json."""
-
-    @classmethod
-    def __get_validators__(cls):
-        yield cls._validate
-
-    @classmethod
-    def _validate(cls, obj: Any) -> Never:
-        raise ValueError
-
-
-missing = Missing()
-
-
-T = TypeVar("T")
-def present(_obj: T | Missing) -> TypeGuard[T]:
-    return not isinstance(_obj, Missing)
 
 
 class ObjID(UUID):

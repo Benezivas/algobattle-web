@@ -1,7 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
 from io import BytesIO
-from itertools import chain
 from typing import Any, Callable, Literal, cast
 from uuid import UUID
 from zipfile import ZipFile
@@ -37,7 +36,7 @@ from algobattle_web.models import (
     User,
     UserSettings,
 )
-from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Missing, missing, present, Wrapped, send_email, SERVER_CONFIG
+from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Wrapped, send_email, SERVER_CONFIG
 from algobattle_web.dependencies import curr_user, check_if_admin
 from algobattle_web.models import UserSettings
 
