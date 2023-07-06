@@ -18,6 +18,14 @@ COPY frontend .
 RUN npm ci
 RUN npm run build
 
+FROM python:3.11 as docs_builder
+WORKDIR /code
+RUN git clone -b "4.0.0-rc" https://github.com/Benezivas/algobattle.git
+WORKDIR /code/algobattle
+RUN pip install .[dev]
+RUN mkdocs build
+
 FROM nginx
 WORKDIR /code
 COPY --from=frontend_builder /code/dist frontend
+COPY --from=docs_builder /code/algobattle/site docs
