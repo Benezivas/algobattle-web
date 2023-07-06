@@ -26,6 +26,7 @@ dependencies = [
 
 [project.scripts]
 algobattle_web = "algobattle_web.app:main"
+algobattle_api = "algobattle_web.app:create_openapi"
 
 [tool.setuptools]
 packages = ["algobattle_web"]

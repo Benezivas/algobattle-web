@@ -1,3 +1,4 @@
+import json
 from multiprocessing import Process
 
 from fastapi import FastAPI, Request, status
@@ -73,3 +74,7 @@ def main():
         run("algobattle_web:app")
     finally:
         match_runner.terminate()
+
+def create_openapi():
+    """Prints the openapi.json schema."""
+    print(json.dumps(app.openapi()))

@@ -9,6 +9,7 @@ import tomllib
 from typing import Any, Generic, TypeVar
 from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
+from os import environ
 
 from pydantic import AnyUrl, BaseModel, BaseConfig, Extra, validator
 from pydantic.color import Color
@@ -73,7 +74,8 @@ class Config(BaseSchema):
 
 
 try:
-    with open(Path(__file__).parent / "config.toml", "rb") as f:
+    config_path = Path(environ.get("ALGOBATTLE_CONFIG_PATH", Path(__file__).parent / "config.toml"))
+    with open(config_path, "rb") as f:
         toml_dict = tomllib.load(f)
     SERVER_CONFIG = Config.parse_obj(toml_dict)
 except (KeyError, OSError):
