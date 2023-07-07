@@ -22,10 +22,11 @@ dependencies = [
     "sqlalchemy >= 2.0.0b1",
     "pydantic",
     "markdown",
+    "mysqlclient",
+    "sqlalchemy-utils",
 ]
 
 [project.scripts]
-algobattle_web = "algobattle_web.app:main"
 algobattle_api = "algobattle_web.app:create_openapi"
 
 [tool.setuptools]
