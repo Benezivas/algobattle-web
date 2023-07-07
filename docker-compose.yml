@@ -1,16 +1,27 @@
 services:
+  database:
+    image: mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${SQL_PASSWORD}
+    healthcheck:
+      test: "/usr/bin/mysql --user=root --password=${SQL_PASSWORD} --execute \"SHOW DATABASES;\""
+      interval: 2s
+      timeout: 20s
+      retries: 10
   backend:
     build: backend
-    ports:
-      - ":8000"
+    depends_on:
+      database:
+        condition: service_healthy
     environment:
       - ALGOBATTLE_CONFIG_PATH=/config/config.toml
+      - SQL_PASSWORD=${SQL_PASSWORD}
     volumes:
       - ./config.toml:/config/config.toml
   nginx:
     build: .
     ports:
-      - ":8000"
       - "8080:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
