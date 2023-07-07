@@ -550,7 +550,7 @@ def create_problem(*, db: Session = Depends(get_db),
 
     _tournament = unwrap(db.get(Tournament, tournament))
     if config is None:
-        config = UploadFile("config.toml")
+        config = UploadFile(BytesIO(b"\n"), filename="config.toml")
 
     if image is not None:
         _image = DbFile(image, alt_text=alt_text)
