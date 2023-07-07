@@ -19,9 +19,14 @@ services:
       - SQL_PASSWORD=${SQL_PASSWORD}
     volumes:
       - ./config.toml:/config/config.toml
+      - db-files:/etc/dbfiles
   nginx:
     build: .
     ports:
       - "8080:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
+
+volumes:
+  db-files:
+    # intentionally empty
