@@ -1,27 +1,31 @@
+from contextlib import asynccontextmanager
 import json
-from multiprocessing import Process
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
-from uvicorn import run
+from sqlalchemy_utils.functions import database_exists, create_database
 
 from algobattle_web.models import Base, SessionLocal, engine, User
 from algobattle_web.api import router as api, SchemaRoute
-from algobattle_web.battle import main as battle_main
 from algobattle_web.util import PermissionExcpetion, ValueTaken, SERVER_CONFIG
 
 
-Base.metadata.create_all(bind=engine)
-with SessionLocal() as db:
-    if User.get(db, SERVER_CONFIG.admin_email) is None:
-        User(db, email=SERVER_CONFIG.admin_email, name="Admin", is_admin=True)
-        db.commit()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not database_exists(engine.url):
+        create_database(engine.url)
+    Base.metadata.create_all(bind=engine)
+    with SessionLocal() as db:
+        if User.get(db, SERVER_CONFIG.admin_email) is None:
+            User(db, email=SERVER_CONFIG.admin_email, name="Admin", is_admin=True)
+            db.commit()
+    yield
 
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 
 @app.exception_handler(RequestValidationError)
@@ -52,10 +56,12 @@ async def val_taken_err(request: Request, e: ValueTaken):
         })
     )
 
+
 app.include_router(api)
 for route in app.routes:
     if isinstance(route, SchemaRoute):
         route.operation_id = route.name
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,15 +71,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-def main():
-    """Starts a basic webserver."""
-    match_runner = Process(target=battle_main)
-    try:
-        match_runner.start()
-        run("algobattle_web:app")
-    finally:
-        match_runner.terminate()
 
 def create_openapi():
     """Prints the openapi.json schema."""
