@@ -36,7 +36,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
 
             config.teams[team.name] = TeamInfo(generator=gen_path, solver=sol_path)
             paricipants.add(ResultParticipant(db, team, gen, sol, 0))
-        db_result = MatchResult(db, "running", datetime.now(), scheduled_match.problem, paricipants, config_file)
+        db_result = MatchResult(db, MatchResult.Status.running, datetime.now(), scheduled_match.problem, paricipants, config_file)
         db.commit()
 
         result = run(Match.run, config, problem)
@@ -44,7 +44,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
 
         for team in db_result.participants:
             team.points = points[team.team.name]
-        db_result.status = "complete"
+        db_result.status = MatchResult.Status.complete
         with open(folder / "results.json", "x") as f:
             f.write(result.json())
         db_result.logs = File(folder / "result.json", move=True)

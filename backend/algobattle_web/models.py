@@ -2,6 +2,7 @@
 from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
+from enum import Enum
 from tempfile import SpooledTemporaryFile
 from typing import IO, ClassVar, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Sequence
@@ -12,7 +13,7 @@ from shutil import copyfileobj, copyfile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey, Column, select, create_engine, DateTime, inspect
+from sqlalchemy import Table, ForeignKey, Column, select, create_engine, DateTime, inspect, String, Text
 from sqlalchemy.event import listens_for
 from sqlalchemy.sql import true as sql_true, or_, and_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
@@ -30,8 +31,13 @@ from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion, guess_mi
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
+str32 = Annotated[str, mapped_column(String(32))]
+str64 = Annotated[str, mapped_column(String(64))]
+str128 = Annotated[str, mapped_column(String(128))]
+str256 = Annotated[str, mapped_column(String(256))]
+strText = Annotated[str, mapped_column(Text)]
 
-engine = create_engine(SERVER_CONFIG.database_url, connect_args={"check_same_thread": False})
+engine = create_engine(SERVER_CONFIG.database_url)
 SessionLocal = sessionmaker(autoflush=False, bind=engine)
 
 
@@ -56,22 +62,22 @@ class File(RawBase, init=False):
     __tablename__ = "files"
 
     id: Mapped[ID] = mapped_column(primary_key=True)
-    filename: Mapped[str]
-    media_type: Mapped[str]
-    alt_text: Mapped[str | None]
+    filename: Mapped[str128]
+    media_type: Mapped[str32]
+    alt_text: Mapped[str256]
     timestamp: Mapped[datetime]
 
     @overload
-    def __init__(self, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str | None = None): ...
+    def __init__(self, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str = ""): ...
 
     @overload
     def __init__(self, file: "File"): ...
 
     @overload
-    def __init__(self, file: UploadFile, *, alt_text: str | None = None): ...
+    def __init__(self, file: UploadFile, *, alt_text: str = ""): ...
 
     @overload
-    def __init__(self, file: Path, *, media_type: str | None = None, alt_text: str | None = None, move: bool): ...
+    def __init__(self, file: Path, *, media_type: str | None = None, alt_text: str = "", move: bool): ...
 
     def __init__(
         self,
@@ -79,7 +85,7 @@ class File(RawBase, init=False):
         filename: str | None = None,
         *,
         media_type: str | None = None,
-        alt_text: str | None = None,
+        alt_text: str = "",
         move: bool = False,
     ) -> None:
         self.id = uuid4()
@@ -107,7 +113,7 @@ class File(RawBase, init=False):
             self.filename = file.name
         else:
             self._file = file.file
-            self.filename = file.filename
+            self.filename = file.filename or "UNNAMED_FILE"
             if file.content_type != "application/octet-stream":
                 media_type = media_type or file.content_type
         if media_type:
@@ -117,7 +123,7 @@ class File(RawBase, init=False):
         super().__init__()
 
     @classmethod
-    def maybe(cls, file: UploadFile | None, *, alt_text: str | None = None) -> Self | None:
+    def maybe(cls, file: UploadFile | None, *, alt_text: str = "") -> Self | None:
         """Creates a `DbFile` if an `UploadFile` is given, otherwise `None`."""
         if file is None:
             return None
@@ -169,7 +175,7 @@ class File(RawBase, init=False):
         location: str
         media_type: str
         timestamp: datetime
-        alt_text: str | None = None
+        alt_text: str
 
         @classmethod
         def __get_validators__(cls):
@@ -295,7 +301,7 @@ class BaseNoID(RawBase):
 
 class Base(BaseNoID, unsafe_hash=True):
     __abstract__ = True
-    id: Mapped[ID] = mapped_column(default_factory=uuid4, primary_key=True, init=False)
+    id: Mapped[ID] = mapped_column(default_factory=uuid4, primary_key=True, init=False, autoincrement=False)
 
     class Schema(BaseNoID.Schema, ABC):
         id: ID
@@ -314,8 +320,8 @@ team_members = Table(
 
 
 class User(Base, unsafe_hash=True):
-    email: Mapped[str] = mapped_column(unique=True)
-    name: Mapped[str]
+    email: Mapped[str128] = mapped_column(unique=True)
+    name: Mapped[str32]
     token_id: Mapped[ID] = mapped_column(init=False)
     is_admin: Mapped[bool] = mapped_column(default=False)
 
@@ -415,7 +421,7 @@ class UserSettings(Base, unsafe_hash=True):
 
 
 class Tournament(Base, unsafe_hash=True):
-    name: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str32] = mapped_column(unique=True)
 
     teams: Mapped[list["Team"]] = relationship(back_populates="tournament", init=False)
 
@@ -432,7 +438,7 @@ class Tournament(Base, unsafe_hash=True):
 
 
 class Team(Base, unsafe_hash=True):
-    name: Mapped[str]
+    name: Mapped[str32]
     tournament: Mapped[Tournament] = relationship(back_populates="teams", uselist=False, lazy="joined")
     tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
     members: Mapped[list[User]] = relationship(secondary=team_members, back_populates="teams", lazy="joined", default_factory=list)
@@ -476,7 +482,7 @@ class Problem(Base, unsafe_hash=True):
     description_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     image_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
 
-    name: Mapped[str]
+    name: Mapped[str32]
     tournament: Mapped[Tournament] = relationship()
     tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
     file: Mapped[File] = relationship(foreign_keys=file_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
@@ -484,11 +490,11 @@ class Problem(Base, unsafe_hash=True):
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
     description: Mapped[File | None] = relationship(default=None, foreign_keys=description_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
-    short_description: Mapped[str] = mapped_column(default="")
+    short_description: Mapped[str256] = mapped_column(default="")
     image: Mapped[File | None] = relationship(default=None, foreign_keys=image_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
-    problem_schema: Mapped[str | None] = mapped_column(default=None)
-    solution_schema: Mapped[str | None] = mapped_column(default=None)
-    colour: Mapped[str] = mapped_column(default=None)
+    problem_schema: Mapped[strText] = mapped_column(default="")
+    solution_schema: Mapped[strText] = mapped_column(default="")
+    colour: Mapped[str] = mapped_column(String(7), default="#FFFFFF")
 
     __table_args__ = (UniqueConstraint("name", "tournament_id"),)
 
@@ -557,7 +563,7 @@ class Documentation(Base, unsafe_hash=True):
 
 
 class Program(Base, unsafe_hash=True):
-    name: Mapped[str]
+    name: Mapped[str32]
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
     role: Mapped[ProgramRole]
@@ -591,7 +597,7 @@ class ScheduledMatch(Base, unsafe_hash=True):
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
-    name: Mapped[str] = mapped_column(default="")
+    name: Mapped[str32] = mapped_column(default="")
     points: Mapped[float] = mapped_column(default=100)
 
     class Schema(Base.Schema):
@@ -619,7 +625,12 @@ class ResultParticipant(BaseNoID, unsafe_hash=True):
 
 
 class MatchResult(Base, unsafe_hash=True):
-    status: Mapped[str]
+    class Status(Enum):
+        complete = "complete"
+        failed = "failed"
+        running = "running"
+
+    status: Mapped[Status]
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id), init=False)
@@ -629,7 +640,6 @@ class MatchResult(Base, unsafe_hash=True):
     logs_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     logs: Mapped[File | None] = relationship(default=None, foreign_keys=logs_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
 
-    Status = Literal["complete", "failed", "running"]
 
     class Schema(Base.Schema):
         status: "MatchResult.Status"
