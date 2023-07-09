@@ -82,8 +82,10 @@ except (KeyError, OSError):
     raise SystemExit("Badly formatted or missing config.toml!")
 
 
-def send_email(email: str, content: str):
-    print(f"sending email to {email}: {content}")
+def send_email(email: str, content: str) -> None:
+    if environ.get("DEV", None):
+        print(f"sending email to {email}: {content}")
+        return
     msg = EmailMessage()
     msg["Subject"] = "Algobattle login"
     msg["From"] = SERVER_CONFIG.server_email.address
