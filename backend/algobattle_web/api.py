@@ -533,7 +533,7 @@ def create_problem(*, db: Session = Depends(get_db),
         end: datetime | None = Form(None),
         image: UploadFile | None = File(None),
         alt_text: str = Form(""),
-        short_description: str = Form(),
+        short_description: str = Form(""),
         colour: Color = Form(Color("#ffffff")),
     ) -> Wrapped[str]:
     if file is None == problem_id is None:
