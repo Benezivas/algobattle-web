@@ -15,11 +15,28 @@ services:
       database:
         condition: service_healthy
     environment:
-      - ALGOBATTLE_CONFIG_PATH=/config/config.toml
+      - ALGOBATTLE_CONFIG_PATH=/algobattle/config.toml
       - SQL_PASSWORD=${SQL_PASSWORD}
     volumes:
-      - ./config.toml:/config/config.toml
-      - db-files:/etc/dbfiles
+      - ./config.toml:/algobattle/config.toml
+      - db-files:/algobattle/dbfiles
+  runner:
+    build: backend
+    command: algobattle_runner
+    stop_grace_period: 1s
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      - ALGOBATTLE_CONFIG_PATH=/algobattle/config.toml
+      - SQL_PASSWORD=${SQL_PASSWORD}
+      - ALGOBATTLE_IO_VOLUMES=true
+    volumes:
+      - ./config.toml:/algobattle/config.toml
+      - db-files:/algobattle/dbfiles
+      - /var/run/docker.sock,target=/var/run/docker.sock
+      - algobattle_input:/algobattle/input
+      - algobattle_output:/algobattle/output
   nginx:
     build: .
     ports:
@@ -30,3 +47,7 @@ services:
 volumes:
   db-files:
     # intentionally empty
+  algobattle_input:
+    external: true
+  algobattle_output:
+    external: true

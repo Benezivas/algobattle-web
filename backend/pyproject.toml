@@ -13,7 +13,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "algobattle-base",
+    "algobattle-base @ git+https://github.com/ImogenBits/algobattle.git@4.0.0-rc",
     "uvicorn",
     # until https://github.com/tiangolo/fastapi/pull/5978 is accepted
     "fastapi @ git+https://github.com/ImogenBits/fastapi.git@pydantic_orm",
@@ -28,6 +28,7 @@ dependencies = [
 
 [project.scripts]
 algobattle_api = "algobattle_web.app:create_openapi"
+algobattle_runner = "algobattle_web.battle:main"
 
 [tool.setuptools]
 packages = ["algobattle_web"]
