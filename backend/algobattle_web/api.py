@@ -1,6 +1,8 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
 from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Callable, Literal, cast
 from uuid import UUID
 from zipfile import ZipFile
@@ -18,7 +20,7 @@ from pydantic import Field
 from pydantic.color import Color
 
 
-from algobattle.util import TempDir, Role
+from algobattle.util import Role
 from algobattle.problem import Problem as AlgProblem
 from algobattle_web.models import (
     File as DbFile,
@@ -380,15 +382,13 @@ def search_team(
 class CreateTeam(BaseSchema):
     name: str = Field(min_length=1)
     tournament: ID
-    members: list[ID]
+    members: set[ID]
 
 
 @admin.post("/team/create", tags=["team"])
 def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
     tournament = unwrap(Tournament.get(db, team.tournament))
     members = [unwrap(db.get(User, id)) for id in team.members]
-    if len(members) != len(set(members)):
-        raise HTTPException(400)
     _team = Team(db, team.name, tournament, members)
     try:
         db.commit()
@@ -500,7 +500,8 @@ def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None)
     if file is None == problem_id is None:
         raise ValueError
     if file is not None:
-        with TempDir() as folder:
+        with TemporaryDirectory() as folder:
+            folder = Path(folder)
             with open(folder / "problem.py", "wb+") as _file:
                 _file.write(file.file.read())
             try:

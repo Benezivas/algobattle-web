@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from time import sleep
 from zipfile import ZipFile
 from anyio import run
@@ -7,7 +8,7 @@ from sqlalchemy import select
 
 from algobattle.team import TeamInfo
 from algobattle.match import Match, BaseConfig
-from algobattle.util import TempDir, Role
+from algobattle.util import Role
 from algobattle.problem import Problem
 from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, SessionLocal
 from algobattle_web.util import unwrap, SERVER_CONFIG
@@ -21,7 +22,8 @@ def _extract_to(source: Path, target: Path) -> Path:
 
 
 def run_match(db: Session, scheduled_match: ScheduledMatch):
-    with TempDir() as folder:
+    with TemporaryDirectory() as folder:
+        folder = Path(folder)
         config_file = scheduled_match.problem.config
         config = BaseConfig.from_file(config_file.path)
         config.teams = {}
