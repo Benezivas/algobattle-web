@@ -1,5 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
+from enum import Enum
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -41,6 +42,11 @@ from algobattle_web.models import (
 from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Wrapped, send_email, SERVER_CONFIG
 from algobattle_web.dependencies import curr_user, check_if_admin
 from algobattle_web.models import UserSettings
+
+
+class EditAction(Enum):
+    add = "add"
+    remove = "remove"
 
 
 class SchemaRoute(APIRoute):
@@ -166,11 +172,12 @@ def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
     db.commit()
     return new
 
+
 class EditUser(BaseSchema):
     name: str | None = Field(None, min_length=1)
     email: str | None = Field(None, min_length=1)
     is_admin: bool | None = None
-    teams: dict[ID, Literal["add", "remove"]] = {}
+    teams: dict[ID, EditAction] = {}
 
 
 @admin.post("/user/{id}/edit", tags=["user"])
@@ -182,12 +189,13 @@ def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
             setattr(user, key, val)
     for id, action in edit.teams.items():
         team = unwrap(db.get(Team, id))
-        if action == "add" and team not in user.teams:
-            user.teams.append(team)
-        elif action == "remove" and team in user.teams:
-            user.teams.remove(team)
-        else:
-            raise ValueError
+        match action:
+            case EditAction.add:
+                if team not in user.teams:
+                    user.teams.append(team)
+            case EditAction.remove:
+                if team in user.teams:
+                    user.teams.remove(team)
     try:
         db.commit()
     except IntegrityError as e:
@@ -400,7 +408,7 @@ def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
 class EditTeam(BaseSchema):
     name: str | None = Field(None, min_length=1)
     tournament: ID | None = None
-    members: dict[ID, Literal["add", "remove"]] = {}
+    members: dict[ID, EditAction] = {}
 
 
 @admin.post("/team/{id}/edit", tags=["team"])
@@ -412,12 +420,13 @@ def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
         team.tournament_id = edit.tournament
     for id, action in edit.members.items():
         user = unwrap(db.get(User, id))
-        if action =="add" and user not in team.members:
-            team.members.append(user)
-        elif action == "remove" and user in team.members:
-            team.members.remove(user)
-        else:
-            raise ValueError
+        match action, user in team.members:
+            case EditAction.add, False:
+                team.members.append(user)
+            case EditAction.remove, True:
+                team.members.remove(user)
+            case _, _:
+                raise ValueError
     try:
         db.commit()
     except IntegrityError as e:

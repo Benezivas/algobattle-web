@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from sqlalchemy_utils.functions import database_exists, create_database
 
 from algobattle_web.models import Base, SessionLocal, engine, User
@@ -26,6 +27,20 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(
+        title="Algobattle",
+        version="0.1.0",
+        openapi_version="3.0.0",
+        routes=app.routes,
+    )
+    app.openapi_schema = schema
+    return schema
+app.openapi = custom_openapi
 
 
 @app.exception_handler(RequestValidationError)

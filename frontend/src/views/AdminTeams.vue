@@ -111,7 +111,7 @@ async function sendData() {
         createTeam: {
           name: editData.value.name,
           tournament: editData.value.tournament,
-          members: editData.value.members,
+          members: new Set(editData.value.members),
         }
       })
       teams.value[newTeam.id] = newTeam
