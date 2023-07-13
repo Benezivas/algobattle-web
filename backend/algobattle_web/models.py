@@ -3,7 +3,6 @@ from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
 from enum import Enum
-from tempfile import SpooledTemporaryFile
 from typing import IO, ClassVar, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Sequence
 from uuid import UUID, uuid4
@@ -72,12 +71,13 @@ class File(RawBase, init=False):
     timestamp: Mapped[datetime]
 
     _move: bool = False
+    _file: Path | BinaryIO | None = None
 
     @overload
     def __init__(self, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str = ""): ...
 
     @overload
-    def __init__(self, file: "File"): ...
+    def __init__(self, file: Self): ...
 
     @overload
     def __init__(self, file: UploadFile, *, alt_text: str = ""): ...
@@ -87,7 +87,7 @@ class File(RawBase, init=False):
 
     def __init__(
         self,
-        file: "BinaryIO | Path | File | UploadFile",
+        file: BinaryIO | Path | Self | UploadFile,
         filename: str | None = None,
         *,
         media_type: str | None = None,
@@ -155,17 +155,17 @@ class File(RawBase, init=False):
 
     def save(self) -> None:
         """Saves the associated file to disk."""
-        if hasattr(self, "_file"):
+        if self._file is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            if isinstance(self._file, (BinaryIO, SpooledTemporaryFile)):
-                with open(self.path, "wb+") as target:
-                    copyfileobj(self._file, target)
-            else:
+            if isinstance(self._file, Path):
                 if self._move:
                     self._file.rename(self.path)
                 else:
                     copyfile(self._file, self.path)
-            del self._file
+            else:
+                with open(self.path, "wb+") as target:
+                    copyfileobj(self._file, target)
+            self._file = None
     
     def response(self, content_disposition: Literal["attachment", "inline"] = "attachment") -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
