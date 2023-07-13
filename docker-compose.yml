@@ -5,7 +5,7 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=${SQL_PASSWORD}
     healthcheck:
-      test: "/usr/bin/mysql --user=root --password=${SQL_PASSWORD} --execute \"SHOW DATABASES;\""
+      test: "mysqladmin ping"
       interval: 2s
       timeout: 20s
       retries: 10
@@ -23,7 +23,6 @@ services:
       retries: 10
     environment:
       - ALGOBATTLE_CONFIG_PATH=/algobattle/config.toml
-      - SQL_PASSWORD=${SQL_PASSWORD}
       - TZ=Europe/Berlin
     volumes:
       - ./config.toml:/algobattle/config.toml
@@ -37,7 +36,6 @@ services:
         condition: service_healthy
     environment:
       - ALGOBATTLE_CONFIG_PATH=/algobattle/config.toml
-      - SQL_PASSWORD=${SQL_PASSWORD}
       - ALGOBATTLE_IO_VOLUMES=true
       - TZ=Europe/Berlin
     volumes:
