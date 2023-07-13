@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import sleep
@@ -10,7 +10,7 @@ from algobattle.team import TeamInfo
 from algobattle.match import Match, BaseConfig
 from algobattle.util import Role
 from algobattle.problem import Problem
-from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, SessionLocal
+from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, SessionLocal, ID
 from algobattle_web.util import unwrap, SERVER_CONFIG
 
 
@@ -22,6 +22,7 @@ def _extract_to(source: Path, target: Path) -> Path:
 
 
 def run_match(db: Session, scheduled_match: ScheduledMatch):
+    print(f"running match...")
     with TemporaryDirectory() as folder:
         folder = Path(folder)
         config_file = scheduled_match.problem.config
@@ -29,7 +30,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         config.teams = {}
         problem = Problem.import_from_path(scheduled_match.problem.file.path)
 
-        paricipants: set[ResultParticipant] = set()
+        paricipants: dict[ID, ResultParticipant] = {}
         for team in scheduled_match.problem.tournament.teams:
             gen = unwrap(db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.generator)).unique().first())
             gen_path = _extract_to(gen.file.path, folder / team.id.hex / "generator")
@@ -37,8 +38,8 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
             sol_path = _extract_to(sol.file.path, folder / team.id.hex / "solver")
 
             config.teams[team.name] = TeamInfo(generator=gen_path, solver=sol_path)
-            paricipants.add(ResultParticipant(db, team, gen, sol, 0))
-        db_result = MatchResult(db, MatchResult.Status.running, datetime.now(), scheduled_match.problem, paricipants, config_file)
+            paricipants[team.id] = ResultParticipant(db, team, gen, sol, 0)
+        db_result = MatchResult(db, MatchResult.Status.running, datetime.now(), scheduled_match.problem, set(paricipants.values()), config_file)
         db.commit()
 
         result = run(Match.run, config, problem)
@@ -47,7 +48,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         for team in db_result.participants:
             team.points = points[team.team.name]
         db_result.status = MatchResult.Status.complete
-        with open(folder / "results.json", "x") as f:
+        with open(folder / "result.json", "x") as f:
             f.write(result.json())
         db_result.logs = File(folder / "result.json", move=True)
         db.commit()
@@ -55,9 +56,9 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
 
 def run_scheduled_matches():
     time = datetime.now()
-    first = time - SERVER_CONFIG.match_execution_interval
+    first = time - SERVER_CONFIG.match_execution_interval - timedelta(hours=1)
     with SessionLocal() as db:
-        scheduled_matches = db.scalars(select(ScheduledMatch).where(ScheduledMatch.time >= first, ScheduledMatch.time <= time)).unique().all()
+        scheduled_matches = db.scalars(select(ScheduledMatch).where(first <= ScheduledMatch.time, ScheduledMatch.time <= time)).unique().all()
         if len(scheduled_matches) == 0:
             return
         # ! Temporary fix, come up with a better solution to this
@@ -68,13 +69,15 @@ def run_scheduled_matches():
             run_match(db, scheduled_matches[0])
         except BaseException as e:
             print(f"Exception occured when executing match:\n{e}")
+        finally:
+            db.delete(scheduled_matches[0])
+            db.commit()
 
 
 def main():
     day = datetime.today()
-    next_exec = SERVER_CONFIG.match_execution_interval - (datetime.now() - day) % SERVER_CONFIG.match_execution_interval
-    sleep(next_exec.seconds)
     while True:
+        next_exec = SERVER_CONFIG.match_execution_interval - (datetime.now() - day) % SERVER_CONFIG.match_execution_interval
+        sleep(next_exec.seconds)
         run_scheduled_matches()
-        sleep(SERVER_CONFIG.match_execution_interval.seconds)
 
