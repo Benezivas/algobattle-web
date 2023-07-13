@@ -37,7 +37,11 @@ str128 = Annotated[str, mapped_column(String(128))]
 str256 = Annotated[str, mapped_column(String(256))]
 strText = Annotated[str, mapped_column(Text)]
 
-engine = create_engine(SERVER_CONFIG.database_url)
+
+connect_args = {}
+if SERVER_CONFIG.database_url.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+engine = create_engine(SERVER_CONFIG.database_url, connect_args=connect_args)
 SessionLocal = sessionmaker(autoflush=False, bind=engine)
 
 
@@ -66,6 +70,8 @@ class File(RawBase, init=False):
     media_type: Mapped[str32]
     alt_text: Mapped[str256]
     timestamp: Mapped[datetime]
+
+    _move: bool = False
 
     @overload
     def __init__(self, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str = ""): ...
@@ -482,7 +488,7 @@ class Problem(Base, unsafe_hash=True):
     description_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     image_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
 
-    name: Mapped[str32]
+    name: Mapped[str64]
     tournament: Mapped[Tournament] = relationship()
     tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
     file: Mapped[File] = relationship(foreign_keys=file_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
