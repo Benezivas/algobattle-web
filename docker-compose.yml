@@ -17,7 +17,7 @@ services:
       database:
         condition: service_healthy
     healthcheck:
-      test: "lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null"
+      test: "curl --fail localhost:8000/openapi.json || exit 1"
       interval: 2s
       timeout: 20s
       retries: 10
@@ -48,6 +48,8 @@ services:
     build: .
     depends_on:
       database:
+        condition: service_healthy
+      backend:
         condition: service_healthy
     ports:
       - "8080:80"
