@@ -613,7 +613,7 @@ class ScheduledMatch(Base, unsafe_hash=True):
         points: float
 
 
-class ResultParticipant(BaseNoID, unsafe_hash=True):
+class ResultParticipant(BaseNoID):
     match: Mapped["MatchResult"] = relationship(back_populates="participants", init=False)
     match_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True, init=False)
     team: Mapped[Team] = relationship()
@@ -623,6 +623,9 @@ class ResultParticipant(BaseNoID, unsafe_hash=True):
     solver_id: Mapped[ID | None] = mapped_column(ForeignKey("programs.id"), init=False)
     solver: Mapped[Program | None] = relationship(foreign_keys=[solver_id])
     points: Mapped[float]
+
+    def __hash__(self) -> int:
+        return hash(self.team_id)
 
     class Schema(BaseNoID.Schema):
         generator: ObjID
