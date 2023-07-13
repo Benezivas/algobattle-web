@@ -24,6 +24,7 @@ services:
     environment:
       - ALGOBATTLE_CONFIG_PATH=/algobattle/config.toml
       - SQL_PASSWORD=${SQL_PASSWORD}
+      - TZ=Europe/Berlin
     volumes:
       - ./config.toml:/algobattle/config.toml
       - db-files:/algobattle/dbfiles
@@ -38,6 +39,7 @@ services:
       - ALGOBATTLE_CONFIG_PATH=/algobattle/config.toml
       - SQL_PASSWORD=${SQL_PASSWORD}
       - ALGOBATTLE_IO_VOLUMES=true
+      - TZ=Europe/Berlin
     volumes:
       - ./config.toml:/algobattle/config.toml
       - db-files:/algobattle/dbfiles
