@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 from time import sleep
 from zipfile import ZipFile
 from anyio import run
-from sqlalchemy import select
+from sqlalchemy import select, create_engine
 
 from algobattle.team import TeamInfo
 from algobattle.match import Match, BaseConfig
@@ -76,6 +76,8 @@ def run_scheduled_matches():
 
 def main():
     ServerConfig.load()
+    engine = create_engine(ServerConfig.obj.database_url)
+    SessionLocal.configure(bind=engine)
     day = datetime.today()
     while True:
         next_exec = ServerConfig.obj.match_execution_interval - (datetime.now() - day) % ServerConfig.obj.match_execution_interval
