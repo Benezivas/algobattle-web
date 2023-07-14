@@ -6,7 +6,7 @@ from email.message import EmailMessage
 from pathlib import Path
 from smtplib import SMTP
 import tomllib
-from typing import Any, Generic, TypeVar
+from typing import Any, ClassVar, Generic, Self, TypeVar
 from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 from os import environ
@@ -57,7 +57,7 @@ class _EmailConfig(BaseSchema):
     password: str
 
 
-class Config(BaseSchema):
+class ServerConfig(BaseSchema):
     algorithm: str = "HS256"
     secret_key: bytes
     database_url: str
@@ -66,6 +66,8 @@ class Config(BaseSchema):
     match_execution_interval: timedelta = timedelta(minutes=5)
     base_url: AnyUrl
     server_email: _EmailConfig
+
+    obj: ClassVar[Self]
 
     @validator("secret_key")
     def parse_b64(cls, val) -> bytes:
@@ -85,14 +87,15 @@ class Config(BaseSchema):
         else:
             return self.base_url
 
-
-try:
-    config_path = Path(environ.get("ALGOBATTLE_CONFIG_PATH", Path(__file__).parent / "config.toml"))
-    with open(config_path, "rb") as f:
-        toml_dict = tomllib.load(f)
-    SERVER_CONFIG = Config.parse_obj(toml_dict)
-except (KeyError, OSError):
-    raise SystemExit("Badly formatted or missing config.toml!")
+    @classmethod
+    def load(cls) -> None:
+        try:
+            config_path = Path(environ.get("ALGOBATTLE_CONFIG_PATH", Path(__file__).parent / "config.toml"))
+            with open(config_path, "rb") as f:
+                toml_dict = tomllib.load(f)
+            cls.obj = cls.parse_obj(toml_dict)
+        except (KeyError, OSError):
+            raise SystemExit("Badly formatted or missing config.toml!")
 
 
 def send_email(email: str, content: str) -> None:
@@ -101,15 +104,15 @@ def send_email(email: str, content: str) -> None:
         return
     msg = EmailMessage()
     msg["Subject"] = "Algobattle login"
-    msg["From"] = SERVER_CONFIG.server_email.address
+    msg["From"] = ServerConfig.obj.server_email.address
     msg["To"] = email
     msg.set_content(content)
 
-    server = SMTP(SERVER_CONFIG.server_email.server, SERVER_CONFIG.server_email.port)
+    server = SMTP(ServerConfig.obj.server_email.server, ServerConfig.obj.server_email.port)
     server.ehlo()
     server.starttls()
-    server.login(SERVER_CONFIG.server_email.username, SERVER_CONFIG.server_email.password)
-    server.sendmail(SERVER_CONFIG.server_email.username, email, msg.as_string())
+    server.login(ServerConfig.obj.server_email.username, ServerConfig.obj.server_email.password)
+    server.sendmail(ServerConfig.obj.server_email.username, email, msg.as_string())
     server.close()
 
 

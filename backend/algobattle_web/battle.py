@@ -11,7 +11,7 @@ from algobattle.match import Match, BaseConfig
 from algobattle.util import Role
 from algobattle.problem import Problem
 from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, SessionLocal, ID
-from algobattle_web.util import unwrap, SERVER_CONFIG
+from algobattle_web.util import unwrap, ServerConfig
 
 
 def _extract_to(source: Path, target: Path) -> Path:
@@ -56,7 +56,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
 
 def run_scheduled_matches():
     time = datetime.now()
-    first = time - SERVER_CONFIG.match_execution_interval - timedelta(hours=1)
+    first = time - ServerConfig.obj.match_execution_interval - timedelta(hours=1)
     with SessionLocal() as db:
         scheduled_matches = db.scalars(select(ScheduledMatch).where(first <= ScheduledMatch.time, ScheduledMatch.time <= time)).unique().all()
         if len(scheduled_matches) == 0:
@@ -77,7 +77,7 @@ def run_scheduled_matches():
 def main():
     day = datetime.today()
     while True:
-        next_exec = SERVER_CONFIG.match_execution_interval - (datetime.now() - day) % SERVER_CONFIG.match_execution_interval
+        next_exec = ServerConfig.obj.match_execution_interval - (datetime.now() - day) % ServerConfig.obj.match_execution_interval
         sleep(next_exec.seconds)
         run_scheduled_matches()
 

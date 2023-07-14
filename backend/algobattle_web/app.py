@@ -11,17 +11,18 @@ from sqlalchemy_utils.functions import database_exists, create_database
 
 from algobattle_web.models import Base, SessionLocal, engine, User
 from algobattle_web.api import router as api, SchemaRoute
-from algobattle_web.util import PermissionExcpetion, ValueTaken, SERVER_CONFIG
+from algobattle_web.util import PermissionExcpetion, ValueTaken, ServerConfig
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    ServerConfig.load()
     if not database_exists(engine.url):
         create_database(engine.url)
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
-        if User.get(db, SERVER_CONFIG.admin_email) is None:
-            User(db, email=SERVER_CONFIG.admin_email, name="Admin", is_admin=True)
+        if User.get(db, ServerConfig.obj.admin_email) is None:
+            User(db, email=ServerConfig.obj.admin_email, name="Admin", is_admin=True)
             db.commit()
     yield
 
@@ -80,7 +81,7 @@ for route in app.routes:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[SERVER_CONFIG.frontend_base_url],
+    allow_origins=[ServerConfig.obj.frontend_base_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

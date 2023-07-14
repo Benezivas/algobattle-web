@@ -26,7 +26,7 @@ from pydantic import validator
 from pydantic.color import Color
 
 from algobattle.docker_util import Role as ProgramRole
-from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion, guess_mimetype, SERVER_CONFIG
+from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion, guess_mimetype, ServerConfig
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
@@ -38,9 +38,9 @@ strText = Annotated[str, mapped_column(Text)]
 
 
 connect_args = {}
-if SERVER_CONFIG.database_url.startswith("sqlite"):
+if ServerConfig.obj.database_url.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
-engine = create_engine(SERVER_CONFIG.database_url, connect_args=connect_args)
+engine = create_engine(ServerConfig.obj.database_url, connect_args=connect_args)
 SessionLocal = sessionmaker(autoflush=False, bind=engine)
 
 
@@ -141,7 +141,7 @@ class File(RawBase, init=False):
         name = str(self.id)
         if self.extension is not None:
             name += f".{self.extension}"
-        return SERVER_CONFIG.storage_path / name
+        return ServerConfig.obj.storage_path / name
 
     @property
     def extension(self) -> str | None:
@@ -192,7 +192,7 @@ class File(RawBase, init=False):
             if isinstance(value, File.Schema):
                 return value
             elif isinstance(value, File):
-                url = f"{SERVER_CONFIG.backend_base_url}/api/files/{urlencode(str(value.id))}"
+                url = f"{ServerConfig.obj.backend_base_url}/api/files/{urlencode(str(value.id))}"
                 return cls(
                     id=value.id,
                     name=value.filename,
@@ -376,14 +376,14 @@ class User(Base, unsafe_hash=True):
             "token_id": self.token_id.hex,
             "exp": datetime.now() + timedelta(weeks=4),
         }
-        return jwt.encode(payload, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)
+        return jwt.encode(payload, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
 
     @classmethod
     def decode_token(cls, db: Session, token: str | None) -> Self | None:
         if token is None:
             return
         try:
-            payload = jwt.decode(token, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)
+            payload = jwt.decode(token, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
             if payload["type"] == "user":
                 user_id = UUID(cast(str, payload["user_id"]))
                 token_id = UUID(cast(str, payload["token_id"]))
@@ -399,12 +399,12 @@ class User(Base, unsafe_hash=True):
             "email": self.email,
             "exp": datetime.now() + lifetime,
         }
-        return jwt.encode(payload, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)
+        return jwt.encode(payload, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
 
     @classmethod
     def decode_login_token(cls, db: Session, token: str) -> Self:
         try:
-            payload = jwt.decode(token, SERVER_CONFIG.secret_key, SERVER_CONFIG.algorithm)
+            payload = jwt.decode(token, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
             if payload["type"] == "login":
                 user = User.get(db, cast(str, payload["email"]))
                 if user is not None:
