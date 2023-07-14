@@ -75,6 +75,7 @@ def run_scheduled_matches():
 
 
 def main():
+    ServerConfig.load()
     day = datetime.today()
     while True:
         next_exec = ServerConfig.obj.match_execution_interval - (datetime.now() - day) % ServerConfig.obj.match_execution_interval
