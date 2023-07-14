@@ -64,13 +64,26 @@ class Config(BaseSchema):
     admin_email: str
     storage_path: Path
     match_execution_interval: timedelta = timedelta(minutes=5)
-    frontend_base_url: AnyUrl
-    backend_base_url: AnyUrl
+    base_url: AnyUrl
     server_email: _EmailConfig
 
     @validator("secret_key")
     def parse_b64(cls, val) -> bytes:
         return b64decode(val)
+
+    @property
+    def frontend_base_url(self) -> str:
+        if environ.get("DEV", None):
+            return "http://localhost:5173"
+        else:
+            return self.base_url
+
+    @property
+    def backend_base_url(self) -> str:
+        if environ.get("DEV", None):
+            return "http://127.0.0.1:8000"
+        else:
+            return self.base_url
 
 
 try:
