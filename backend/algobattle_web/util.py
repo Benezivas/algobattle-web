@@ -86,14 +86,14 @@ class ServerConfig(BaseSchema):
 
     @property
     def frontend_base_url(self) -> str:
-        if environ.get("DEV", None):
+        if environ.get("DEV"):
             return "http://localhost:5173"
         else:
             return self.base_url
 
     @property
     def backend_base_url(self) -> str:
-        if environ.get("DEV", None):
+        if environ.get("DEV"):
             return "http://127.0.0.1:8000"
         else:
             return self.base_url
@@ -101,16 +101,16 @@ class ServerConfig(BaseSchema):
     @classmethod
     def load(cls) -> None:
         try:
-            config_path = Path(__file__).parent / "config.toml" if environ.get("DEV", None) else "/algobattle/config.toml"
+            config_path = Path(__file__).parent / "config.toml" if environ.get("DEV") else "/algobattle/config.toml"
             with open(config_path, "rb") as f:
                 toml_dict = tomllib.load(f)
             cls.obj = cls.parse_obj(toml_dict)
-        except (KeyError, OSError):
-            raise SystemExit("Badly formatted or missing config.toml!")
+        except (KeyError, OSError) as e:
+            raise SystemExit("Badly formatted or missing config file!\n\n" + str(e))
 
 
 def send_email(email: str, content: str) -> None:
-    if environ.get("DEV", None):
+    if environ.get("DEV"):
         print(f"sending email to {email}: {content}")
         return
     msg = EmailMessage()
