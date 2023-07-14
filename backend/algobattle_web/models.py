@@ -4,7 +4,7 @@ from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
 from enum import Enum
 from typing import IO, ClassVar, Iterable, Any
-from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, AsyncIterable, Sequence
+from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, Sequence
 from uuid import UUID, uuid4
 from pathlib import Path
 from urllib.parse import quote as urlencode
@@ -12,11 +12,11 @@ from shutil import copyfileobj, copyfile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey, Column, select, create_engine, DateTime, inspect, String, Text
+from sqlalchemy import Table, ForeignKey, Column, select, DateTime, inspect, String, Text
 from sqlalchemy.event import listens_for
 from sqlalchemy.sql import true as sql_true, or_, and_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
-from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, Session, DeclarativeBase, registry, MappedAsDataclass
+from sqlalchemy.orm import relationship, Mapped, mapped_column, Session, DeclarativeBase, registry, MappedAsDataclass
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.base import _NoArg
 from fastapi import UploadFile
@@ -26,7 +26,7 @@ from pydantic import validator
 from pydantic.color import Color
 
 from algobattle.docker_util import Role as ProgramRole
-from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion, guess_mimetype, ServerConfig
+from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion, guess_mimetype, ServerConfig, SessionLocal
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
@@ -35,22 +35,6 @@ str64 = Annotated[str, mapped_column(String(64))]
 str128 = Annotated[str, mapped_column(String(128))]
 str256 = Annotated[str, mapped_column(String(256))]
 strText = Annotated[str, mapped_column(Text)]
-
-
-connect_args = {}
-if ServerConfig.obj.database_url.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
-engine = create_engine(ServerConfig.obj.database_url, connect_args=connect_args)
-SessionLocal = sessionmaker(autoflush=False, bind=engine)
-
-
-async def get_db() -> AsyncIterable[Session]:
-    with SessionLocal() as db:
-        try:
-            yield db
-        except:
-            db.rollback()
-            raise
 
 
 class RawBase(MappedAsDataclass, DeclarativeBase):

@@ -15,6 +15,10 @@ from pydantic import AnyUrl, BaseModel, BaseConfig, Extra, validator
 from pydantic.color import Color
 from pydantic.generics import GenericModel
 from fastapi import HTTPException
+from sqlalchemy.orm import sessionmaker
+
+
+SessionLocal = sessionmaker()
 
 
 class BaseSchema(BaseModel):

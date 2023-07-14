@@ -8,15 +8,22 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy_utils.functions import database_exists, create_database
+from sqlalchemy import create_engine
 
-from algobattle_web.models import Base, SessionLocal, engine, User
+from algobattle_web.models import Base, User
 from algobattle_web.api import router as api, SchemaRoute
-from algobattle_web.util import PermissionExcpetion, ValueTaken, ServerConfig
+from algobattle_web.util import PermissionExcpetion, ValueTaken, ServerConfig, SessionLocal
+
+
+# needs to be top level because of CORSMiddleware
+ServerConfig.load()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    ServerConfig.load()
+    engine = create_engine(ServerConfig.obj.database_url)
+    SessionLocal.configure(bind=engine)
+
     if not database_exists(engine.url):
         create_database(engine.url)
     Base.metadata.create_all(bind=engine)

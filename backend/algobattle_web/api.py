@@ -26,7 +26,6 @@ from algobattle.problem import Problem as AlgProblem
 from algobattle_web.models import (
     File as DbFile,
     encode,
-    get_db,
     Session,
     ID,
     Tournament,
@@ -40,7 +39,7 @@ from algobattle_web.models import (
     UserSettings,
 )
 from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Wrapped, send_email, ServerConfig
-from algobattle_web.dependencies import curr_user, check_if_admin
+from algobattle_web.dependencies import curr_user, check_if_admin, get_db
 from algobattle_web.models import UserSettings
 
 
