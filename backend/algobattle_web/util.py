@@ -64,18 +64,25 @@ class _EmailConfig(BaseSchema):
 class ServerConfig(BaseSchema):
     algorithm: str = "HS256"
     secret_key: bytes
-    database_url: str
+    database_url: str = "mysql+mysqldb://root:{SQL_PASSWORD}@database:3306/algobattle"
     admin_email: str
-    storage_path: Path
-    match_execution_interval: timedelta = timedelta(minutes=5)
+    storage_path: Path = Path("/algobattle/dbfiles")
+    match_execution_interval: timedelta = timedelta(minutes=1)
     base_url: AnyUrl
     server_email: _EmailConfig
 
     obj: ClassVar[Self]
 
+    class Config(BaseSchema.Config):
+        validate_all = True
+
     @validator("secret_key")
     def parse_b64(cls, val) -> bytes:
         return b64decode(val)
+
+    @validator("database_url")
+    def parse_db_url(cls, val: str) -> str:
+        return val.format(SQL_PASSWORD=environ.get("SQL_PASSWORD", ""))
 
     @property
     def frontend_base_url(self) -> str:
@@ -94,7 +101,7 @@ class ServerConfig(BaseSchema):
     @classmethod
     def load(cls) -> None:
         try:
-            config_path = Path(environ.get("ALGOBATTLE_CONFIG_PATH", Path(__file__).parent / "config.toml"))
+            config_path = Path(__file__).parent / "config.toml" if environ.get("DEV", None) else "/algobattle/config.toml"
             with open(config_path, "rb") as f:
                 toml_dict = tomllib.load(f)
             cls.obj = cls.parse_obj(toml_dict)

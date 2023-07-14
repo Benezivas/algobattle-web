@@ -2,8 +2,7 @@ FROM python:3.11 as api_builder
 WORKDIR /code
 COPY backend .
 RUN pip install .
-COPY config.toml .
-ENV ALGOBATTLE_CONFIG_PATH=config.toml
+COPY config.toml /algobattle/config.toml
 RUN algobattle_api > openapi.json
 
 FROM openapitools/openapi-generator-cli as ts_builder

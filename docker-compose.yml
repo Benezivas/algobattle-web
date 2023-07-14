@@ -22,8 +22,8 @@ services:
       timeout: 20s
       retries: 10
     environment:
-      - ALGOBATTLE_CONFIG_PATH=/algobattle/config.toml
       - TZ=Europe/Berlin
+      - SQL_PASSWORD=${SQL_PASSWORD}
     volumes:
       - ./config.toml:/algobattle/config.toml
       - db-files:/algobattle/dbfiles
@@ -35,9 +35,9 @@ services:
       database:
         condition: service_healthy
     environment:
-      - ALGOBATTLE_CONFIG_PATH=/algobattle/config.toml
       - ALGOBATTLE_IO_VOLUMES=true
       - TZ=Europe/Berlin
+      - SQL_PASSWORD=${SQL_PASSWORD}
     volumes:
       - ./config.toml:/algobattle/config.toml
       - db-files:/algobattle/dbfiles
