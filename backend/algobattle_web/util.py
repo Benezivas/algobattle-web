@@ -11,9 +11,7 @@ from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 from os import environ
 
-from pydantic import AnyUrl, BaseModel, BaseConfig, Extra, validator
-from pydantic.color import Color
-from pydantic.generics import GenericModel
+from pydantic import ConfigDict, field_validator, AnyUrl, BaseModel, Extra
 from fastapi import HTTPException
 from sqlalchemy.orm import sessionmaker
 
@@ -22,12 +20,12 @@ SessionLocal = sessionmaker()
 
 
 class BaseSchema(BaseModel):
-    class Config(BaseConfig):
-        orm_mode = True
-        extra = Extra.forbid
-        json_encoders = {
-            Color: Color.as_hex,
-        }
+    """Base class for all our pydantic models."""
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra=Extra.forbid,
+        )
 
 
 class ObjID(UUID):
@@ -73,28 +71,29 @@ class ServerConfig(BaseSchema):
 
     obj: ClassVar[Self]
 
-    class Config(BaseSchema.Config):
-        validate_all = True
+    model_config = ConfigDict(validate_default=True)
 
-    @validator("secret_key")
+    @field_validator("secret_key")
+    @classmethod
     def parse_b64(cls, val) -> bytes:
         return b64decode(val)
 
-    @validator("database_url")
+    @field_validator("database_url")
+    @classmethod
     def parse_db_url(cls, val: str) -> str:
         return val.format(SQL_PASSWORD=environ.get("SQL_PASSWORD", ""))
 
     @property
-    def frontend_base_url(self) -> str:
+    def frontend_base_url(self) -> AnyUrl:
         if environ.get("DEV"):
-            return "http://localhost:5173"
+            return AnyUrl("http://localhost:5173")
         else:
             return self.base_url
 
     @property
-    def backend_base_url(self) -> str:
+    def backend_base_url(self) -> AnyUrl:
         if environ.get("DEV"):
-            return "http://127.0.0.1:8000"
+            return AnyUrl("http://127.0.0.1:8000")
         else:
             return self.base_url
 
@@ -104,7 +103,7 @@ class ServerConfig(BaseSchema):
             config_path = Path(__file__).parent / "config.toml" if environ.get("DEV") else "/algobattle/config.toml"
             with open(config_path, "rb") as f:
                 toml_dict = tomllib.load(f)
-            cls.obj = cls.parse_obj(toml_dict)
+            cls.obj = cls.model_validate(toml_dict)
         except (KeyError, OSError) as e:
             raise SystemExit("Badly formatted or missing config file!\n\n" + str(e))
 
@@ -175,6 +174,6 @@ def guess_mimetype(info: str | Path) -> str:
     return _extension_map.get(info.split(".")[-1], "application/octet-stream")
 
 
-class Wrapped(BaseSchema, GenericModel, Generic[T]):
+class Wrapped(BaseSchema, Generic[T]):
     """Wraps a value in a schema to force json encoding."""
     data: T

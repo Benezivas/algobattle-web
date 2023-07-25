@@ -22,11 +22,11 @@ from sqlalchemy.sql.base import _NoArg
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
 from fastapi.encoders import jsonable_encoder
-from pydantic import validator
-from pydantic.color import Color
+from pydantic import field_validator
 
 from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion, guess_mimetype, ServerConfig, SessionLocal
+from pydantic_extra_types.color import Color
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
@@ -493,13 +493,13 @@ class Problem(Base, unsafe_hash=True):
         tournament: ObjID
         file: File.Schema
         config: File.Schema
-        start: datetime | None
-        end: datetime | None
-        description: File.Schema | None
+        start: datetime | None = None
+        end: datetime | None = None
+        description: File.Schema | None = None
         short_description: str
-        image: File.Schema | None
-        problem_schema: str | None
-        solution_schema: str | None
+        image: File.Schema | None = None
+        problem_schema: str | None = None
+        solution_schema: str | None = None
         colour: Color
 
     def visible(self, user: User) -> bool:
@@ -637,12 +637,13 @@ class MatchResult(Base, unsafe_hash=True):
     class Schema(Base.Schema):
         status: "MatchResult.Status"
         time: datetime
-        config: File.Schema | None
+        config: File.Schema | None = None
         problem: ObjID
         participants: dict[ID, ResultParticipant.Schema]
-        logs: File.Schema | None
+        logs: File.Schema | None = None
 
-        @validator("participants")
+        @field_validator("participants")
+        @classmethod
         def val_teams(cls, val):
             if not isinstance(val, set):
                 raise ValueError
@@ -650,7 +651,7 @@ class MatchResult(Base, unsafe_hash=True):
             for v in val:
                 if not isinstance(v, ResultParticipant):
                     raise ValueError
-                out[v.team_id] = ResultParticipant.Schema.from_orm(val)
+                out[v.team_id] = ResultParticipant.Schema.model_validate(val)
             return out
 
     def visible(self, user: User) -> bool:
@@ -658,4 +659,3 @@ class MatchResult(Base, unsafe_hash=True):
 
 for cls in BaseNoID._children:
     cls.Schema.__name__ = cls.__name__
-UserSettings.Schema.update_forward_refs()

@@ -18,7 +18,6 @@ from markdown import markdown
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from pydantic import Field
-from pydantic.color import Color
 
 
 from algobattle.util import Role
@@ -41,6 +40,7 @@ from algobattle_web.models import (
 from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Wrapped, send_email, ServerConfig
 from algobattle_web.dependencies import curr_user, check_if_admin, get_db
 from algobattle_web.models import UserSettings
+from pydantic_extra_types.color import Color
 
 
 class EditAction(Enum):
@@ -183,7 +183,7 @@ class EditUser(BaseSchema):
 def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     user = unwrap(User.get(db, id))
 
-    for key, val in edit.dict(exclude_unset=True).items():
+    for key, val in edit.model_dump(exclude_unset=True).items():
         if key != "teams":
             setattr(user, key, val)
     for id, action in edit.teams.items():
@@ -217,7 +217,7 @@ class EditSelf(BaseSchema):
 
 @router.post("/user/self/edit", tags=["user"])
 def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSelf) -> User:
-    for key, val in edit.dict(exclude_unset=True).items():
+    for key, val in edit.model_dump(exclude_unset=True).items():
         setattr(user, key, val)
     db.commit()
     return user
@@ -229,7 +229,7 @@ class EditSettings(BaseSchema):
 
 @router.post("/user/self/settings", tags=["user"])
 def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
-    updates = settings.dict(exclude_unset=True)
+    updates = settings.model_dump(exclude_unset=True)
     if "selected_team" in updates:
         team = unwrap(Team.get(db, updates["selected_team"]))
         if team not in user.teams:
@@ -243,7 +243,7 @@ def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_us
 def login(*, db = Depends(get_db), email: str = Body(), target_url: str = Body(), tasks: BackgroundTasks) -> None:
     user = unwrap(User.get(db, email))
     token = user.login_token()
-    url = ServerConfig.obj.frontend_base_url + target_url + f"?login_token={token}"
+    url = str(ServerConfig.obj.frontend_base_url) + target_url + f"?login_token={token}"
     tasks.add_task(send_email, email, url)
 
 
@@ -420,11 +420,11 @@ def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
     for id, action in edit.members.items():
         user = unwrap(db.get(User, id))
         match action, user in team.members:
-            case EditAction.add, False:
+            case [EditAction.add, False]:
                 team.members.append(user)
-            case EditAction.remove, True:
+            case [EditAction.remove, True]:
                 team.members.remove(user)
-            case _, _:
+            case [_, _]:
                 raise ValueError
     try:
         db.commit()
@@ -500,8 +500,8 @@ def problem_by_name(*, db = Depends(get_db), user = Depends(curr_user), tourname
 
 class ProblemMetadata(BaseSchema):
     name: str
-    problem_schema: str | None
-    solution_schema: str | None
+    problem_schema: str | None = None
+    solution_schema: str | None = None
 
 @admin.post("/problem/verify", tags=["problem"], response_model=ProblemMetadata)
 def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None), problem_id: ID | None = Form(None)):
@@ -517,7 +517,7 @@ def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None)
             except ValueError as e:
                 print(e)
                 raise HTTPException(400)
-            return ProblemMetadata(name=prob.name, problem_schema=prob.io_schema(), solution_schema=prob.Solution.io_schema())
+            return ProblemMetadata(name=prob.name, problem_schema=prob.instance_cls.io_schema(), solution_schema=prob.solution_cls.io_schema())
     else:
         return unwrap(db.get(Problem, problem_id))
 
@@ -604,7 +604,7 @@ class ProblemEdit(BaseSchema):
 @admin.post("/problem/{id}/edit", tags=["problem"])
 def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit) -> Problem:
     problem = unwrap(db.get(Problem, id))
-    for key, val in edit.dict(exclude_unset=True).items():
+    for key, val in edit.model_dump(exclude_unset=True).items():
         if key == "tournament":
             tournament_ = unwrap(db.get(Tournament, edit.tournament))
             problem.tournament = tournament_
