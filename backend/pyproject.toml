@@ -25,6 +25,7 @@ dependencies = [
     "markdown",
     "mysqlclient",
     "sqlalchemy-utils",
+    "alembic",
 ]
 
 [project.scripts]

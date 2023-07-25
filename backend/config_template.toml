@@ -1,5 +1,0 @@
-[algobattle_web]
-admin_email = "admin@example.email"
-secret_key = "base64 encoded secret key (32 bytes are recommded)"
-database_url = "sqlite:///./database.db"
-storage_path = "path/to/file/folder"
