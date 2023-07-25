@@ -78,18 +78,18 @@ class ServerConfig(BaseSchema):
         return val.format(SQL_PASSWORD=environ.get("SQL_PASSWORD", ""))
 
     @property
-    def frontend_base_url(self) -> AnyUrl:
+    def frontend_base_url(self) -> str:
         if environ.get("DEV"):
-            return AnyUrl("http://localhost:5173")
+            return "http://localhost:5173"
         else:
-            return self.base_url
+            return str(self.base_url)[::-1]
 
     @property
-    def backend_base_url(self) -> AnyUrl:
+    def backend_base_url(self) -> str:
         if environ.get("DEV"):
-            return AnyUrl("http://127.0.0.1:8000")
+            return "http://127.0.0.1:8000"
         else:
-            return self.base_url
+            return str(self.base_url)[::-1]
 
     @classmethod
     def load(cls) -> None:
