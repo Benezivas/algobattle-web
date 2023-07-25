@@ -3,7 +3,7 @@ from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
 from enum import Enum
-from typing import IO, ClassVar, Iterable, Any
+from typing import IO, Callable, ClassVar, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, Sequence
 from uuid import UUID, uuid4
 from pathlib import Path
@@ -21,8 +21,7 @@ from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.base import _NoArg
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
-from fastapi.encoders import jsonable_encoder
-from pydantic import field_validator
+from pydantic import computed_field, field_validator
 
 from algobattle.docker_util import Role as ProgramRole
 from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion, guess_mimetype, ServerConfig, SessionLocal
@@ -174,34 +173,14 @@ class File(RawBase, init=False):
 
     class Schema(BaseSchema, ABC):
         id: ID
-        name: str
-        location: str
+        filename: str
         media_type: str
         timestamp: datetime
         alt_text: str
 
-        @classmethod
-        def __get_validators__(cls):
-            yield cls.validate
-
-        @classmethod
-        def validate(cls, value: Any) -> "File.Schema":
-            if isinstance(value, File.Schema):
-                return value
-            elif isinstance(value, File):
-                url = f"{ServerConfig.obj.backend_base_url}/api/files/{urlencode(str(value.id))}"
-                return cls(
-                    id=value.id,
-                    name=value.filename,
-                    location=url,
-                    media_type=value.media_type,
-                    alt_text=value.alt_text,
-                    timestamp=value.timestamp
-                )
-            elif isinstance(value, Mapping):
-                return cls.parse_obj(value)
-            else:
-                raise TypeError
+        @computed_field
+        def location(self) -> str:
+            return f"{ServerConfig.obj.backend_base_url}/api/files/{urlencode(str(self.id))}"
     Schema.__name__ = "DbFile"
 
 
@@ -261,17 +240,13 @@ class BaseNoID(RawBase):
     def __tablename__(cls):
         return cls.__name__.lower() + "s"
 
-    def encode(self) -> dict[str, Any]:
-        return jsonable_encoder(self.Schema.from_orm(self))
+    def encode(self) -> BaseSchema:
+        return self.Schema.model_validate(self)
 
     @classmethod
     def get_all(cls, db: Session) -> Sequence[Self]:
         """Get all database entries of this type."""
         return db.scalars(select(cls)).unique().all()
-
-    def as_schema(self) -> Any:
-        """Converts the database object into a pydantic schema."""
-        return self.Schema.from_orm(self)
 
     def visible(self, user: "User") -> bool:
         """Checks wether this model is visible to a given user."""
@@ -312,7 +287,7 @@ class Base(BaseNoID, unsafe_hash=True):
 
 def encode(col: Iterable[Base]) -> dict[ID, Any]:
     """Encodes a collection of database items into a jsonable container."""
-    return jsonable_encoder({el.id: el.encode() for el in col})
+    return {el.id: el.encode() for el in col}
 
 team_members = Table(
     "team_members",

@@ -5,12 +5,12 @@ from email.message import EmailMessage
 from pathlib import Path
 from smtplib import SMTP
 import tomllib
-from typing import Any, ClassVar, Generic, Self, TypeVar
+from typing import Annotated, ClassVar, Generic, Self, TypeVar
 from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 from os import environ
 
-from pydantic import Base64Bytes, ConfigDict, Field, ValidationError, field_validator, AnyUrl, BaseModel, Extra
+from pydantic import Base64Bytes, BeforeValidator, ConfigDict, Field, ValidationError, field_validator, AnyUrl, BaseModel, Extra
 from fastapi import HTTPException
 from sqlalchemy.orm import sessionmaker
 
@@ -27,27 +27,22 @@ class BaseSchema(BaseModel):
         )
 
 
-class ObjID(UUID):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, obj: Any) -> UUID:
-        if isinstance(obj, UUID):
-            return obj
-        elif hasattr(obj, "id"):
-            if isinstance(obj.id, UUID):
-                return obj.id
-            else:
-                raise ValueError
-        elif isinstance(obj, str):
-            return UUID(obj)
+def model_to_id(obj: object) -> UUID:
+    """Validates a pydantic model into a UUID."""
+    if isinstance(obj, UUID):
+        return obj
+    elif hasattr(obj, "id"):
+        if isinstance(obj.id, UUID):    # type: ignore
+            return obj.id   # type: ignore
         else:
-            raise TypeError
+            raise ValueError
+    elif isinstance(obj, str):
+        return UUID(obj)
+    else:
+        raise ValueError
 
-    def __repr__(self) -> str:
-        return f"ObjID({super().__repr__()})"
+
+ObjID = Annotated[UUID, BeforeValidator(model_to_id)]
 
 
 class _EmailConfig(BaseSchema):
