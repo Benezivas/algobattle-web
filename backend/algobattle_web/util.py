@@ -1,5 +1,4 @@
 """Util functions."""
-from base64 import b64decode
 from dataclasses import dataclass
 from datetime import timedelta
 from email.message import EmailMessage
@@ -11,7 +10,7 @@ from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 from os import environ
 
-from pydantic import ConfigDict, field_validator, AnyUrl, BaseModel, Extra
+from pydantic import Base64Bytes, ConfigDict, Field, ValidationError, field_validator, AnyUrl, BaseModel, Extra
 from fastapi import HTTPException
 from sqlalchemy.orm import sessionmaker
 
@@ -61,7 +60,7 @@ class _EmailConfig(BaseSchema):
 
 class ServerConfig(BaseSchema):
     algorithm: str = "HS256"
-    secret_key: bytes
+    secret_key: Base64Bytes = Field(min_length=32)
     database_url: str = "mysql+mysqldb://root:{SQL_PASSWORD}@database:3306/algobattle"
     admin_email: str
     storage_path: Path = Path("/algobattle/dbfiles")
@@ -72,11 +71,6 @@ class ServerConfig(BaseSchema):
     obj: ClassVar[Self]
 
     model_config = ConfigDict(validate_default=True)
-
-    @field_validator("secret_key")
-    @classmethod
-    def parse_b64(cls, val) -> bytes:
-        return b64decode(val)
 
     @field_validator("database_url")
     @classmethod
@@ -104,7 +98,7 @@ class ServerConfig(BaseSchema):
             with open(config_path, "rb") as f:
                 toml_dict = tomllib.load(f)
             cls.obj = cls.model_validate(toml_dict)
-        except (KeyError, OSError) as e:
+        except (KeyError, OSError, ValidationError) as e:
             raise SystemExit("Badly formatted or missing config file!\n\n" + str(e))
 
 
