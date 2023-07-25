@@ -44,6 +44,19 @@ class RawBase(MappedAsDataclass, DeclarativeBase):
         }
     )
 
+    def __init_subclass__(cls,
+            init: _NoArg | bool = _NoArg.NO_ARG,
+            repr: _NoArg | bool = _NoArg.NO_ARG,
+            eq: _NoArg | bool = _NoArg.NO_ARG,
+            order: _NoArg | bool = _NoArg.NO_ARG,
+            unsafe_hash: _NoArg | bool = _NoArg.NO_ARG,
+            match_args: _NoArg | bool = _NoArg.NO_ARG,
+            kw_only: _NoArg | bool = _NoArg.NO_ARG,
+            dataclass_callable: _NoArg | Callable[..., type] = _NoArg.NO_ARG
+        ) -> None:
+        super().__init_subclass__(init, repr, eq, order, unsafe_hash, match_args, kw_only, dataclass_callable)
+        del cls.__dataclass_fields__
+
 
 class File(RawBase, init=False):
     __tablename__ = "files"

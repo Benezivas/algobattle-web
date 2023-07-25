@@ -15,8 +15,7 @@ classifiers = [
 dependencies = [
     "algobattle-base @ git+https://github.com/ImogenBits/algobattle.git@4.0.0-rc",
     "uvicorn",
-    # until https://github.com/tiangolo/fastapi/pull/5978 is accepted
-    "fastapi @ git+https://github.com/ImogenBits/fastapi.git@pydantic_orm",
+    "fastapi",
     "python-jose[cryptography]",
     "python-multipart",
     "sqlalchemy >= 2.0.0b1",
