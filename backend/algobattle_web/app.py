@@ -88,7 +88,7 @@ for route in app.routes:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ServerConfig.obj.frontend_base_url],
+    allow_origins=(ServerConfig.obj.frontend_base_url,),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
