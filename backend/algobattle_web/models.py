@@ -179,6 +179,7 @@ class File(RawBase, init=False):
         alt_text: str
 
         @computed_field
+        @property
         def location(self) -> str:
             return f"{ServerConfig.obj.backend_base_url}/api/files/{urlencode(str(self.id))}"
     Schema.__name__ = "DbFile"

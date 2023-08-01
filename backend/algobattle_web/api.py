@@ -228,7 +228,7 @@ class EditSettings(BaseSchema):
 
 
 @router.post("/user/self/settings", tags=["user"])
-def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> User:
+def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> UserSettings:
     updates = settings.model_dump(exclude_unset=True)
     if "selected_team" in updates:
         team = unwrap(Team.get(db, updates["selected_team"]))
@@ -236,7 +236,7 @@ def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_us
             raise HTTPException(status.HTTP_400_BAD_REQUEST)
         user.settings.selected_team = team
     db.commit()
-    return user
+    return user.settings
 
 
 @router.post("/user/login", tags=["user"])
@@ -702,20 +702,20 @@ def problem_desc(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> 
 # *******************************************************************************
 
 
-@router.post("/documentation/{problem_id}", tags=["docs"], response_model=Documentation.Schema | None)
+@router.post("/documentation/{problem_id}", tags=["docs"])
 def upload_own_docs(
         *,
         db: Session = Depends(get_db),
         user: User = Depends(curr_user),
         problem_id: ID,
         file: UploadFile = File(),
-    ) -> Documentation | None:
+    ) -> Documentation:
     problem = unwrap(db.get(Problem, problem_id))
     team = unwrap(user.settings.selected_team)
     return docs_edit(db, user, problem, team, file)
 
 
-@admin.post("/documentation/{problem_id}/{team_id}", tags=["docs"], response_model=Documentation.Schema | None)
+@admin.post("/documentation/{problem_id}/{team_id}", tags=["docs"])
 def upload_docs(
         *,
         db = Depends(get_db),
@@ -723,7 +723,7 @@ def upload_docs(
         problem_id: ID,
         team_id: ID,
         file: UploadFile = File(),
-    ) -> Documentation | None:
+    ) -> Documentation:
     problem = unwrap(db.get(Problem, problem_id))
     team = unwrap(db.get(Team, team_id))
     return docs_edit(db, user, problem, team, file)
@@ -735,7 +735,7 @@ def docs_edit(
         problem: Problem,
         team: Team,
         file: UploadFile = File(),
-    ) -> Documentation | None:
+    ) -> Documentation:
     problem.assert_editable(user)
     if problem.tournament != team.tournament:
         raise HTTPException(400)
