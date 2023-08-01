@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import DateTime from "@/components/DateTime.vue";
-import { matchApi, store, type ModelDict, tournamentApi, problemApi } from "@/main";
+import { store } from "@/main";
+import { MatchService, TournamentService, ProblemService } from "../../typescript_client";
 import { Modal } from "bootstrap";
-import type { ScheduledMatch, Problem, Tournament, CreateScheduleRequest } from "typescript_client";
+import type { ScheduledMatch, Problem, Tournament, ModelDict} from "../types";
 import { onMounted, ref, toRaw } from "vue";
 
 let selectedTournament = ref<string>("");
@@ -12,14 +12,14 @@ const tournaments = ref<ModelDict<Tournament>>({});
 
 let modal: Modal;
 onMounted(async () => {
-  selectedTournament.value = store.user.settings.selectedTeam?.tournament || "";
-  const results = await matchApi.scheduledMatches();
-  tournaments.value = await tournamentApi.allTournaments();
+  selectedTournament.value = store.user.settings.selected_team?.tournament || "";
+  const results = await MatchService.scheduledMatches({});
+  tournaments.value = await TournamentService.allTournaments();
   problems.value = results.problems;
   matches.value = results.matches;
   modal = Modal.getOrCreateInstance("#editModal");
-  if (store.user.isAdmin) {
-    problems.value = await problemApi.allProblems({tournament: selectedTournament.value})
+  if (store.user.is_admin) {
+    problems.value = await ProblemService.allProblems({tournament: selectedTournament.value})
   }
 })
 
@@ -33,12 +33,12 @@ const confirmDelete = ref<boolean>(false);
 async function sendData() {
   let newMatch;
   if (editData.value.id) {
-    newMatch = await matchApi.editSchedule(editData.value as ScheduledMatch);
+    newMatch = await MatchService.editSchedule(editData.value as ScheduledMatch);
   } else {
     if (!editData.value.time || !editData.value.problem || !editData.value.points) {
       return;
     }
-    newMatch = await matchApi.createSchedule({
+    newMatch = await MatchService.createSchedule({
       name: editData.value.name,
       time: editData.value.time,
       problem: editData.value.problem,
@@ -50,7 +50,7 @@ async function sendData() {
 }
 async function deleteMatch() {
   if (editData.value.id) {
-    await matchApi.deleteSchedule({id: editData.value.id});
+    await MatchService.deleteSchedule({id: editData.value.id});
     delete matches.value[editData.value.id];
     modal.hide();
   }
@@ -59,7 +59,7 @@ async function deleteMatch() {
 </script>
 
 <template>
-  <template v-if="store.user.isAdmin">
+  <template v-if="store.user.is_admin">
     <div class="mb-5">
       <label for="tournament_select" class="form-label">Select tournament</label>
       <select id="tournament_select" class="form-select w-em" v-model="selectedTournament">
@@ -75,7 +75,7 @@ async function deleteMatch() {
         <th scope="col">Time</th>
         <th scope="col">Problem</th>
         <th scope="col">Points</th>
-        <th v-if="store.user.isAdmin" scope="col"></th>
+        <th v-if="store.user.is_admin" scope="col"></th>
       </tr>
     </thead>
     <tbody>
@@ -84,7 +84,7 @@ async function deleteMatch() {
         <td>{{ match.time.toLocaleString() }}</td>
         <td><RouterLink :to="`/problems/${tournaments[selectedTournament].name}/${problems[match.problem].name}`">{{ problems[match.problem].name }}</RouterLink></td>
         <td>{{ match.points }}</td>
-        <td v-if="store.user.isAdmin" class="text-end">
+        <td v-if="store.user.is_admin" class="text-end">
           <button type="button" class="btn btn-sm btn-warning" title="Edit" @click="e => openModal(match)"><i class="bi bi-pencil"></i></button>
         </td>
       </tr>
@@ -106,7 +106,7 @@ async function deleteMatch() {
           <label for="name" class="form-label">Name</label>
           <input id="name" class="form-control w-em mb-3" type="text" v-model="editData.name">
           <label for="time" class="form-label">Time</label>
-          <DateTime id="time" class="w-em mb-3" required v-model="editData.time"/>
+          <input id="time" class="form-control w-em mb-3" type="datetime-local" required v-model="editData.time"/>
           <label for="problem" class="form-label">Problem</label>
           <select id="problem" class="form-select w-em mb-3" required v-model="editData.problem">
             <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>

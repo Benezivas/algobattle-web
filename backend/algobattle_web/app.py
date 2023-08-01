@@ -43,7 +43,7 @@ def custom_openapi():
     schema = get_openapi(
         title="Algobattle",
         version="0.1.0",
-        openapi_version="3.0.0",
+        openapi_version="3.1.0",
         routes=app.routes,
     )
     app.openapi_schema = schema

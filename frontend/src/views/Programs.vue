@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { store, type ModelDict, programApi, type InputFileEvent } from "@/main";
+import { ProgramService } from "../../typescript_client";
+import { store } from "../main";
 import { Modal } from "bootstrap";
-import type { Problem, Program, Team, Role } from "typescript_client";
+import type { Problem, Program, Team, ModelDict, InputFileEvent, DbFileLoc } from "../types";
 import type { UploadProgramRequest } from "typescript_client/apis/ProgramApi";
 import { onMounted, ref } from "vue";
 
@@ -20,12 +21,12 @@ const searchData = ref({
 async function search(
   page: number = 1
 ) {
-  const ret = await programApi.searchProgram({page: page});
+  const ret = await ProgramService.searchProgram({page: page});
   programs.value = ret.programs;
   problems.value = ret.problems;
   teams.value = ret.teams;
   currPage.value = ret.page;
-  maxPage.value = ret.maxPage;
+  maxPage.value = ret.max_page;
 }
 
 const newProgData = ref<Partial<UploadProgramRequest>>({
@@ -49,7 +50,13 @@ async function uploadProgram() {
   || !newProgData.value.problem || !newProgData.value.role) {
     return
   }
-  const newProgram = await programApi.uploadProgram(newProgData.value as UploadProgramRequest);
+  const newProgram = await ProgramService.uploadProgram({
+    role: newProgData.value.role,
+    problem: newProgData.value.problem,
+    formData: {
+      file: newProgData.value.file,
+    }
+  })
   programs.value[newProgram.id] = newProgram;
   modal.hide();
 }
@@ -65,7 +72,7 @@ onMounted(() => {
     <thead>
       <tr>
         <th scope="col">Problem</th>
-        <th scope="col" v-if="store.user.isAdmin">Team</th>
+        <th scope="col" v-if="store.user.is_admin">Team</th>
         <th scope="col">Role</th>
         <th scope="col">Uploaded</th>
         <th scope="col">Name</th>
@@ -75,12 +82,12 @@ onMounted(() => {
     <tbody>
       <tr v-for="program in programs">
         <td>{{ problems[program.problem].name }}</td>
-        <td v-if="store.user.isAdmin">{{ teams[program.team].name }}</td>
+        <td v-if="store.user.is_admin">{{ teams[program.team].name }}</td>
         <td>{{ program.role }}</td>
-        <td>{{ program.creationTime.toLocaleString() }}</td>
+        <td>{{ program.creation_time.toLocaleString() }}</td>
         <td>{{ program.name }}</td>
         <td>
-          <a role="button" class="btn btn-primary btn-sm" :href="program.file.location" title="Download program file">Download <i class="bi bi-download ms-1"></i></a>
+          <a role="button" class="btn btn-primary btn-sm" :href="(program.file as DbFileLoc).location" title="Download program file">Download <i class="bi bi-download ms-1"></i></a>
         </td>
       </tr>
     </tbody>

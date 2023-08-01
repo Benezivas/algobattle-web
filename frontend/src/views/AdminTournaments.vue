@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { tournamentApi } from '@/main';
+import { TournamentService } from "../../typescript_client";
 import { Modal } from 'bootstrap';
-import type { Tournament } from 'typescript_client';
 import { onMounted, ref } from 'vue';
+import type { Tournament } from '../types';
 
 
 const tournaments = ref<{[key: string]: Tournament}>({})
 
 
 onMounted(async () => {
-  tournaments.value = await tournamentApi.allTournaments()
+  tournaments.value = await TournamentService.allTournaments()
 })
 
 const error = ref("")
@@ -39,10 +39,10 @@ function openModal(action: string, tournament: Tournament | null) {
 async function submitEdit() {
   try {
     if (data.value.action == "create") {
-      const newTournament = await tournamentApi.createTournament({createTournament: {name: data.value.name}})
+      const newTournament = await TournamentService.createTournament({requestBody: {name: data.value.name}})
       tournaments.value[newTournament.id] = newTournament
     } else {
-      const edited = await tournamentApi.editTournament({id: data.value.id, editTournament: {name: data.value.name}})
+      const edited = await TournamentService.editTournament({id: data.value.id, requestBody: {name: data.value.name}})
       tournaments.value[edited.id] = edited
     }
     Modal.getOrCreateInstance("#tournamentModal").toggle()
@@ -55,7 +55,7 @@ async function deleteTournament() {
     data.value.confirmDelete = true
     return
   }
-  await tournamentApi.deleteTournament({id: data.value.id})
+  await TournamentService.deleteTournament({id: data.value.id})
   delete tournaments.value[data.value.id]
   Modal.getOrCreateInstance("#tournamentModal").toggle()
 }

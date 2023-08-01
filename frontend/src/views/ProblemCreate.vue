@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import FileInput from '../components/FileInput.vue';
-import { tournamentApi, problemApi } from '@/main';
+import { TournamentService, ProblemService } from "../../typescript_client";
 import router from '@/router';
-import type { Tournament, Problem } from 'typescript_client';
+import type { Tournament, Problem } from '../types';
 import { computed, onMounted, ref } from 'vue';
 
 
@@ -20,8 +20,8 @@ const data = ref({
   solutionSchema: "",
   config: undefined as File | undefined,
   description: undefined as File | undefined,
-  start: undefined as Date | undefined,
-  end: undefined as Date | undefined,
+  start: undefined as string | undefined,
+  end: undefined as string | undefined,
   image: undefined as File | undefined,
   alt: "",
   shortDescription: "",
@@ -34,16 +34,16 @@ const imageUrl = computed(() => {
 })
 
 onMounted(async () => {
-  problems.value = await problemApi.allProblems()
-  tournaments.value = await tournamentApi.allTournaments()
+  problems.value = await ProblemService.allProblems({})
+  tournaments.value = await TournamentService.allTournaments()
 })
 
 async function sendFile() {
   try {
-    const problemInfo = await problemApi.verifyProblem({file: data.value.file, problemId: data.value.copyFrom})
+    const problemInfo = await ProblemService.verifyProblem({ formData: {file: data.value.file, problem_id: data.value.copyFrom}})
     data.value.name = problemInfo.name
-    data.value.problemSchema = problemInfo.problemSchema || ""
-    data.value.solutionSchema = problemInfo.solutionSchema || ""
+    data.value.problemSchema = problemInfo.problem_schema || ""
+    data.value.solutionSchema = problemInfo.solution_schema || ""
     error.value = ""
     page.value = 1
     checkName()
@@ -53,7 +53,7 @@ async function sendFile() {
 }
 async function createProblem() {
   try {
-    const location = await problemApi.createProblem(data.value)
+    const location = await ProblemService.createProblem({formData: data.value})
     router.push(location.data)
   } catch {
     error.value = "server"

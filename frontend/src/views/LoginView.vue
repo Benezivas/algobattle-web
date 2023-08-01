@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { userApi } from '@/main';
+import { UserService } from "../../typescript_client";
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
 
@@ -9,7 +9,7 @@ var msg = ref("")
 
 async function login() {
   try {
-    await userApi.login({bodyLoginApiUserLoginPost: {email: email.value, targetUrl: route.fullPath}})
+    await UserService.login({requestBody: {email: email.value, target_url: route.fullPath}})
     msg.value = "email_sent"
   } catch {
     msg.value = "error"

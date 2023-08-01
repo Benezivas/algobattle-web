@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import ProblemCard from '@/components/ProblemCard.vue';
-import { tournamentApi, problemApi, store } from '@/main';
-import type { Tournament, Problem } from 'typescript_client';
+import { store } from "../main";
+import { ProblemService, TournamentService } from "../../typescript_client";
+import type { Tournament, Problem } from '../types';
 import { computed, onMounted, ref, watch, type Ref } from 'vue';
 
 let tournaments: Ref<{
@@ -11,14 +12,14 @@ let selectedTournament: Ref<string | undefined> = ref(undefined)
 const problems: Ref<{[key: string]: Problem}> = ref({})
 
 onMounted(async () => {
-  tournaments.value = await tournamentApi.allTournaments()
-  selectedTournament.value = store.user.settings.selectedTeam?.tournament
-  problems.value = await problemApi.allProblems({tournament: selectedTournament.value})
+  tournaments.value = await TournamentService.allTournaments()
+  selectedTournament.value = store.user.settings.selected_team?.tournament
+  problems.value = await ProblemService.allProblems({tournament: selectedTournament.value})
 })
 
 watch(selectedTournament, async (newTournament: string | undefined, oldTournament: string | undefined) => {
   if (newTournament != oldTournament) {
-    problems.value = await problemApi.allProblems({tournament: newTournament})
+    problems.value = await ProblemService.allProblems({tournament: newTournament})
   }
 })
 
@@ -36,7 +37,7 @@ const future_problems = computed(() => {
     .filter(([id, problem]) => 
     inTournament(problem)
       && problem.start != null
-      && problem.start > now
+      && new Date(problem.start) > now
     ))
 })
 
@@ -44,8 +45,8 @@ const current_problems = computed(() => {
   return Object.fromEntries(Object.entries(problems.value)
     .filter(([id, problem]) =>
     inTournament(problem)
-      && (problem.start == null || problem.start <= now)
-      && (problem.end == null || problem.end > now)
+      && (problem.start == null || new Date(problem.start) <= now)
+      && (problem.end == null || new Date(problem.end) > now)
     ))
 })
 
@@ -54,13 +55,13 @@ const past_problems = computed(() => {
     .filter(([id, problem]) =>
     inTournament(problem)
       && problem.end != null
-      && problem.end < now
+      && new Date(problem.end) < now
     ))
 })
 </script>
 
 <template>
-  <template v-if="store.user.isAdmin">
+  <template v-if="store.user.is_admin">
     <div class="mb-5">
       <label for="tournament_select" class="form-label">Select tournament</label>
       <select id="tournament_select" class="form-select w-em" v-model="selectedTournament">

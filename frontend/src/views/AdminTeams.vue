@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import HoverBadgeVue from '@/components/HoverBadge.vue';
-import { tournamentApi, teamApi, userApi, type ModelDict } from '@/main';
 import { Modal } from 'bootstrap';
-import type { Team, Tournament, User } from 'typescript_client';
+import { TournamentService, TeamService, UserService } from "../../typescript_client";
+import type { Team, Tournament, User, ModelDict } from '../types';
 import { computed, onMounted, ref, toRaw } from 'vue';
 
 
@@ -22,13 +22,13 @@ const isFiltered = computed(() => {
 })
 let modal: Modal
 onMounted(async () => {
-  tournaments.value = await tournamentApi.allTournaments()
+  tournaments.value = await TournamentService.allTournaments()
   modal = Modal.getOrCreateInstance("#teamModal")
   search()
 })
 
 async function search(page: number = 1) {
-  const result = await teamApi.searchTeam({
+  const result = await TeamService.searchTeam({
     name: searchData.value.name || undefined,
     tournament: searchData.value.tournament || undefined,
     limit: searchData.value.limit,
@@ -37,7 +37,7 @@ async function search(page: number = 1) {
   teams.value = result.teams
   users.value = result.users
   currPage.value = result.page
-  maxPage.value = result.maxPage
+  maxPage.value = result.max_page
 }
 async function clearSearch() {
   searchData.value = {
@@ -78,7 +78,7 @@ function openModal(team: Team | undefined) {
   modal.show()
 }
 async function userSearch() {
-  const result = await userApi.searchUsers({
+  const result = await UserService.searchUsers({
     name: userSearchData.value.name || undefined,
     email: userSearchData.value.email || undefined,
     limit: editData.value.members.length + 5,
@@ -98,20 +98,20 @@ async function sendData() {
       const oldMembers = teams.value[editData.value.id].members
       const newMembers = editData.value.members.filter(id => !oldMembers.includes(id))
       const deletedMembers = oldMembers.filter(id => !editData.value.members.includes(id))
-      teams.value[editData.value.id] = await teamApi.editTeam({
+      teams.value[editData.value.id] = await TeamService.editTeam({
         id: editData.value.id,
-        editTeam: {
+        requestBody: {
           name: editData.value.name,
           tournament: editData.value.tournament,
           members: Object.fromEntries(newMembers.map(id => [id, "add"]).concat(deletedMembers.map(id => [id, "remove"])))
         }
       })
     } else {
-      const newTeam = await teamApi.createTeam({
-        createTeam: {
+      const newTeam = await TeamService.createTeam({
+        requestBody: {
           name: editData.value.name,
           tournament: editData.value.tournament,
-          members: new Set(editData.value.members),
+          members: editData.value.members,
         }
       })
       teams.value[newTeam.id] = newTeam
@@ -128,12 +128,12 @@ async function deleteTeam() {
   } else {
     confirmDelete.value = false
   }
-  await teamApi.deleteTeam({id: editData.value.id})
+  await TeamService.deleteTeam({id: editData.value.id})
   delete teams.value[editData.value.id]
   modal.hide()
 }
 async function checkName() {
-  const result = await teamApi.searchTeam({
+  const result = await TeamService.searchTeam({
     name: editData.value.name,
     tournament: editData.value.tournament,
     limit: 1,

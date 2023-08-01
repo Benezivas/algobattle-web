@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Modal } from "bootstrap"
-import { tournamentApi, docsApi, problemApi, store, teamApi, type InputFileEvent } from '@/main';
-import type { Tournament, Documentation, DbFile, Problem, Team } from 'typescript_client';
+import { store } from "../main"
+import { TournamentService, DocsService, ProblemService, TeamService, ApiError } from "../../typescript_client";
+import type { Tournament, Documentation, DbFile, Problem, Team, InputFileEvent, DbFileLoc } from '../types';
 import { computed, onMounted, ref, type Ref } from 'vue';
 import { useRoute } from 'vue-router';
 import router from "@/router";
@@ -17,14 +18,14 @@ interface ProblemEdit {
   tournament: string,
   file: DbFileEdit,
   config: DbFileEdit,
-  start?: Date,
-  end?: Date,
+  start?: string | null,
+  end?: string | null,
   description: DbFileEdit,
-  shortDescription: string,
+  short_description: string,
   image: DbFileEdit,
   alt?: string,
-  problemSchema?: string,
-  solutionSchema?: string,
+  problem_schema?: string,
+  solution_schema?: string,
   colour: string,
 }
 
@@ -32,9 +33,9 @@ const problem = ref({} as Problem)
 const tournaments: Ref<{
     [key: string]: Tournament
 }> = ref({})
-const selectedTeam: Ref<Team | undefined> = ref(undefined)
+const selectedTeam: Ref<Team | null> = ref(null)
 const docs: Ref<{[key: string]: Documentation}> = ref({})
-const description: Ref<string | undefined> = ref(undefined)
+const description: Ref<string | null> = ref(null)
 const teams: Ref<{[key: string]: Team}> = ref({})
 
 const route = useRoute()
@@ -52,21 +53,21 @@ const now = new Date()
 
 
 onMounted(async () => {
-  selectedTeam.value = store.user.settings.selectedTeam
+  selectedTeam.value = store.user.settings.selected_team
   try {
-    const problemInfo = await problemApi.problemByName({
+    const problemInfo = await ProblemService.problemByName({
       problemName: route.params.problemName as string,
       tournamentName: route.params.tournamentName as string,
     })
     problem.value = problemInfo.problem
-    if (store.user.isAdmin) {
-      tournaments.value = await tournamentApi.allTournaments()
+    if (store.user.is_admin) {
+      tournaments.value = await TournamentService.allTournaments()
     } else {
       tournaments.value = {[problemInfo.tournament.id]: problemInfo.tournament}
     }
-    docs.value = await docsApi.getDocs({getDocs: {problem: problem.value.id}})
-    description.value = (await problemApi.problemDesc({id: problem.value.id})).data
-    teams.value = await teamApi.getTeams({requestBody: Object.values(docs.value).map((doc) => doc.team)})
+    docs.value = await DocsService.getDocs({requestBody: {problem: problem.value.id}})
+    description.value = (await ProblemService.problemDesc({id: problem.value.id})).data
+    teams.value = await TeamService.getTeams({requestBody: Object.values(docs.value).map((doc) => doc.team)})
     if (selectedTeam.value) {
       teams.value[selectedTeam.value.id] = selectedTeam.value
     }
@@ -94,9 +95,9 @@ async function openDocEdit(docId: string | null) {
     editDoc.problem = docs.value[docId].problem
     editDoc.team = docs.value[docId].team
     editDoc.docId.value = docId
-  } else if (store.user.settings.selectedTeam) {
+  } else if (store.user.settings.selected_team) {
     editDoc.problem = problem.value.id
-    editDoc.team = store.user.settings.selectedTeam.id
+    editDoc.team = store.user.settings.selected_team.id
     editDoc.docId.value = ownDoc.value?.id
   } else {
     return
@@ -113,15 +114,15 @@ async function uploadDoc() {
     return
   }
   var newDoc = null
-  if (store.user.isAdmin) {
-    newDoc = await docsApi.uploadDocs({problemId: editDoc.problem, teamId: editDoc.team, file: editDoc.newFile})
+  if (store.user.is_admin) {
+    newDoc = await DocsService.uploadDocs({problemId: editDoc.problem, teamId: editDoc.team, formData: { file: editDoc.newFile } })
   } else {
-    newDoc = await docsApi.uploadOwnDocs({problemId: editDoc.problem, file: editDoc.newFile})
+    newDoc = await DocsService.uploadOwnDocs({problemId: editDoc.problem, formData: { file: editDoc.newFile } })
   }
+  docs.value[newDoc.id] = newDoc
   if (editDoc.fileSelect.value) {
     editDoc.fileSelect.value.value = ""
   }
-  docs.value[newDoc.id] = newDoc
   Modal.getOrCreateInstance("#docModal").hide()
 }
 async function removeDoc() {
@@ -132,10 +133,10 @@ async function removeDoc() {
     editDoc.confirmDelete.value = true
     return
   }
-  if (store.user.isAdmin) {
-    docsApi.deleteAdminDocs({teamId: editDoc.team, problemId: editDoc.problem})
+  if (store.user.is_admin) {
+    DocsService.deleteAdminDocs({teamId: editDoc.team, problemId: editDoc.problem})
   } else {
-    docsApi.deleteOwnDocs({problemId: editDoc.problem})
+    DocsService.deleteOwnDocs({problemId: editDoc.problem})
   }
   editDoc.confirmDelete.value = false
   if (editDoc.fileSelect.value) {
@@ -145,7 +146,10 @@ async function removeDoc() {
   Modal.getOrCreateInstance("#docModal").hide()
 }
 function docEditable() {
-  return selectedTeam.value?.tournament === problem.value.tournament && (store.user.isAdmin || !problem.value.end || problem.value.end >= now)
+  return (
+    selectedTeam.value?.tournament === problem.value.tournament
+    && (store.user.is_admin || !problem.value.end || new Date(problem.value.end) >= now)
+  )
 }
 
 let editProblem = ref(createProblemEdit(problem.value))
@@ -153,11 +157,13 @@ let confirmDeleteProblem = ref(false)
 function createProblemEdit(problem: Problem): ProblemEdit {
   return {
     ...problem,
-    file: {...problem.file},
-    config: {...problem.config},
-    description: problem.description ? {...problem.description} : {},
-    image: problem.image ? {...problem.image} : {},
-    alt: problem.image?.altText
+    problem_schema: problem.problem_schema || "",
+    solution_schema: problem.solution_schema || "",
+    file: {location: (problem.file as DbFileLoc).location},
+    config: {location: (problem.config as DbFileLoc).location},
+    description: problem.description ? {location: (problem.description as DbFileLoc).location} : {},
+    image: problem.image ? {location: (problem.image as DbFileLoc)?.location} : {},
+    alt: problem.image?.alt_text
   }
 }
 function openEdit() {
@@ -169,17 +175,17 @@ function openEdit() {
 async function submitEdit() {
   //try {
     const prob = editProblem.value
-    problem.value = await problemApi.editProblem({
+    problem.value = await ProblemService.editProblem({
       id: problem.value.id,
-      problemEdit: {
+      requestBody: {
         name: prob.name,
         tournament: prob.tournament,
         start: prob.start,
         end: prob.end,
-        shortDescription: prob.shortDescription,
+        short_description: prob.short_description,
         alt: prob.alt,
-        problemSchema: prob.problemSchema,
-        solutionSchema: prob.solutionSchema,
+        problem_schema: prob.problem_schema,
+        solution_schema: prob.solution_schema,
         colour: prob.colour,
       }
     })
@@ -192,10 +198,12 @@ async function submitEdit() {
     try {
       const editFile = editProblem.value[key] as DbFileEdit
       if (editFile.edit !== undefined) {
-        problem.value = await problemApi.editProblemFile({
+        problem.value = await ProblemService.editProblemFile({
           id: problem.value.id,
-          name: key as any,
-          file: editFile.edit === null ? undefined : editFile.edit,
+          formData: {
+            name: key as any,
+            file: editFile.edit === null ? undefined : editFile.edit,
+          }
         })
       }
     } catch {
@@ -211,7 +219,7 @@ async function checkName() {
     return
   }
   try {
-    const prob = await problemApi.problemByName({tournamentName: tournament.name, problemName: editProblem.value.name})
+    const prob = await ProblemService.problemByName({tournamentName: tournament.name, problemName: editProblem.value.name})
     if (prob.problem.id != problem.value.id) {
       error.value = "name"
       return
@@ -224,7 +232,7 @@ async function deleteProblem() {
     confirmDeleteProblem.value = true
     return
   }
-  problemApi.deleteProblem({id: problem.value.id})
+  ProblemService.deleteProblem({id: problem.value.id})
   router.push("problems")
 }
 
@@ -234,19 +242,19 @@ async function deleteProblem() {
   <template v-if="error != 'problem'">
     <nav id="navbar" class="navbar bg-body-tertiary px-3 mb-3">
       <a class="navbar-brand" href="#">
-        {{problem.name + (store.user.isAdmin ? ` (${tournaments[problem.tournament]?.name})`: "")}}
+        {{problem.name + (store.user.is_admin ? ` (${tournaments[problem.tournament]?.name})`: "")}}
       </a>
       <ul class="nav nav-pills">
         <li v-if="problem.description" class="nav-item">
           <a class="nav-link" href="#description">Description</a>
         </li>
-        <li v-if="store.user.isAdmin || ownDoc" class="nav-item">
+        <li v-if="store.user.is_admin || ownDoc" class="nav-item">
           <a class="nav-link" href="#documentation">Documentation</a>
         </li>
-        <li v-if="problem.problemSchema" class="nav-item">
+        <li v-if="problem.problem_schema" class="nav-item">
           <a class="nav-link" href="#problem_schema">Problem schema</a>
         </li>
-        <li v-if="problem.solutionSchema" class="nav-item">
+        <li v-if="problem.solution_schema" class="nav-item">
           <a class="nav-link" href="#solution_schema">Solution schema</a>
         </li>
       </ul>
@@ -254,19 +262,19 @@ async function deleteProblem() {
     <div data-bs-spy="scroll" data-bs-target="#navbar" data-bs-root-margin="0px 0px -40%" data-bs-smooth-scroll="true" class="bg-body-tertiary p-3 rounded-2" tabindex="0">
       <div class="row">
         <div class="col-md-9">
-          <img v-if="problem.image" :src="problem.image.location" :alt="problem.image.altText" class="object-fit-cover border rounded mb-4" style="width: 100%;">
+          <img v-if="problem.image" :src="(problem.image as DbFileLoc).location" :alt="problem.image.alt_text" class="object-fit-cover border rounded mb-4" style="width: 100%;">
         </div>
         <div class="col-md-3">
           <ul class="list-group list-group-flush bg-body-tertiary w-em">
             <li class="list-group-item bg-body-tertiary">{{problem.name}}</li>
-            <li v-if="store.user.isAdmin" class="list-group-item bg-body-tertiary">{{tournaments[problem.tournament]?.name}}</li>
-            <li v-if="problem.shortDescription" class="list-group-item bg-body-tertiary">{{ problem.shortDescription }}</li>
+            <li v-if="store.user.is_admin" class="list-group-item bg-body-tertiary">{{tournaments[problem.tournament]?.name}}</li>
+            <li v-if="problem.short_description" class="list-group-item bg-body-tertiary">{{ problem.short_description }}</li>
             <li v-if="problem.start" class="list-group-item bg-body-tertiary">Start: {{problem.start.toLocaleString()}}</li>
             <li v-if="problem.end" class="list-group-item bg-body-tertiary">End: {{problem.end.toLocaleString()}}</li>
             <li class="list-group-item bg-body-tertiary">
               <a role="button" class="btn btn-primary btn-sm" :href="`/api/problem/${problem.id}/download_all`" title="Download problem files">Download problem files <i class="bi bi-download ms-1"></i></a>
             </li>
-            <li v-if="store.user.isAdmin" class="list-group-item bg-body-tertiary">
+            <li v-if="store.user.is_admin" class="list-group-item bg-body-tertiary">
               <button role="button" class="btn btn-warning btn-sm" title="Edit problem" @click="openEdit">Edit problem<i class="bi bi-pencil ms-1"></i></button>
             </li>
             <li v-if="docEditable()" class="list-group-item bg-body-tertiary">
@@ -277,12 +285,12 @@ async function deleteProblem() {
       </div>
       <template v-if="problem.description">
         <h4 id="description" class="mt-5">Description</h4>
-        <a v-if="description == '__DOWNLOAD_BUTTON__'" role="button" class="btn btn-primary btn-sm" :href="problem.description.location" title="Download file">Download description file <i class="bi bi-download ms-1"></i></a>
+        <a v-if="description == '__DOWNLOAD_BUTTON__'" role="button" class="btn btn-primary btn-sm" :href="(problem.description as DbFileLoc).location" title="Download file">Download description file <i class="bi bi-download ms-1"></i></a>
         <div v-else v-html="description"></div>
       </template>
-      <template v-if="ownDoc || store.user.isAdmin">
+      <template v-if="ownDoc || store.user.is_admin">
         <h4 id="documentation" class="mt-5">Documentation</h4>
-        <a v-if="ownDoc && !store.user.isAdmin" role="button" class="btn btn-primary btn-sm mb-3" :href="ownDoc.file.location" title="Download documentation">Download documentation<i class="bi bi-download ms-1"></i></a>
+        <a v-if="ownDoc && !store.user.is_admin" role="button" class="btn btn-primary btn-sm mb-3" :href="(ownDoc.file as DbFileLoc).location" title="Download documentation">Download documentation<i class="bi bi-download ms-1"></i></a>
         <table v-else class="table">
           <thead>
             <tr>
@@ -294,20 +302,20 @@ async function deleteProblem() {
             <tr v-for="(doc, id) in docs">
               <td>{{ teams[doc.team]?.name }}</td>
               <td>
-                <a class="btn btn-primary btn-sm" :href="doc.file.location" title="Download file">Download <i class="bi bi-download ms-1"></i></a>
+                <a class="btn btn-primary btn-sm" :href="(doc.file as DbFileLoc).location" title="Download file">Download <i class="bi bi-download ms-1"></i></a>
                 <button role="button" class="btn btn-warning btn-sm ms-2" title="Edit" @click="(e) => openDocEdit(id as string)">Edit <i class="bi bi-pencil ms-1"></i></button>
               </td>
             </tr>
           </tbody>
         </table>
       </template>
-      <template v-if="problem.problemSchema">
+      <template v-if="problem.problem_schema">
         <h4 id="problem_schema" class="mt-5">Problem schema</h4>
-        <pre><code>{{problem.problemSchema}}</code></pre>
+        <pre><code>{{problem.problem_schema}}</code></pre>
       </template>
-      <template v-if="problem.solutionSchema">
+      <template v-if="problem.solution_schema">
         <h4 id="solution_schema" class="mt-5">Solution schema</h4>
-        <pre><code>{{problem.solutionSchema}}</code></pre>
+        <pre><code>{{problem.solution_schema}}</code></pre>
       </template>
     </div>
   </template>
@@ -363,7 +371,7 @@ async function deleteProblem() {
             </div>
             <div class="mb-3">
               <label for="prob_schema" class="form-label">Problem schema</label>
-              <textarea class="form-control" name="problem_schema" id="prob_schema" rows="10" v-model="editProblem.problemSchema"></textarea>
+              <textarea class="form-control" name="problem_schema" id="prob_schema" rows="10" v-model="editProblem.problem_schema"></textarea>
             </div>
 
           </div>
@@ -381,7 +389,7 @@ async function deleteProblem() {
             </div>
             <div class="mb-3">
               <label for="sol_schema" class="form-label">Solution schema</label>
-              <textarea class="form-control" name="solution_schema" id="sol_schema" rows="10" v-model="editProblem.solutionSchema"></textarea>
+              <textarea class="form-control" name="solution_schema" id="sol_schema" rows="10" v-model="editProblem.solution_schema"></textarea>
             </div>
 
           </div>
@@ -411,7 +419,7 @@ async function deleteProblem() {
           <div class="col-md-6">
             <div class="mb-3">
               <label for="short_desc" class="form-label">Short description</label>
-              <textarea class="form-control w-em" name="short_description" id="short_desc" rows="5" v-model="editProblem.shortDescription"></textarea>
+              <textarea class="form-control w-em" name="short_description" id="short_desc" rows="5" v-model="editProblem.short_description"></textarea>
             </div>
           </div>
           <div class="mb-3">

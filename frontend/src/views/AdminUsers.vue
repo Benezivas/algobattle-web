@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import HoverBadgeVue from '@/components/HoverBadge.vue';
-import { tournamentApi, teamApi, userApi, type ModelDict } from '@/main'
+import { TournamentService, TeamService, UserService } from "../../typescript_client";
 import { Modal } from 'bootstrap'
-import type { Team, User, Tournament } from 'typescript_client'
+import type { Team, User, Tournament, ModelDict } from '../types'
 import { computed, onMounted, ref } from 'vue'
 
 
@@ -30,12 +30,12 @@ const isFiltered = computed(() => {
   || filterData.value.limit != 25
 })
 onMounted(async () => {
-  tournaments.value = await tournamentApi.allTournaments()
+  tournaments.value = await TournamentService.allTournaments()
   modal = Modal.getOrCreateInstance("#userModal")
   search()
 })
 async function search(page: number = 1) {
-  const result = await userApi.searchUsers({
+  const result = await UserService.searchUsers({
     name: filterData.value.name || undefined,
     tournament: filterData.value.tournament || undefined,
     limit: filterData.value.limit,
@@ -44,7 +44,7 @@ async function search(page: number = 1) {
   teams.value = result.teams
   users.value = result.users
   currPage.value = result.page
-  maxPage.value = result.maxPage
+  maxPage.value = result.max_page
 }
 async function clearSearch() {
   filterData.value = {
@@ -72,7 +72,7 @@ function emptyUser(): User {
     id: "",
     name: "",
     email: "",
-    isAdmin: false,
+    is_admin: false,
     teams: [],
   }
 }
@@ -93,7 +93,7 @@ function openModal(user: User | undefined) {
   modal.show()
 }
 async function searchTeam() {
-  const result = await teamApi.searchTeam({
+  const result = await TeamService.searchTeam({
     name: teamSearchData.value.name || undefined,
     tournament: teamSearchData.value.tournament || undefined,
     limit: editData.value.teams.length + 5,
@@ -110,21 +110,21 @@ async function sendData() {
       const oldTeams = teams.value[editData.value.id].members
       const newTeams = editData.value.teams.filter(id => !oldTeams.includes(id))
       const removedTeams = oldTeams.filter(id => !editData.value.teams.includes(id))
-      users.value[editData.value.id] = await userApi.editUser({
+      users.value[editData.value.id] = await UserService.editUser({
         id: editData.value.id,
-        editUser: {
+        requestBody: {
           name: editData.value.name,
           email: editData.value.email,
-          isAdmin: editData.value.isAdmin,
+          is_admin: editData.value.is_admin,
           teams: Object.fromEntries(newTeams.map(id => [id, "add"]).concat(removedTeams.map(id => [id, "remove"])))
         }
       })
     } else {
-      const newUser = await userApi.createUser({
-        createUser: {
+      const newUser = await UserService.createUser({
+        requestBody: {
           name: editData.value.name,
           email: editData.value.email,
-          isAdmin: editData.value.isAdmin,
+          is_admin: editData.value.is_admin,
           teams: editData.value.teams,
         }
       })
@@ -142,12 +142,12 @@ async function deleteUser() {
   } else {
     confirmDelete.value = false
   }
-  await userApi.deleteUser({id: editData.value.id})
+  await UserService.deleteUser({id: editData.value.id})
   delete teams.value[editData.value.id]
   modal.hide()
 }
 async function checkEmail() {
-  const result = await userApi.searchUsers({
+  const result = await UserService.searchUsers({
     email: editData.value.email,
     limit: 1,
     exactSearch: true,
@@ -175,7 +175,7 @@ async function checkEmail() {
       <tr v-for="user in users" :class="{'table-info': user.id == '{{user.id}}'}">
         <td>
           {{ user.name }}
-          <i v-if="user.isAdmin" class="bi bi-patch-check-fill text-success ms-1" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
+          <i v-if="user.is_admin" class="bi bi-patch-check-fill text-success ms-1" data-bs-toggle="tooltip" data-bs-placement="right" title="Admin"></i>
         </td>
         <td>{{ user.email }}</td>
         <td>{{ user.teams.map(t => teamName(teams[t])).join(", ") }}</td>
@@ -274,7 +274,7 @@ async function checkEmail() {
           <label for="name" class="form-label">Name</label>
           <div class="input-group w-em input-group-sm mb-3" name="name">
             <input class="form-control w-em" type="text" v-model="editData.name" required>
-            <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="editData.isAdmin">
+            <input type="checkbox" class="btn-check" id="set-admin" name="is_admin" v-model="editData.is_admin">
             <label class="btn btn-outline-success btn-sm" for="set-admin" data-bs-toggle="tooltip" title="Admin"><i class="bi bi-patch-check"></i></label>
           </div>
           <label for="email" class="form-label">Email</label>

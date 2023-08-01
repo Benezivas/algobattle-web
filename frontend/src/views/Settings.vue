@@ -1,5 +1,7 @@
-<script setup lang="ts">import { tournamentApi, store, teamApi, userApi } from '@/main';
-import type { Team, Tournament } from 'typescript_client';
+<script setup lang="ts">
+import { store } from '@/main';
+import { TeamService, TournamentService, UserService } from "../../typescript_client";
+import type { Team, Tournament } from '../types';
 import { onMounted, ref } from 'vue';
 
 
@@ -7,7 +9,7 @@ const userEdit = ref({
   name: store.user.name,
   email: store.user.email,
   settings: {
-    selectedTeam: store.user.settings.selectedTeam?.id,
+    selectedTeam: store.user.settings.selected_team?.id,
   },
 })
 const teams = ref<{[key: string]: Team}>({})
@@ -15,14 +17,14 @@ const tournaments = ref<{[key: string]: Tournament}>({})
 const error = ref("")
 
 onMounted(async () => {
-  teams.value = await teamApi.getTeams({requestBody: store.user.teams})
-  tournaments.value = await tournamentApi.getTournaments({requestBody: Object.values(teams.value).map(t => t.tournament)})
+  teams.value = await TeamService.getTeams({requestBody: store.user.teams})
+  tournaments.value = await TournamentService.getTournaments({requestBody: Object.values(teams.value).map(t => t.tournament)})
 })
 
 async function saveEdit() {
-  const newUser = await userApi.editSelf({editSelf: {name: userEdit.value.name, email: userEdit.value.email}})
+  const newUser = await UserService.editSelf({requestBody: {name: userEdit.value.name, email: userEdit.value.email}})
   Object.assign(store.user, newUser)
-  store.user.settings = await userApi.editSettings({editSettings: {selectedTeam: userEdit.value.settings.selectedTeam}})
+  store.user.settings = await UserService.editSettings({requestBody: {selected_team: userEdit.value.settings.selectedTeam}})
   error.value = "success"
 }
 </script>
