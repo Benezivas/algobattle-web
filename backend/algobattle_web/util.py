@@ -88,6 +88,8 @@ class ServerConfig(BaseSchema):
 
     @classmethod
     def load(cls) -> None:
+        if hasattr(cls, "obj"):
+            return
         try:
             config_path = Path(__file__).parent / "config.toml" if environ.get("DEV") else "/algobattle/config.toml"
             with open(config_path, "rb") as f:
