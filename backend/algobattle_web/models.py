@@ -12,7 +12,7 @@ from shutil import copyfileobj, copyfile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import Table, ForeignKey, Column, select, DateTime, inspect, String, Text
+from sqlalchemy import MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
 from sqlalchemy.event import listens_for
 from sqlalchemy.sql import true as sql_true, or_, and_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
@@ -42,6 +42,14 @@ class RawBase(MappedAsDataclass, DeclarativeBase):
             datetime: DateTime,
         }
     )
+
+    metadata = MetaData(naming_convention={
+        "ix": "ix_%(column_0_label)s",
+        "uq": "uq_%(table_name)s_%(column_0_name)s",
+        "ck": "ck_%(table_name)s_`%(constraint_name)s`",
+        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+        "pk": "pk_%(table_name)s"
+    })
 
     def __init_subclass__(cls,
             init: _NoArg | bool = _NoArg.NO_ARG,
