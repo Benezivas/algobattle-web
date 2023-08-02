@@ -316,7 +316,7 @@ class User(Base, unsafe_hash=True):
     settings: Mapped["UserSettings"] = relationship(back_populates="user", init=False, cascade="all, delete")
 
     def __post_init__(self, db: Session) -> None:
-        UserSettings(db, self.id)
+        UserSettings(db, self)
         super().__post_init__(db)
 
     class Schema(Base.Schema):
@@ -397,14 +397,17 @@ class User(Base, unsafe_hash=True):
 
 class UserSettings(Base, unsafe_hash=True):
     __tablename__ = "usersettings"  # type: ignore
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
-    selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), default=None)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), init=False)
+    selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), init=False)
+    tournament_id: Mapped[UUID | None] = mapped_column(ForeignKey("tournaments.id"), init=False)
 
-    user: Mapped[User] = relationship(back_populates="settings", lazy="joined", init=False)
-    selected_team: Mapped["Team | None"] = relationship(lazy="joined", init=False)
+    user: Mapped[User] = relationship(back_populates="settings", lazy="joined")
+    selected_team: Mapped["Team | None"] = relationship(lazy="joined", default=None)
+    tournament: "Mapped[Tournament | None]" = relationship(default=None)
 
     class Schema(Base.Schema):
         selected_team: "Team.Schema | None"
+        tournament: "Tournament.Schema | None"
 
 
 class Tournament(Base, unsafe_hash=True):
