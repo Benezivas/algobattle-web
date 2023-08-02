@@ -33,3 +33,6 @@ algobattle_runner = "algobattle_web.battle:main"
 
 [tool.setuptools]
 packages = ["algobattle_web"]
+
+[tool.setuptools.package-data]
+"algobattle_web.alembic" = ["*"]
