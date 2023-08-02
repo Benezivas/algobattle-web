@@ -27,6 +27,11 @@ dependencies = [
     "alembic",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "watchfiles",
+]
+
 [project.scripts]
 algobattle_api = "algobattle_web.app:create_openapi"
 algobattle_runner = "algobattle_web.battle:main"
