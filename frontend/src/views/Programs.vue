@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ProgramService } from "../../typescript_client";
+import { ProgramService, Role } from "../../typescript_client";
 import { store } from "../main";
 import { Modal } from "bootstrap";
 import type { Problem, Program, Team, ModelDict, InputFileEvent, DbFileLoc } from "../types";
-import type { UploadProgramRequest } from "typescript_client/apis/ProgramApi";
 import { onMounted, ref } from "vue";
 
 const programs = ref<ModelDict<Program>>({});
@@ -29,7 +28,12 @@ async function search(
   maxPage.value = ret.max_page;
 }
 
-const newProgData = ref<Partial<UploadProgramRequest>>({
+const newProgData = ref<{
+  name?: string,
+  role?: Role,
+  problem?: string,
+  file?: Blob,
+}>({
   name: "",
 });
 let modal: Modal;
