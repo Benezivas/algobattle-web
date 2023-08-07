@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import FileInput from '../components/FileInput.vue';
-import { TournamentService, ProblemService } from "../../typescript_client";
+import { TournamentService, ProblemService } from "@client";
 import router from '@/router';
-import type { Tournament, Problem } from '../../typescript_client';
+import type { Tournament, Problem } from "@client";
 import { computed, onMounted, ref } from 'vue';
 
 

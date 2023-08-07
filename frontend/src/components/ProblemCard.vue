@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Tournament, Problem } from '../../typescript_client';
+import type { Tournament, Problem } from "@client";
 import type { DbFileLoc } from '@/main';
 import { computed } from 'vue';
 

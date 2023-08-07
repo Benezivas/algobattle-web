@@ -5,7 +5,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@client": ["./typescript_client"],
     },
     "lib": [
         "es2019",

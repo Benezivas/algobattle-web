@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { store, type ModelDict } from "@/main";
-import { MatchService, TournamentService, ProblemService } from "../../typescript_client";
+import { MatchService, TournamentService, ProblemService } from "@client";
 import { Modal } from "bootstrap";
-import type { ScheduledMatch, Problem, Tournament } from "../../typescript_client";
+import type { ScheduledMatch, Problem, Tournament } from "@client";
 import { onMounted, ref, toRaw } from "vue";
 
 let selectedTournament = ref<string>("");

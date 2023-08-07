@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { TournamentService } from "../../typescript_client";
+import { TournamentService } from "@client";
 import { Modal } from 'bootstrap';
 import { onMounted, ref } from 'vue';
-import type { Tournament } from '../../typescript_client';
+import type { Tournament } from "@client";
 
 
 const tournaments = ref<{[key: string]: Tournament}>({})

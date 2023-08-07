@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { UserService } from "../../typescript_client";
+import { UserService } from "@client";
 import { ref } from 'vue';
 import { useRoute } from 'vue-router';
 
