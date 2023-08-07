@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { store } from '@/main';
 import { TeamService, TournamentService, UserService } from "../../typescript_client";
-import type { Team, Tournament } from '../types';
+import type { Team, Tournament } from '../../typescript_client';
 import { onMounted, ref } from 'vue';
 
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import HoverBadgeVue from '@/components/HoverBadge.vue';
-import { TournamentService, TeamService, UserService } from "../../typescript_client";
+import { TournamentService, TeamService, UserService, type Team, type User, type Tournament } from "../../typescript_client";
 import { Modal } from 'bootstrap'
-import type { Team, User, Tournament, ModelDict } from '../types'
+import type { ModelDict } from '@/main';
 import { computed, onMounted, ref } from 'vue'
 
 

@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
 from email.message import EmailMessage
+from enum import Enum
 from pathlib import Path
 from smtplib import SMTP
 import tomllib
@@ -168,3 +169,11 @@ def guess_mimetype(info: str | Path) -> str:
 class Wrapped(BaseSchema, Generic[T]):
     """Wraps a value in a schema to force json encoding."""
     data: T
+
+
+class MatchStatus(Enum):
+    """Possible status of a match."""
+
+    complete = "complete"
+    failed = "failed"
+    running = "running"

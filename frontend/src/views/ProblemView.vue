@@ -2,7 +2,7 @@
 import ProblemCard from '@/components/ProblemCard.vue';
 import { store } from "../main";
 import { ProblemService, TournamentService } from "../../typescript_client";
-import type { Tournament, Problem } from '../types';
+import type { Tournament, Problem } from '../../typescript_client';
 import { computed, onMounted, ref, watch, type Ref } from 'vue';
 
 let tournaments: Ref<{

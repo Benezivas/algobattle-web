@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { DbFile } from '../types';
 import { ref } from 'vue';
 
 interface DbFileEdit {

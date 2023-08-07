@@ -1,14 +1,12 @@
 "Database models"
-from abc import ABC
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
-from enum import Enum
 from typing import IO, Callable, ClassVar, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, Sequence
 from uuid import UUID, uuid4
 from pathlib import Path
-from urllib.parse import quote as urlencode
 from shutil import copyfileobj, copyfile
+from algobattle_web import schemas
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
@@ -21,11 +19,9 @@ from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.base import _NoArg
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
-from pydantic import computed_field, field_validator
 
 from algobattle.docker_util import Role as ProgramRole
-from algobattle_web.util import BaseSchema, ObjID, PermissionExcpetion, guess_mimetype, ServerConfig, SessionLocal
-from pydantic_extra_types.color import Color
+from algobattle_web.util import BaseSchema, MatchStatus, PermissionExcpetion, guess_mimetype, ServerConfig, SessionLocal
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
@@ -51,6 +47,8 @@ class RawBase(MappedAsDataclass, DeclarativeBase):
         "pk": "pk_%(table_name)s"
     })
 
+    Schema: ClassVar[type[BaseSchema]]
+
     def __init_subclass__(cls,
             init: _NoArg | bool = _NoArg.NO_ARG,
             repr: _NoArg | bool = _NoArg.NO_ARG,
@@ -66,7 +64,10 @@ class RawBase(MappedAsDataclass, DeclarativeBase):
 
 
 class File(RawBase, init=False):
+    """A file that is stored on disk with metadata in the database."""
+
     __tablename__ = "files"
+    Schema = schemas.DbFile
 
     id: Mapped[ID] = mapped_column(primary_key=True)
     filename: Mapped[str128]
@@ -179,19 +180,6 @@ class File(RawBase, init=False):
         """Opens the underlying file object."""
         return open(self.path, mode)
 
-    class Schema(BaseSchema, ABC):
-        id: ID
-        filename: str
-        media_type: str
-        timestamp: datetime
-        alt_text: str
-
-        @computed_field
-        @property
-        def location(self) -> str:
-            return f"{ServerConfig.obj.backend_base_url}/api/files/{urlencode(str(self.id))}"
-    Schema.__name__ = "DbFile"
-
 
 @listens_for(File, "after_insert")
 def insert_file(_mapper, _connection, target: File):
@@ -225,24 +213,6 @@ class BaseNoID(RawBase):
 
     def __post_init__(self, db: Session) -> None:
         db.add(self)
-
-    _children: "ClassVar[list[type[BaseNoID]]]" = []
-
-    def __init_subclass__(
-            cls,
-            init: _NoArg | bool = _NoArg.NO_ARG,
-            repr: _NoArg | bool = _NoArg.NO_ARG,
-            eq: _NoArg | bool = _NoArg.NO_ARG,
-            order: _NoArg | bool = _NoArg.NO_ARG,
-            unsafe_hash: _NoArg | bool = _NoArg.NO_ARG,
-            match_args: _NoArg | bool = _NoArg.NO_ARG,
-            kw_only: _NoArg | bool = _NoArg.NO_ARG
-        ) -> None:
-        BaseNoID._children.append(cls)
-        return super().__init_subclass__(init, repr, eq, order, unsafe_hash, match_args, kw_only)
-
-    class Schema(BaseSchema, ABC):
-        pass
 
     @classmethod
     @property
@@ -287,11 +257,13 @@ class BaseNoID(RawBase):
 
 
 class Base(BaseNoID, unsafe_hash=True):
+    """Base class of ORM objects."""
+
     __abstract__ = True
+    Schema = schemas.Base
+
     id: Mapped[ID] = mapped_column(default_factory=uuid4, primary_key=True, init=False, autoincrement=False)
 
-    class Schema(BaseNoID.Schema, ABC):
-        id: ID
 
 
 def encode(col: Iterable[Base]) -> dict[ID, Any]:
@@ -307,6 +279,8 @@ team_members = Table(
 
 
 class User(Base, unsafe_hash=True):
+    """A user object."""
+
     email: Mapped[str128] = mapped_column(unique=True)
     name: Mapped[str32]
     token_id: Mapped[ID] = mapped_column(init=False)
@@ -319,11 +293,7 @@ class User(Base, unsafe_hash=True):
         UserSettings(db, self)
         super().__post_init__(db)
 
-    class Schema(Base.Schema):
-        name: str
-        email: str
-        is_admin: bool
-        teams: list[ObjID]
+    Schema = schemas.User
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, User):
@@ -405,9 +375,7 @@ class UserSettings(Base, unsafe_hash=True):
     selected_team: Mapped["Team | None"] = relationship(lazy="joined", default=None)
     tournament: "Mapped[Tournament | None]" = relationship(default=None)
 
-    class Schema(Base.Schema):
-        selected_team: "Team.Schema | None"
-        tournament: "Tournament.Schema | None"
+    Schema = schemas.UserSettings
 
 
 class Tournament(Base, unsafe_hash=True):
@@ -415,8 +383,7 @@ class Tournament(Base, unsafe_hash=True):
 
     teams: Mapped[list["Team"]] = relationship(back_populates="tournament", init=False)
 
-    class Schema(Base.Schema):
-        name: str
+    Schema = schemas.Tournament
 
     @classmethod
     def get(cls, db: Session, identifier: str | ID) -> Self | None:
@@ -435,10 +402,7 @@ class Team(Base, unsafe_hash=True):
 
     __table_args__ = (UniqueConstraint("name", "tournament_id"),)
 
-    class Schema(Base.Schema):
-        name: str
-        tournament: ObjID
-        members: list[ObjID]
+    Schema = schemas.Team
 
     def __str__(self) -> str:
         return self.name
@@ -487,20 +451,7 @@ class Problem(Base, unsafe_hash=True):
     colour: Mapped[str] = mapped_column(String(7), default="#FFFFFF")
 
     __table_args__ = (UniqueConstraint("name", "tournament_id"),)
-
-    class Schema(Base.Schema):
-        name: str
-        tournament: ObjID
-        file: File.Schema
-        config: File.Schema
-        start: datetime | None = None
-        end: datetime | None = None
-        description: File.Schema | None = None
-        short_description: str
-        image: File.Schema | None = None
-        problem_schema: str | None = None
-        solution_schema: str | None = None
-        colour: Color
+    Schema = schemas.Problem
 
     def visible(self, user: User) -> bool:
         if user.is_admin or self.start is None:
@@ -525,11 +476,7 @@ class Documentation(Base, unsafe_hash=True):
     file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
 
     __table_args__ = (UniqueConstraint("team_id", "problem_id"),)
-
-    class Schema(Base.Schema):
-        team: ObjID
-        problem: ObjID
-        file: File.Schema
+    Schema = schemas.Documentation
 
     def visible(self, user: "User") -> bool:
         return user.is_admin or self.team in user.teams
@@ -564,6 +511,8 @@ class Program(Base, unsafe_hash=True):
     creation_time: Mapped[datetime] = mapped_column(default_factory=datetime.now)
     user_editable: Mapped[bool] = mapped_column(default=True)
 
+    Schema = schemas.Program
+
     @classmethod
     def visible_sql(cls, user: User) -> _ColumnExpressionArgument[bool]:
         if user.is_admin:
@@ -571,30 +520,16 @@ class Program(Base, unsafe_hash=True):
         else:
             return cls.team_id == user.settings.selected_team_id
 
-    class Schema(Base.Schema):
-        name: str
-        team: ObjID
-        role: ProgramRole
-        file: File.Schema
-        creation_time: datetime
-        problem: ObjID
-        user_editable: bool
-
 
 class ScheduledMatch(Base, unsafe_hash=True):
     __tablename__ = "scheduledmatches"  # type: ignore
+    Schema = schemas.ScheduledMatch
 
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
     name: Mapped[str32] = mapped_column(default="")
     points: Mapped[float] = mapped_column(default=100)
-
-    class Schema(Base.Schema):
-        name: str
-        time: datetime
-        problem: ObjID
-        points: float
 
 
 class ResultParticipant(BaseNoID):
@@ -608,22 +543,15 @@ class ResultParticipant(BaseNoID):
     solver: Mapped[Program | None] = relationship(foreign_keys=[solver_id])
     points: Mapped[float]
 
+    Schema = schemas.ResultParticipant
+
     def __hash__(self) -> int:
         return hash(self.team_id)
 
-    class Schema(BaseNoID.Schema):
-        generator: ObjID
-        solver: ObjID
-        points: float
-
 
 class MatchResult(Base, unsafe_hash=True):
-    class Status(Enum):
-        complete = "complete"
-        failed = "failed"
-        running = "running"
 
-    status: Mapped[Status]
+    status: Mapped[MatchStatus]
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id), init=False)
@@ -633,29 +561,7 @@ class MatchResult(Base, unsafe_hash=True):
     logs_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     logs: Mapped[File | None] = relationship(default=None, foreign_keys=logs_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
 
-
-    class Schema(Base.Schema):
-        status: "MatchResult.Status"
-        time: datetime
-        config: File.Schema | None = None
-        problem: ObjID
-        participants: dict[ID, ResultParticipant.Schema]
-        logs: File.Schema | None = None
-
-        @field_validator("participants")
-        @classmethod
-        def val_teams(cls, val):
-            if not isinstance(val, set):
-                raise ValueError
-            out = {}
-            for v in val:
-                if not isinstance(v, ResultParticipant):
-                    raise ValueError
-                out[v.team_id] = ResultParticipant.Schema.model_validate(val)
-            return out
+    Scehma = schemas.MatchResult
 
     def visible(self, user: User) -> bool:
         return user.is_admin or len(set(user.teams).intersection(p.team for p in self.participants)) != 0
-
-for cls in BaseNoID._children:
-    cls.Schema.__name__ = cls.__name__

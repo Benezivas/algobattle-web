@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ProgramService, Role } from "../../typescript_client";
-import { store } from "../main";
+import { store, type ModelDict, type InputFileEvent, type DbFileLoc } from "@/main";
 import { Modal } from "bootstrap";
-import type { Problem, Program, Team, ModelDict, InputFileEvent, DbFileLoc } from "../types";
+import type { Problem, Program, Team } from "../../typescript_client";
 import { onMounted, ref } from "vue";
 
 const programs = ref<ModelDict<Program>>({});

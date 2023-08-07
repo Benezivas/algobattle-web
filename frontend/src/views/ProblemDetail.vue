@@ -2,7 +2,8 @@
 import { Modal } from "bootstrap"
 import { store } from "../main"
 import { TournamentService, DocsService, ProblemService, TeamService, ApiError } from "../../typescript_client";
-import type { Tournament, Documentation, DbFile, Problem, Team, InputFileEvent, DbFileLoc } from '../types';
+import type { Tournament, Documentation, DbFile, Problem, Team } from '../../typescript_client';
+import type { DbFileLoc, InputFileEvent } from '@/main';
 import { computed, onMounted, ref, type Ref } from 'vue';
 import { useRoute } from 'vue-router';
 import router from "@/router";

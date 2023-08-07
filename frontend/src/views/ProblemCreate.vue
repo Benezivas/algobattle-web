@@ -2,7 +2,7 @@
 import FileInput from '../components/FileInput.vue';
 import { TournamentService, ProblemService } from "../../typescript_client";
 import router from '@/router';
-import type { Tournament, Problem } from '../types';
+import type { Tournament, Problem } from '../../typescript_client';
 import { computed, onMounted, ref } from 'vue';
 
 

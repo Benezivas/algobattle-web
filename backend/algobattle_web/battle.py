@@ -11,7 +11,7 @@ from algobattle.match import Match, BaseConfig
 from algobattle.util import Role
 from algobattle.problem import Problem
 from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, ID
-from algobattle_web.util import unwrap, ServerConfig, SessionLocal
+from algobattle_web.util import MatchStatus, unwrap, ServerConfig, SessionLocal
 
 
 def _extract_to(source: Path, target: Path) -> Path:
@@ -39,7 +39,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
 
             config.teams[team.name] = TeamInfo(generator=gen_path, solver=sol_path)
             paricipants[team.id] = ResultParticipant(db, team, gen, sol, 0)
-        db_result = MatchResult(db, MatchResult.Status.running, datetime.now(), scheduled_match.problem, set(paricipants.values()), config_file)
+        db_result = MatchResult(db, MatchStatus.running, datetime.now(), scheduled_match.problem, set(paricipants.values()), config_file)
         db.commit()
 
         result = run(Match.run, config, problem)
@@ -47,9 +47,9 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
 
         for team in db_result.participants:
             team.points = points[team.team.name]
-        db_result.status = MatchResult.Status.complete
+        db_result.status = MatchStatus.complete
         with open(folder / "result.json", "x") as f:
-            f.write(result.json())
+            f.write(result.model_dump_json())
         db_result.logs = File(folder / "result.json", move=True)
         db.commit()
 

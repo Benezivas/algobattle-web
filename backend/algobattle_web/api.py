@@ -19,9 +19,9 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from pydantic import Field
 
-
 from algobattle.util import Role
 from algobattle.problem import Problem as AlgProblem
+from algobattle_web import schemas
 from algobattle_web.models import (
     File as DbFile,
     encode,
@@ -79,8 +79,8 @@ def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
 # *******************************************************************************
 
 
-class UserWithSettings(User.Schema):
-    settings: UserSettings.Schema
+class UserWithSettings(schemas.User):
+    settings: schemas.UserSettings
 
 
 @router.get("/user/self", tags=["user"], response_model=UserWithSettings)
@@ -88,7 +88,7 @@ def get_self(*, user = Depends(curr_user)) -> User:
     return user
 
 
-@admin.get("/user", tags=["user"], response_model=list[User.Schema])
+@admin.get("/user", tags=["user"], response_model=list[schemas.User])
 def get_user(*, db = Depends(get_db), user = Depends(curr_user), users: list[ID] = Body()):
     return db.scalars(
         select(User)
@@ -99,8 +99,8 @@ def get_user(*, db = Depends(get_db), user = Depends(curr_user), users: list[ID]
 class UserSearch(BaseSchema):
     page: int
     max_page: int
-    users: dict[ID, User.Schema]
-    teams: dict[ID, Team.Schema]
+    users: dict[ID, schemas.User]
+    teams: dict[ID, schemas.Team]
 
 
 @admin.get("/user/search", tags=["user"])
@@ -265,7 +265,7 @@ def get_token(*, db = Depends(get_db), login_token: str) -> TokenData:
 
 
 @router.post("/tournament/all", tags=["tournament"])
-def all_tournaments(*, db = Depends(get_db), user = Depends(curr_user)) -> dict[ID, Tournament.Schema]:
+def all_tournaments(*, db = Depends(get_db), user = Depends(curr_user)) -> dict[ID, schemas.Tournament]:
     if user.is_admin:
         tournaments = db.scalars(
             select(Tournament)
@@ -280,7 +280,7 @@ def all_tournaments(*, db = Depends(get_db), user = Depends(curr_user)) -> dict[
 
 
 @router.post("/tournament", tags=["tournament"])
-def get_tournaments(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, Tournament.Schema]:
+def get_tournaments(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Tournament]:
     tournaments = db.scalars(
         select(Tournament)
         .where(Tournament.id.in_(ids), Tournament.visible_sql(user))
@@ -331,7 +331,7 @@ def delete_tournament(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 
 @router.post("/team", tags=["team"])
-def get_teams(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, Team.Schema]:
+def get_teams(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Team]:
     teams = db.scalars(
         select(Team)
         .where(Team.id.in_(ids), Team.visible_sql(user))
@@ -342,8 +342,8 @@ def get_teams(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID])
 class TeamSearch(BaseSchema):
     page: int
     max_page: int
-    teams: dict[ID, Team.Schema]
-    users: dict[ID, User.Schema]
+    teams: dict[ID, schemas.Team]
+    users: dict[ID, schemas.User]
 
 
 @admin.get("/team/search", tags=["team"])
@@ -461,7 +461,7 @@ def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr
 
 
 @router.post("/problem", tags=["problem"])
-def get_problems(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, Problem.Schema]:
+def get_problems(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Problem]:
     problems = db.scalars(
         select(Problem)
         .where(Problem.id.in_(ids), Problem.visible_sql(user))
@@ -470,7 +470,7 @@ def get_problems(*, db = Depends(get_db), user = Depends(curr_user), ids: list[I
 
 
 @router.post("/problem/all", tags=["problem"])
-def all_problems(*, db = Depends(get_db), user = Depends(curr_user), tournament: ID | None = None) -> dict[ID, Problem.Schema]:
+def all_problems(*, db = Depends(get_db), user = Depends(curr_user), tournament: ID | None = None) -> dict[ID, schemas.Problem]:
     filters = []
     if tournament is not None:
         filters.append(Problem.tournament_id == tournament)
@@ -482,8 +482,8 @@ def all_problems(*, db = Depends(get_db), user = Depends(curr_user), tournament:
 
 
 class ProblemInfo(BaseSchema):
-    problem: Problem.Schema
-    tournament: Tournament.Schema
+    problem: schemas.Problem
+    tournament: schemas.Tournament
 
 @router.get("/problem/{tournament_name}/{problem_name}", tags=["problem"], response_model=ProblemInfo)
 def problem_by_name(*, db = Depends(get_db), user = Depends(curr_user), tournament_name: str, problem_name: str):
@@ -522,7 +522,7 @@ def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None)
         return unwrap(db.get(Problem, problem_id))
 
 
-@admin.get("/problem/{tournament}/{problem}", tags=["problem"], response_model=Problem.Schema)
+@admin.get("/problem/{tournament}/{problem}", tags=["problem"], response_model=schemas.Problem)
 def get_problem(*, db = Depends(get_db), tournament: str, problem: str):
     return unwrap(db.scalars(select(Problem).join(Tournament).where(Problem.name == problem, Tournament.name == tournament)).unique().first())
 
@@ -774,7 +774,7 @@ class GetDocs(BaseSchema):
 
 
 @router.post("/documentation", tags=["docs"])
-def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs, page: int = 0, limit: int = 25) -> dict[ID, Documentation.Schema]:
+def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs, page: int = 0, limit: int = 25) -> dict[ID, schemas.Documentation]:
     filters = [Documentation.visible_sql(user)]
     if isinstance(data.problem, UUID):
         filters.append(Documentation.problem_id == data.problem)
@@ -803,9 +803,9 @@ def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs, 
 
 
 class ProgramResults(BaseSchema):
-    programs: dict[ID, Program.Schema]
-    teams: dict[ID, Team.Schema]
-    problems: dict[ID, Problem.Schema]
+    programs: dict[ID, schemas.Program]
+    teams: dict[ID, schemas.Team]
+    problems: dict[ID, schemas.Problem]
     page: int
     max_page: int
 
@@ -890,8 +890,8 @@ def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), 
 
 
 class ScheduleInfo(BaseSchema):
-    matches: dict[ID, ScheduledMatch.Schema]
-    problems: dict[ID, Problem.Schema]
+    matches: dict[ID, schemas.ScheduledMatch]
+    problems: dict[ID, schemas.Problem]
 
 
 @router.get("/match/schedule/get", tags=["match"])
