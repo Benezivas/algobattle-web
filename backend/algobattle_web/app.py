@@ -41,7 +41,8 @@ async def lifespan(app: FastAPI):
         alembic_cfg.set_main_option("script_location", str(alembic_ini.parent))
         with engine.connect() as connection:
             context = MigrationContext.configure(connection)
-            if context.get_current_revision() is None:
+            current_revs = context.get_current_heads()
+            if not current_revs:
                 Base.metadata.create_all(bind=engine)
                 stamp(alembic_cfg, "head")
             else:
