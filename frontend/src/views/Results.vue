@@ -220,7 +220,7 @@ function getPrograms(team: string, role: Role) {
             Cancel
           </button>
           <button v-if="editData.id" type="button" class="btn btn-danger ms-2" @click="deleteResult">
-            {{ editData.confirmDelete ? "Confirm deletion" : "Delete match" }}
+            {{ editData.confirmDelete ? "Confirm deletion" : "Delete result" }}
           </button>
           <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Discard</button>
           <button type="submit" class="btn btn-primary">{{ editData.id ? "Save" : "Add" }}</button>
