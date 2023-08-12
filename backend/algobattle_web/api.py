@@ -105,9 +105,9 @@ def search_users(
     page: int = 1,
     exact_search: bool = False,
     ) -> UserSearch:
-    filters: list[Any] = [
-        User.id.in_(ids),
-    ]
+    filters = []
+    if ids:
+        filters.append(User.id.in_(ids))
     if name is not None:
         if exact_search:
             filters.append(User.name == name)
