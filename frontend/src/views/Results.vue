@@ -6,7 +6,6 @@ import type { Problem, Tournament, MatchResult, Team, DbFile, ResultParticipant,
 import { onMounted, ref, toRaw } from "vue";
 import DownloadButtonVue from "@/components/DownloadButton.vue";
 
-let selectedTournament = ref<string | undefined>();
 const problems = ref<ModelDict<Problem>>({});
 const tournaments = ref<ModelDict<Tournament>>({});
 const results = ref<ModelDict<MatchResult>>({});
@@ -15,15 +14,14 @@ const programs = ref<{[team_id: string]: {[role in Role]: Program[]}}>({});
 
 let editModal: Modal;
 onMounted(async () => {
-  selectedTournament.value = store.user.settings.selected_team?.tournament || "";
   tournaments.value = await TournamentService.allTournaments();
-  const res = await MatchService.getMatchResults({})
+  const res = await MatchService.getMatchResults()
   problems.value = res.problems;
   results.value = res.results;
   teams.value = res.teams;
   editModal = Modal.getOrCreateInstance("#editModal");
   if (store.user.is_admin) {
-    problems.value = await ProblemService.allProblems({tournament: selectedTournament.value})
+    problems.value = await ProblemService.allProblems({tournament: store.user.current_tournament?.id})
   }
 })
 
@@ -83,15 +81,6 @@ function getPrograms(team: string, role: Role) {
 </script>
 
 <template>
-  <template v-if="store.user.is_admin">
-    <div class="mb-5">
-      <label for="tournament_select" class="form-label">Select tournament</label>
-      <select id="tournament_select" class="form-select w-em" v-model="selectedTournament">
-        <option v-for="(tournament, id) in tournaments" :value="id">{{tournament.name}}</option>
-      </select>
-    </div>
-  </template>
-
 <table class="table">
   <thead>
     <tr>

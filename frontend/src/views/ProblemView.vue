@@ -13,7 +13,7 @@ const problems: Ref<{[key: string]: Problem}> = ref({})
 
 onMounted(async () => {
   tournaments.value = await TournamentService.allTournaments()
-  selectedTournament.value = store.user.settings.selected_team?.tournament
+  selectedTournament.value = store.user.selected_team?.tournament
   problems.value = await ProblemService.allProblems({tournament: selectedTournament.value})
 })
 

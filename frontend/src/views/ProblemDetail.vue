@@ -54,7 +54,7 @@ const now = new Date()
 
 
 onMounted(async () => {
-  selectedTeam.value = store.user.settings.selected_team
+  selectedTeam.value = store.user.selected_team
   try {
     const problemInfo = await ProblemService.problemByName({
       problemName: route.params.problemName as string,
@@ -96,9 +96,9 @@ async function openDocEdit(docId: string | null) {
     editDoc.problem = docs.value[docId].problem
     editDoc.team = docs.value[docId].team
     editDoc.docId.value = docId
-  } else if (store.user.settings.selected_team) {
+  } else if (store.user.selected_team) {
     editDoc.problem = problem.value.id
-    editDoc.team = store.user.settings.selected_team.id
+    editDoc.team = store.user.selected_team.id
     editDoc.docId.value = ownDoc.value?.id
   } else {
     return
