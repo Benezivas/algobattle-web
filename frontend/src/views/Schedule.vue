@@ -98,23 +98,23 @@ async function deleteMatch() {
         </div>
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
-          <input id="name" class="form-control w-em mb-3" type="text" v-model="editData.name" />
+          <input id="name" class="form-control" type="text" v-model="editData.name" />
           <label for="time" class="form-label">Time</label>
           <input
             id="time"
-            class="form-control w-em mb-3"
+            class="form-control"
             type="datetime-local"
             required
             v-model="editData.time"
           />
           <label for="problem" class="form-label">Problem</label>
-          <select id="problem" class="form-select w-em mb-3" required v-model="editData.problem">
+          <select id="problem" class="form-select" required v-model="editData.problem">
             <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>
           </select>
           <label for="points" class="form-label">Points</label>
           <input
             id="points"
-            class="form-control w-em mb-3"
+            class="form-control"
             type="number"
             min="0"
             required

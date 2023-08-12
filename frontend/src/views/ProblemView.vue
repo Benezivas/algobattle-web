@@ -64,7 +64,7 @@ const past_problems = computed(() => {
   <template v-if="store.user.is_admin">
     <div class="mb-5">
       <label for="tournament_select" class="form-label">Select tournament</label>
-      <select id="tournament_select" class="form-select w-em" v-model="selectedTournament">
+      <select id="tournament_select" class="form-select" v-model="selectedTournament">
         <option :value="undefined" selected>All</option>
         <option v-for="(tournament, id) in tournaments" :value="id">{{ tournament.name }}</option>
       </select>

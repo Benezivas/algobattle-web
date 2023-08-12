@@ -29,7 +29,7 @@ async function login() {
   <form @submit.prevent="login">
     <div class="mb-3">
       <label for="email" class="form-label">Email address</label>
-      <input type="email" class="form-control w-em" id="email" required v-model="email" />
+      <input type="email" class="form-control " id="email" required v-model="email" />
     </div>
     <button type="submit" class="btn btn-primary">Login</button>
   </form>

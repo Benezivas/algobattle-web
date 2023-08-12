@@ -123,7 +123,7 @@ function checkName() {
             />
             <label for="prob_select" class="form-label">Or copy an already existing one</label>
             <select
-              class="form-select w-em"
+              class="form-select"
               id="prob_select"
               @change="(e) => (data.file = undefined)"
               v-model="data.copyFrom"
@@ -148,7 +148,7 @@ function checkName() {
             <div class="mb-3">
               <label for="tournament_sel" class="form-label">Tournament</label>
               <select
-                class="form-select w-em"
+                class="form-select"
                 id="tournament_sel"
                 name="tournament"
                 required
@@ -163,7 +163,7 @@ function checkName() {
               <label for="prob_name" class="form-label">Name</label>
               <input
                 type="text"
-                class="form-control w-em"
+                class="form-control "
                 id="prob_name"
                 v-model="data.name"
                 required
@@ -178,11 +178,11 @@ function checkName() {
             </div>
             <div class="mb-3">
               <label for="start_time" class="form-label">Starting time</label>
-              <input type="datetime-local" class="form-control w-em" id="start_time" v-model="data.start" />
+              <input type="datetime-local" class="form-control " id="start_time" v-model="data.start" />
             </div>
             <div class="mb-3">
               <label for="end_time" class="form-label">Ending time</label>
-              <input type="datetime-local" class="form-control w-em" id="end_time" v-model="data.end" />
+              <input type="datetime-local" class="form-control " id="end_time" v-model="data.end" />
             </div>
 
             <div class="d-flex mt-3">
@@ -239,7 +239,7 @@ function checkName() {
                 <div class="mb-3">
                   <label for="short_desc" class="form-label">Thumbnail alt text</label>
                   <textarea
-                    class="form-control w-em"
+                    class="form-control "
                     name="alt_text"
                     id="alt_text"
                     rows="5"
@@ -249,7 +249,7 @@ function checkName() {
                 <div class="mb-3">
                   <label for="short_desc" class="form-label">Short description</label>
                   <textarea
-                    class="form-control w-em"
+                    class="form-control "
                     name="short_description"
                     id="short_desc"
                     rows="5"

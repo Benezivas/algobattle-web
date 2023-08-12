@@ -256,18 +256,18 @@ async function checkEmail() {
         <div class="row mb-3">
           <div class="col">
             <label for="nameFilter" class="form-label mb-1">Name</label>
-            <input class="form-control w-em" id="nameFilter" type="text" v-model="filterData.name" />
+            <input class="form-control " id="nameFilter" type="text" v-model="filterData.name" />
           </div>
           <div class="col">
             <label for="emailFilter" class="form-label mb-1">Email</label>
-            <input class="form-control w-em" id="emailFilter" type="text" v-model="filterData.email" />
+            <input class="form-control " id="emailFilter" type="text" v-model="filterData.email" />
           </div>
         </div>
         <div class="row mb-3">
           <div class="col">
             <label for="adminFilter" class="form-label mb-1">User type</label>
             <select
-              class="form-select w-em"
+              class="form-select"
               id="adminFilter"
               aria-label="User type filter"
               v-model="filterData.isAdmin"
@@ -282,14 +282,14 @@ async function checkEmail() {
         <div class="row mb-3">
           <div class="col">
             <label for="tournamentFilter" class="form-label mb-1">Tournament</label>
-            <select class="form-select w-em" id="tournamentFilter" v-model="filterData.tournament">
+            <select class="form-select" id="tournamentFilter" v-model="filterData.tournament">
               <option :value="null"></option>
               <option v-for="(tournament, id) in tournaments" :value="id">{{ tournament.name }}</option>
             </select>
           </div>
           <div class="col">
             <label for="teamFilter" class="form-label mb-1">Team</label>
-            <select class="form-select w-em" id="teamFilter" v-model="filterData.team">
+            <select class="form-select" id="teamFilter" v-model="filterData.team">
               <option :value="null"></option>
               <option v-for="(team, id) in teams" :value="id">{{ team.name }}</option>
             </select>
@@ -299,7 +299,7 @@ async function checkEmail() {
           <div class="col">
             <label for="limitFilter" class="form-label mb-1">Limit</label>
             <input
-              class="form-control w-em"
+              class="form-control "
               id="limitFilter"
               type="number"
               min="1"
@@ -337,7 +337,7 @@ async function checkEmail() {
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
           <div class="input-group w-em input-group-sm mb-3" name="name">
-            <input class="form-control w-em" type="text" v-model="editData.name" required />
+            <input class="form-control " type="text" v-model="editData.name" required />
             <input
               type="checkbox"
               class="btn-check"
@@ -355,7 +355,7 @@ async function checkEmail() {
           </div>
           <label for="email" class="form-label">Email</label>
           <input
-            class="form-control w-em form-control-sm"
+            class="form-control  form-control-sm"
             :class="{ 'is-invalid': error == 'email' }"
             name="email"
             type="email"

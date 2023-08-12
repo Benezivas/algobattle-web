@@ -124,17 +124,17 @@ function getPrograms(team: string, role: Role) {
           <label for="time" class="form-label">Time</label>
           <input
             id="time"
-            class="form-control w-em mb-3"
+            class="form-control"
             type="datetime-local"
             required
             v-model="editData.time"
           />
           <label for="problem" class="form-label">Problem</label>
-          <select id="problem" class="form-select w-em mb-3" required v-model="editData.problem">
+          <select id="problem" class="form-select" required v-model="editData.problem">
             <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>
           </select>
           <label for="status" class="form-label">Status</label>
-          <select id="status" class="form-select w-em mb-3" required v-model="editData.status">
+          <select id="status" class="form-select" required v-model="editData.status">
             <option v-for="status in Object.values(MatchStatus)" :value="status">
               {{ status }}
             </option>
@@ -156,7 +156,7 @@ function getPrograms(team: string, role: Role) {
                   <select
                     v-if="participant.editing"
                     :id="participant.team_id + 'gen'"
-                    class="form-select w-em mb-3"
+                    class="form-select"
                     required
                     v-model="participant.generator"
                     @click="getPrograms(participant.team_id, Role.GENERATOR)"
@@ -171,7 +171,7 @@ function getPrograms(team: string, role: Role) {
                   <select
                     v-if="participant.editing"
                     :id="participant.team_id + 'gen'"
-                    class="form-select w-em mb-3"
+                    class="form-select"
                     required
                     v-model="participant.solver"
                     @click="getPrograms(participant.team_id, Role.SOLVER)"
@@ -183,7 +183,7 @@ function getPrograms(team: string, role: Role) {
                   <DownloadButtonVue v-else :file="participant.solver.file" />
                 </td>
                 <td v-if="participant.editing">
-                  <input class="form-control w-em mb-3" type="number" v-model="participant.points" required />
+                  <input class="form-control" type="number" v-model="participant.points" required />
                 </td>
                 <td v-else>{{ participant.points }}</td>
                 <td>

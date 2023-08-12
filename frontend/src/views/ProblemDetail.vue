@@ -404,7 +404,7 @@ async function deleteProblem() {
           <label for="file_select" class="form-label mt-3">Select new file</label>
           <input
             type="file"
-            class="form-control w-em"
+            class="form-control "
             id="file_select"
             ref="editDoc.fileSelect"
             @change="(e) => selectFile(e as any)"
@@ -441,7 +441,7 @@ async function deleteProblem() {
             <div class="mb-3">
               <label for="tournament_sel" class="form-label">Tournament</label>
               <select
-                class="form-select w-em"
+                class="form-select"
                 id="tournament_sel"
                 name="tournament"
                 required
@@ -457,7 +457,7 @@ async function deleteProblem() {
               <input
                 type="datetime-local"
                 name="start"
-                class="form-control w-em"
+                class="form-control "
                 id="start_time"
                 v-model="editProblem.start"
               />
@@ -478,7 +478,7 @@ async function deleteProblem() {
               <label for="prob_name" class="form-label">Name</label>
               <input
                 type="text"
-                class="form-control w-em"
+                class="form-control "
                 name="name"
                 id="prob_name"
                 v-model="editProblem.name"
@@ -493,7 +493,7 @@ async function deleteProblem() {
               <input
                 type="datetime-local"
                 name="end"
-                class="form-control w-em"
+                class="form-control "
                 id="end_time"
                 v-model="editProblem.end"
               />
@@ -530,7 +530,7 @@ async function deleteProblem() {
             <div class="mb-3">
               <label for="short_desc" class="form-label">Image alt text</label>
               <textarea
-                class="form-control w-em"
+                class="form-control "
                 name="alt"
                 id="alt_text"
                 rows="5"
@@ -542,7 +542,7 @@ async function deleteProblem() {
             <div class="mb-3">
               <label for="short_desc" class="form-label">Short description</label>
               <textarea
-                class="form-control w-em"
+                class="form-control "
                 name="short_description"
                 id="short_desc"
                 rows="5"

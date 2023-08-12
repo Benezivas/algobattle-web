@@ -148,7 +148,7 @@ onMounted(() => {
             <div class="mb-3">
               <label for="problem_sel" class="form-label">Problem</label>
               <select
-                class="form-select w-em"
+                class="form-select"
                 id="problem_sel"
                 name="problem"
                 required
@@ -161,7 +161,7 @@ onMounted(() => {
               <label for="prog_name" class="form-label">Name</label>
               <input
                 type="text"
-                class="form-control w-em"
+                class="form-control "
                 name="name"
                 id="prog_name"
                 v-model="newProgData.name"
@@ -171,7 +171,7 @@ onMounted(() => {
           <div class="col-md-6">
             <div class="mb-3">
               <label for="role_sel" class="form-label">Role</label>
-              <select class="form-select w-em" id="role_sel" name="role" required v-model="newProgData.role">
+              <select class="form-select" id="role_sel" name="role" required v-model="newProgData.role">
                 <option value="generator">Generator</option>
                 <option value="solver">Solver</option>
               </select>
@@ -180,7 +180,7 @@ onMounted(() => {
               <label for="file_select" class="form-label mt-3">Select new program file</label>
               <input
                 type="file"
-                class="form-control w-em"
+                class="form-control "
                 id="file_select"
                 @change="(e) => selectFile(e as any)"
                 required

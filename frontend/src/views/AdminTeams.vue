@@ -236,11 +236,11 @@ async function checkName() {
         <div class="row mb-3">
           <div class="col">
             <label for="nameFilter" class="form-label mb-1">Name</label>
-            <input class="form-control w-em" id="nameFilter" type="text" v-model="searchData.name" />
+            <input class="form-control " id="nameFilter" type="text" v-model="searchData.name" />
           </div>
           <div class="col">
             <label for="tournamentFilter" class="form-label mb-1">Tournament</label>
-            <select class="form-select w-em" id="tournamentFilter" v-model="searchData.tournament">
+            <select class="form-select" id="tournamentFilter" v-model="searchData.tournament">
               <option value=""></option>
               <option v-for="(tournament, id) in tournaments" :value="id">{{ tournament.name }}</option>
             </select>
@@ -250,7 +250,7 @@ async function checkName() {
           <div class="col">
             <label for="limitFilter" class="form-label mb-1">Limit</label>
             <input
-              class="form-control w-em"
+              class="form-control "
               id="limitFilter"
               type="number"
               min="1"
@@ -289,7 +289,7 @@ async function checkName() {
           <label for="name" class="form-label">Name</label>
           <input
             id="name"
-            class="form-control w-em"
+            class="form-control "
             type="text"
             v-model="editData.name"
             required
@@ -301,7 +301,7 @@ async function checkName() {
           </div>
           <label for="tournament" class="form-label">Tournament</label>
           <select
-            class="form-select w-em mb-3"
+            class="form-select"
             id="tournament"
             v-model="editData.tournament"
             :required="editData.id != ''"
