@@ -3,7 +3,7 @@ import { Modal } from "bootstrap"
 import { store } from "../main"
 import { TournamentService, DocsService, ProblemService, TeamService, ApiError } from "@client";
 import type { Tournament, Documentation, DbFile, Problem, Team } from "@client";
-import type { DbFileLoc, InputFileEvent } from '@/main';
+import type { InputFileEvent } from '@/main';
 import { computed, onMounted, ref, type Ref } from 'vue';
 import { useRoute } from 'vue-router';
 import router from "@/router";
@@ -160,10 +160,10 @@ function createProblemEdit(problem: Problem): ProblemEdit {
     ...problem,
     problem_schema: problem.problem_schema || "",
     solution_schema: problem.solution_schema || "",
-    file: {location: (problem.file as DbFileLoc).location},
-    config: {location: (problem.config as DbFileLoc).location},
-    description: problem.description ? {location: (problem.description as DbFileLoc).location} : {},
-    image: problem.image ? {location: (problem.image as DbFileLoc)?.location} : {},
+    file: {location: problem.file.location},
+    config: {location: problem.config.location},
+    description: problem.description ? {location: problem.description.location} : {},
+    image: problem.image ? {location: problem.image?.location} : {},
     alt: problem.image?.alt_text
   }
 }
@@ -263,7 +263,7 @@ async function deleteProblem() {
     <div data-bs-spy="scroll" data-bs-target="#navbar" data-bs-root-margin="0px 0px -40%" data-bs-smooth-scroll="true" class="bg-body-tertiary p-3 rounded-2" tabindex="0">
       <div class="row">
         <div class="col-md-9">
-          <img v-if="problem.image" :src="(problem.image as DbFileLoc).location" :alt="problem.image.alt_text" class="object-fit-cover border rounded mb-4" style="width: 100%;">
+          <img v-if="problem.image" :src="problem.image.location" :alt="problem.image.alt_text" class="object-fit-cover border rounded mb-4" style="width: 100%;">
         </div>
         <div class="col-md-3">
           <ul class="list-group list-group-flush bg-body-tertiary w-em">
@@ -286,12 +286,12 @@ async function deleteProblem() {
       </div>
       <template v-if="problem.description">
         <h4 id="description" class="mt-5">Description</h4>
-        <a v-if="description == '__DOWNLOAD_BUTTON__'" role="button" class="btn btn-primary btn-sm" :href="(problem.description as DbFileLoc).location" title="Download file">Download description file <i class="bi bi-download ms-1"></i></a>
+        <a v-if="description == '__DOWNLOAD_BUTTON__'" role="button" class="btn btn-primary btn-sm" :href="problem.description.location" title="Download file">Download description file <i class="bi bi-download ms-1"></i></a>
         <div v-else v-html="description"></div>
       </template>
       <template v-if="ownDoc || store.user.is_admin">
         <h4 id="documentation" class="mt-5">Documentation</h4>
-        <a v-if="ownDoc && !store.user.is_admin" role="button" class="btn btn-primary btn-sm mb-3" :href="(ownDoc.file as DbFileLoc).location" title="Download documentation">Download documentation<i class="bi bi-download ms-1"></i></a>
+        <a v-if="ownDoc && !store.user.is_admin" role="button" class="btn btn-primary btn-sm mb-3" :href="ownDoc.file.location" title="Download documentation">Download documentation<i class="bi bi-download ms-1"></i></a>
         <table v-else class="table">
           <thead>
             <tr>
@@ -303,7 +303,7 @@ async function deleteProblem() {
             <tr v-for="(doc, id) in docs">
               <td>{{ teams[doc.team]?.name }}</td>
               <td>
-                <a class="btn btn-primary btn-sm" :href="(doc.file as DbFileLoc).location" title="Download file">Download <i class="bi bi-download ms-1"></i></a>
+                <a class="btn btn-primary btn-sm" :href="doc.file.location" title="Download file">Download <i class="bi bi-download ms-1"></i></a>
                 <button role="button" class="btn btn-warning btn-sm ms-2" title="Edit" @click="(e) => openDocEdit(id as string)">Edit <i class="bi bi-pencil ms-1"></i></button>
               </td>
             </tr>

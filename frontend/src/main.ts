@@ -12,10 +12,6 @@ export interface InputFileEvent extends InputEvent {
   target: HTMLInputElement;
 }
 
-export interface DbFileLoc extends DbFile{
-    location: string,
-}
-
 export function formatDateTime(datetime: string): string {
     return (new Date(datetime)).toLocaleString()
 }

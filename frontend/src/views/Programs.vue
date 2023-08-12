@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ProgramService, Role } from "@client";
-import { store, type ModelDict, type InputFileEvent, type DbFileLoc } from "@/main";
+import { store, type ModelDict, type InputFileEvent } from "@/main";
 import { Modal } from "bootstrap";
 import type { Problem, Program, Team } from "@client";
 import { onMounted, ref } from "vue";
@@ -91,7 +91,7 @@ onMounted(() => {
         <td>{{ program.creation_time.toLocaleString() }}</td>
         <td>{{ program.name }}</td>
         <td>
-          <a role="button" class="btn btn-primary btn-sm" :href="(program.file as DbFileLoc).location" title="Download program file">Download <i class="bi bi-download ms-1"></i></a>
+          <a role="button" class="btn btn-primary btn-sm" :href="program.file.location" title="Download program file">Download <i class="bi bi-download ms-1"></i></a>
         </td>
       </tr>
     </tbody>
