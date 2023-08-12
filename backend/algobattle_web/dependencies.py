@@ -27,7 +27,7 @@ def curr_user(user: User | None = Depends(curr_user_maybe)) -> User:
 
 
 def curr_team(user: User = Depends(curr_user)) -> Team:
-    team = user.settings.selected_team
+    team = user.selected_team
     if team is None:
         raise ValueError("User has not selected a team.")
     return team

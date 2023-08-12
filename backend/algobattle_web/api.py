@@ -40,6 +40,8 @@ from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Wrapped, send_em
 from algobattle_web.dependencies import curr_user, check_if_admin, get_db
 from pydantic_extra_types.color import Color
 
+__all__ = ("router", "admin")
+
 
 class EditAction(Enum):
     add = "add"
@@ -77,11 +79,7 @@ def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
 # *******************************************************************************
 
 
-class UserWithSettings(schemas.User):
-    settings: schemas.UserSettings
-
-
-@router.get("/user/self", tags=["user"], response_model=UserWithSettings)
+@router.get("/user/self", tags=["user"], response_model=schemas.UserWithSettings)
 def get_self(*, user = Depends(curr_user)) -> User:
     return user
 
@@ -205,22 +203,22 @@ def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 class EditSettings(BaseSchema):
     email: str | None = None
-    selected_team: ID | None = None
-    selected_tournament: ID | None = None
+    team: ID | None = None
+    tournament: ID | None = None
 
 
 @router.patch("/user/settings", tags=["user"])
 def settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSettings) -> User:
     if edit.email is not None:
         user.email = edit.email
-    if edit.selected_team is not None:
-        if not any(edit.selected_team == team.id for team in user.teams):
+    if edit.team is not None:
+        if not any(edit.team == team.id for team in user.teams):
             raise HTTPException(400, "User is not in the selected team")
-        user.settings.selected_team_id = edit.selected_team
-    if edit.selected_tournament is not None:
+        user.selected_team_id = edit.team
+    if edit.tournament is not None:
         if not user.is_admin:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Only admin users can select tournaments")
-        user.settings.tournament = unwrap(db.get(Tournament, edit.selected_tournament))
+        user.selected_tournament = unwrap(db.get(Tournament, edit.tournament))
     db.commit()
     return user
 
@@ -433,7 +431,7 @@ class MemberEditTeam(BaseSchema):
 
 @router.post("/team/self/edit", tags=["team"])
 def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: MemberEditTeam) -> Team:
-    team = unwrap(user.settings.selected_team)
+    team = unwrap(user.selected_team)
     team.assert_editable(user)
     if edit.name is not None:
         team.name = edit.name
@@ -697,7 +695,7 @@ def upload_own_docs(
         file: UploadFile = File(),
     ) -> Documentation:
     problem = unwrap(db.get(Problem, problem_id))
-    team = unwrap(user.settings.selected_team)
+    team = unwrap(user.selected_team)
     return docs_edit(db, user, problem, team, file)
 
 
@@ -811,9 +809,9 @@ def search_program(
     if user.is_admin:
         problems = Problem.get_all(db)
     else:
-        assert user.settings.selected_team is not None
+        assert user.selected_team is not None
         problems = db.scalars(select(Problem).where(Problem.visible_sql(user),
-                    Problem.tournament_id == user.settings.selected_team.tournament_id)).unique().all()
+                    Problem.tournament_id == user.selected_team.tournament_id)).unique().all()
     filters = [Program.visible_sql(user)]
     if name is not None:
         filters.append(Program.name.contains(name, autoescape=True))
@@ -856,7 +854,7 @@ def upload_program(
     problem: ID,
     file: UploadFile = File(),
 ) -> Program:
-    team = unwrap(user.settings.selected_team)
+    team = unwrap(user.selected_team)
     problem_obj = unwrap(db.get(Problem, problem))
     problem_obj.assert_visible(user)
     prog = Program(db, name, team, role, DbFile(file), problem_obj)
@@ -891,7 +889,7 @@ def scheduled_matches(
     tournament: str | None = None,
     ) -> ScheduleInfo:
     if tournament is None:
-        tournament_ = unwrap(user.settings.selected_team).tournament
+        tournament_ = unwrap(user.selected_team).tournament
     else:
         tournament_ = unwrap(db.get(Tournament, tournament))
     matches = db.scalars(
@@ -967,7 +965,7 @@ class MatchResultData(BaseSchema):
 
 @router.get("/match/results", tags=["match"])
 def get_match_results(*, db: Session = Depends(get_db), user: User = Depends(curr_user)) -> MatchResultData:
-    tournament = unwrap(user.settings.selected_team).tournament
+    tournament = unwrap(user.selected_team).tournament
     print(1234)
     tournament.assert_visible(user)
     print(1234)

@@ -283,15 +283,14 @@ class User(Base, unsafe_hash=True):
 
     email: Mapped[str128] = mapped_column(unique=True)
     name: Mapped[str32]
-    token_id: Mapped[ID] = mapped_column(init=False)
     is_admin: Mapped[bool] = mapped_column(default=False)
+    selected_team: Mapped["Team | None"] = relationship(lazy="joined", default=None)
+    selected_tournament: "Mapped[Tournament | None]" = relationship(default=None)
 
     teams: Mapped[list["Team"]] = relationship(secondary=team_members, back_populates="members", lazy="joined", default_factory=list)
-    settings: Mapped["UserSettings"] = relationship(back_populates="user", init=False, cascade="all, delete")
-
-    def __post_init__(self, db: Session) -> None:
-        UserSettings(db, self)
-        super().__post_init__(db)
+    token_id: Mapped[ID] = mapped_column(init=False)
+    selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), init=False)
+    selected_tournament_id: Mapped[UUID | None] = mapped_column(ForeignKey("tournaments.id"), init=False)
 
     Schema = schemas.User
 
@@ -302,11 +301,11 @@ class User(Base, unsafe_hash=True):
         return user.is_admin
 
     @property
-    def selected_tournament(self) -> "Tournament | None":
-        if self.settings.selected_team is not None:
-            return self.settings.selected_team.tournament
+    def current_tournament(self) -> "Tournament | None":
+        if self.selected_team is not None:
+            return self.selected_team.tournament
         elif self.is_admin:
-            return self.settings.tournament
+            return self.selected_tournament
         else:
             return None
 
@@ -361,19 +360,6 @@ class User(Base, unsafe_hash=True):
         except (ExpiredSignatureError, JWTError, NameError):
             pass
         raise ValueError
-
-
-class UserSettings(Base, unsafe_hash=True):
-    __tablename__ = "usersettings"  # type: ignore
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), init=False)
-    selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), init=False)
-    tournament_id: Mapped[UUID | None] = mapped_column(ForeignKey("tournaments.id"), init=False)
-
-    user: Mapped[User] = relationship(back_populates="settings", lazy="joined")
-    selected_team: Mapped["Team | None"] = relationship(lazy="joined", default=None)
-    tournament: "Mapped[Tournament | None]" = relationship(default=None)
-
-    Schema = schemas.UserSettings
 
 
 class Tournament(Base, unsafe_hash=True):
@@ -520,7 +506,7 @@ class Program(Base, unsafe_hash=True):
         if user.is_admin:
             return sql_true
         else:
-            return cls.team_id == user.settings.selected_team_id
+            return cls.team_id == user.selected_team_id
 
 
 class ScheduledMatch(Base, unsafe_hash=True):

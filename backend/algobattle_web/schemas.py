@@ -48,9 +48,10 @@ class Team(Base):
     members: list[ObjID]
 
 
-class UserSettings(Base):
+class UserWithSettings(User):
     selected_team: Team | None
-    tournament: Tournament | None
+    selected_tournament: Tournament | None
+    current_tournament: Tournament | None
 
 
 class Problem(Base):

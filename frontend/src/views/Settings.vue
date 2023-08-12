@@ -7,10 +7,8 @@ import { onMounted, ref } from 'vue';
 
 const userEdit = ref({
   email: store.user.email,
-  settings: {
-    selectedTeam: store.user.settings.selected_team?.id,
-    tournament: store.user.settings.tournament
-  },
+  selectedTeam: store.user.selected_team?.id,
+  selectedTournament: store.user.selected_tournament?.id,
 })
 const teams = ref<ModelDict<Team>>({})
 const tournaments = ref<{[key: string]: Tournament}>({})
@@ -26,8 +24,8 @@ onMounted(async () => {
 async function saveEdit() {
   const newUser = await UserService.settings({requestBody: {
     email: userEdit.value.email,
-    selected_team: userEdit.value.settings.selectedTeam,
-    selected_tournament: userEdit.value.settings.tournament?.id,
+    team: userEdit.value.selectedTeam,
+    tournament: userEdit.value.selectedTournament,
   }})
   Object.assign(store.user, newUser)
   error.value = "success"
@@ -42,12 +40,12 @@ async function saveEdit() {
   <label class="form-label" for="emailInput">Email address</label>
   <input type="email" class="form-control w-em mb-2" id="emailInput" v-model="userEdit.email">
   <label for="selectedTeam" class="form-label">Selected team</label>
-  <select class="form-select w-em" name="selectedTeam" v-model="userEdit.settings.selectedTeam">
+  <select class="form-select w-em" name="selectedTeam" v-model="userEdit.selectedTeam">
     <option v-for="(team, id) in teams" :value="id">{{team.name + ` (${tournaments[team.tournament]?.name})`}}</option>
   </select>
   <template v-if="store.user.is_admin">
     <label for="currTournament" class="form-label">Current Tournament</label>
-    <select class="form-select w-em" name="currTournament" v-model="userEdit.settings.tournament">
+    <select class="form-select w-em" name="currTournament" v-model="userEdit.selectedTournament">
       <option v-for="(tournament, id) in tournaments" :value="id">{{ tournament.name }}</option>
     </select>
   </template>
