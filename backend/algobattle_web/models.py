@@ -295,22 +295,20 @@ class User(Base, unsafe_hash=True):
 
     Schema = schemas.User
 
-    def __eq__(self, o: object) -> bool:
-        if isinstance(o, User):
-            return self.id == o.id
-        elif isinstance(o, Mapping):
-            if "id" in o:
-                if isinstance(o["id"], ID):
-                    return self.id == o["id"]
-                elif isinstance(o["id"], str):
-                    return str(self.id) == o["id"]
-        return NotImplemented
+    def visible(self, user: Self) -> bool:
+        return user.is_admin or user == self
 
-    def visible(self, user: "User") -> bool:
-        return user.is_admin or len(set(user.teams) & set(self.teams)) != 0
-
-    def editable(self, user: "User") -> bool:
+    def editable(self, user: Self) -> bool:
         return user.is_admin
+
+    @property
+    def selected_tournament(self) -> "Tournament | None":
+        if self.settings.selected_team is not None:
+            return self.settings.selected_team.tournament
+        elif self.is_admin:
+            return self.settings.tournament
+        else:
+            return None
 
     @classmethod
     def get(cls, db: Session, identifier: ID | str) -> Self | None:

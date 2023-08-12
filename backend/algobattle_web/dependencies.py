@@ -2,7 +2,7 @@ from typing import AsyncIterable
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
 
-from algobattle_web.models import User, Session
+from algobattle_web.models import Team, User, Session
 from algobattle_web.util import SessionLocal
 
 
@@ -24,6 +24,13 @@ def curr_user(user: User | None = Depends(curr_user_maybe)) -> User:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
     else:
         return user
+
+
+def curr_team(user: User = Depends(curr_user)) -> Team:
+    team = user.settings.selected_team
+    if team is None:
+        raise ValueError("User has not selected a team.")
+    return team
 
 
 def check_if_admin(user: User = Depends(curr_user)):

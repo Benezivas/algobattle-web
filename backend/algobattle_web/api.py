@@ -4,7 +4,7 @@ from enum import Enum
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Literal, cast
+from typing import Annotated, Any, Callable, Literal, cast
 from uuid import UUID
 from zipfile import ZipFile
 from urllib.parse import quote
@@ -15,7 +15,7 @@ from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse, Response
 from markdown import markdown
-from sqlalchemy import func, select
+from sqlalchemy import BinaryExpression, func, select
 from sqlalchemy.exc import IntegrityError
 from pydantic import Field
 
@@ -88,14 +88,6 @@ def get_self(*, user = Depends(curr_user)) -> User:
     return user
 
 
-@admin.get("/user", tags=["user"], response_model=list[schemas.User])
-def get_user(*, db = Depends(get_db), user = Depends(curr_user), users: list[ID] = Body()):
-    return db.scalars(
-        select(User)
-        .where(User.id.in_(users), User.visible_sql(user))
-    )
-
-
 class UserSearch(BaseSchema):
     page: int
     max_page: int
@@ -103,10 +95,11 @@ class UserSearch(BaseSchema):
     teams: dict[ID, schemas.Team]
 
 
-@admin.get("/user/search", tags=["user"])
+@admin.get("/user", tags=["user"])
 def search_users(
     *,
     db = Depends(get_db),
+    ids: list[UUID] = [],
     name: str | None = None,
     email: str | None = None,
     is_admin: bool | None = None,
@@ -116,7 +109,9 @@ def search_users(
     page: int = 1,
     exact_search: bool = False,
     ) -> UserSearch:
-    filters = []
+    filters: list[Any] = [
+        User.id.in_(ids),
+    ]
     if name is not None:
         if exact_search:
             filters.append(User.name == name)
@@ -162,7 +157,7 @@ class CreateUser(BaseSchema):
     teams: list[ID] = []
 
 
-@admin.post("/user/create", tags=["user"])
+@admin.post("/user", tags=["user"])
 def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
     _teams = [unwrap(db.get(Team, id)) for id in user.teams]
     if db.scalars(select(User).filter(User.email == user.email)).unique().first() is not None:
@@ -179,7 +174,7 @@ class EditUser(BaseSchema):
     teams: dict[ID, EditAction] = {}
 
 
-@admin.post("/user/{id}/edit", tags=["user"])
+@admin.patch("/user", tags=["user"])
 def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     user = unwrap(User.get(db, id))
 
@@ -202,7 +197,7 @@ def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     return user
 
 
-@admin.post("/user/{id}/delete", tags=["user"])
+@admin.delete("/user", tags=["user"])
 def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
     user = unwrap(User.get(db, id))
     db.delete(user)
@@ -210,33 +205,21 @@ def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
     return True
 
 
-class EditSelf(BaseSchema):
-    name: str | None = None
-    email: str | None = None
-
-
-@router.post("/user/self/edit", tags=["user"])
-def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSelf) -> User:
-    for key, val in edit.model_dump(exclude_unset=True).items():
-        setattr(user, key, val)
-    db.commit()
-    return user
-
-
 class EditSettings(BaseSchema):
+    email: str | None = None
     selected_team: ID | None = None
 
 
-@router.post("/user/self/settings", tags=["user"])
-def edit_settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), settings: EditSettings) -> UserSettings:
-    updates = settings.model_dump(exclude_unset=True)
-    if "selected_team" in updates:
-        team = unwrap(Team.get(db, updates["selected_team"]))
-        if team not in user.teams:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST)
-        user.settings.selected_team = team
+@router.patch("/user/settings", tags=["user"])
+def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSettings) -> User:
+    if edit.email is not None:
+        user.email = edit.email
+    if edit.selected_team is not None:
+        if not any(edit.selected_team == team.id for team in user.teams):
+            raise HTTPException(400, "User is not in the selected team")
+        user.settings.selected_team_id = edit.selected_team
     db.commit()
-    return user.settings
+    return user
 
 
 @router.post("/user/login", tags=["user"])
