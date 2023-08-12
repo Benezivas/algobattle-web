@@ -4,7 +4,7 @@ from enum import Enum
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Literal, cast
+from typing import Annotated, Any, Callable, Literal, cast
 from uuid import UUID
 from zipfile import ZipFile
 from urllib.parse import quote
@@ -37,7 +37,7 @@ from algobattle_web.models import (
     User,
 )
 from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Wrapped, send_email, ServerConfig
-from algobattle_web.dependencies import curr_user, check_if_admin, get_db
+from algobattle_web.dependencies import curr_tournament, curr_user, check_if_admin, get_db
 from pydantic_extra_types.color import Color
 
 __all__ = ("router", "admin")
@@ -964,17 +964,12 @@ class MatchResultData(BaseSchema):
 
 
 @router.get("/match/results", tags=["match"])
-def get_match_results(*, db: Session = Depends(get_db), user: User = Depends(curr_user)) -> MatchResultData:
-    tournament = unwrap(user.selected_team).tournament
-    print(1234)
-    tournament.assert_visible(user)
-    print(1234)
+def get_match_results(*, db: Session = Depends(get_db), tournament: Annotated[Tournament, Depends(curr_tournament)]) -> MatchResultData:
     results = db.scalars(
         select(MatchResult)
         .join(Problem)
         .where(Problem.tournament_id == tournament.id)
     ).unique().all()
-    print(1234)
     return MatchResultData(
         results=encode(results),
         problems=encode({result.problem for result in results}),
