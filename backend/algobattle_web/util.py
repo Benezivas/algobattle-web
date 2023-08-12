@@ -122,7 +122,7 @@ T = TypeVar("T")
 def unwrap(arg: T | None) -> T:
     """Returns the argument if it is not `None`, otherwise raises a HTTPException."""
     if arg is None:
-        raise HTTPException(400)
+        raise HTTPException(400, detail="Attempted to access a nonexistent resource.")
     else:
         return arg
 
