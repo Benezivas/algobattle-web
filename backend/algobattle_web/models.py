@@ -453,6 +453,10 @@ class Problem(Base, unsafe_hash=True):
     __table_args__ = (UniqueConstraint("name", "tournament_id"),)
     Schema = schemas.Problem
 
+    @property
+    def link(self) -> str:
+        return f"{ServerConfig.obj.frontend_base_url}/problems/{self.tournament.name}/{self.name}"
+
     def visible(self, user: User) -> bool:
         if user.is_admin or self.start is None:
             return True
@@ -556,12 +560,10 @@ class MatchResult(Base, unsafe_hash=True):
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id), init=False)
     participants: Mapped[set[ResultParticipant]] = relationship(default=set)
-    config_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
-    config: Mapped[File | None] = relationship(default=None, foreign_keys=config_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
     logs_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     logs: Mapped[File | None] = relationship(default=None, foreign_keys=logs_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
 
-    Scehma = schemas.MatchResult
+    Schema = schemas.MatchResult
 
     def visible(self, user: User) -> bool:
         return user.is_admin or len(set(user.teams).intersection(p.team for p in self.participants)) != 0

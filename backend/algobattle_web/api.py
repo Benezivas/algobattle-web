@@ -818,6 +818,7 @@ def search_program(
     name: str | None = None,
     team: ID | None = None,
     role: Role | None = None,
+    problem: ID | None = None,
     limit: int = 25,
     page: int = 1,
     ) -> ProgramResults:
@@ -831,9 +832,11 @@ def search_program(
     if name is not None:
         filters.append(Program.name.contains(name, autoescape=True))
     if team is not None:
-        filters.append(Program.team == team)
+        filters.append(Program.team_id == team)
     if role is not None:
         filters.append(Program.role == role)
+    if problem is not None:
+        filters.append(Program.problem_id == problem)
     page = max(page - 1, 0)
     programs = db.scalars(
         select(Program)
@@ -968,6 +971,31 @@ def delete_result(*, db: Session = Depends(get_db), id: ID) -> bool:
     db.delete(result)
     db.commit()
     return True
+
+
+class MatchResultData(BaseSchema):
+    problems: dict[ID, schemas.Problem]
+    results: dict[ID, schemas.MatchResult]
+    teams: dict[ID, schemas.Team]
+
+
+@router.get("/match/results", tags=["match"])
+def get_match_results(*, db: Session = Depends(get_db), user: User = Depends(curr_user)) -> MatchResultData:
+    tournament = unwrap(user.settings.selected_team).tournament
+    print(1234)
+    tournament.assert_visible(user)
+    print(1234)
+    results = db.scalars(
+        select(MatchResult)
+        .join(Problem)
+        .where(Problem.tournament_id == tournament.id)
+    ).unique().all()
+    print(1234)
+    return MatchResultData(
+        results=encode(results),
+        problems=encode({result.problem for result in results}),
+        teams=encode({participant.team for result in results for participant in result.participants})
+    )
 
 
 # * has to be executed after all route defns

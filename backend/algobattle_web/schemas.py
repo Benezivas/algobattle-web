@@ -66,6 +66,8 @@ class Problem(Base):
     problem_schema: str | None = None
     solution_schema: str | None = None
     colour: Color
+    # property is defined on db model to make it have access to the tournament name
+    link: str
 
 
 class Documentation(Base):
@@ -92,15 +94,15 @@ class ScheduledMatch(Base):
 
 
 class ResultParticipant(BaseSchema):
-    generator: ObjID
-    solver: ObjID
+    team_id: UUID
+    generator: Program
+    solver: Program
     points: float
 
 
 class MatchResult(Base):
     status: MatchStatus
     time: datetime
-    config: DbFile | None = None
     problem: ObjID
     participants: list[ResultParticipant]
     logs: DbFile | None = None

@@ -16,6 +16,10 @@ export interface DbFileLoc extends DbFile{
     location: string,
 }
 
+export function formatDateTime(datetime: string): string {
+    return (new Date(datetime)).toLocaleString()
+}
+
 const { cookies } = useCookies()
 OpenAPI.BASE = import.meta.env.MODE == "production" ? "" : "http://127.0.0.1:8000";
 OpenAPI.HEADERS = async () => {
