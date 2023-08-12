@@ -1,39 +1,38 @@
 <script setup lang="ts">
-import { RouterView, useRouter } from 'vue-router'
-import PageNavbarIcon from './components/HomeNavbarIcon.vue';
-import { store } from "./main"
-import { UserService } from '../typescript_client';
-import LoginView from './views/LoginView.vue';
-import { useCookies } from "vue3-cookies"
-import { onMounted } from 'vue';
+import { RouterView, useRouter } from "vue-router";
+import PageNavbarIcon from "./components/HomeNavbarIcon.vue";
+import { store } from "./main";
+import { UserService } from "../typescript_client";
+import LoginView from "./views/LoginView.vue";
+import { useCookies } from "vue3-cookies";
+import { onMounted } from "vue";
 import type { UserWithSettings } from "../typescript_client";
 
-const router = useRouter()
-const { cookies } = useCookies()
+const router = useRouter();
+const { cookies } = useCookies();
 
-onMounted(async () => { 
+onMounted(async () => {
   try {
-    store.user = await UserService.getSelf()
+    store.user = await UserService.getSelf();
   } catch {}
-  
-  const route = router.currentRoute.value
-  let login_token = route.query.login_token
+
+  const route = router.currentRoute.value;
+  let login_token = route.query.login_token;
   if (login_token instanceof Array) {
-    login_token = login_token[0]
+    login_token = login_token[0];
   }
   if (login_token) {
-    const data = await UserService.getToken({loginToken: login_token})
-    cookies.set("algobattle_user_token", data.token, data.expires)
-    store.user = await UserService.getSelf()
-    router.replace({path: route.path})
+    const data = await UserService.getToken({ loginToken: login_token });
+    cookies.set("algobattle_user_token", data.token, data.expires);
+    store.user = await UserService.getSelf();
+    router.replace({ path: route.path });
   }
-})
+});
 
 async function logout() {
-  cookies.remove("algobattle_user_token")
-  store.user = {} as UserWithSettings
+  cookies.remove("algobattle_user_token");
+  store.user = {} as UserWithSettings;
 }
-
 </script>
 
 <template>
@@ -42,7 +41,15 @@ async function logout() {
       <RouterLink to="/" class="navbar-brand">
         <span class="fs-4">Algobattle</span>
       </RouterLink>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent"
+        aria-expanded="false"
+        aria-label="Toggle navigation"
+      >
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -55,12 +62,18 @@ async function logout() {
         </ul>
 
         <div v-if="store.user.id" class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-person-circle me-2"></i> <strong>{{store.user.name}}</strong>
+          <a
+            class="nav-link dropdown-toggle text-white"
+            href="#"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            <i class="bi bi-person-circle me-2"></i> <strong>{{ store.user.name }}</strong>
           </a>
           <ul class="dropdown-menu">
             <li><RouterLink class="dropdown-item" to="settings">Settings</RouterLink></li>
-            <li><hr class="dropdown-divider"></li>
+            <li><hr class="dropdown-divider" /></li>
             <li>
               <button class="dropdown-item" @click="logout">Log out</button>
             </li>

@@ -15,12 +15,10 @@ const searchData = ref({
   team: "",
   role: "",
   limit: 25,
-})
+});
 
-async function search(
-  page: number = 1
-) {
-  const ret = await ProgramService.searchProgram({page: page});
+async function search(page: number = 1) {
+  const ret = await ProgramService.searchProgram({ page: page });
   programs.value = ret.programs;
   problems.value = ret.problems;
   teams.value = ret.teams;
@@ -29,10 +27,10 @@ async function search(
 }
 
 const newProgData = ref<{
-  name?: string,
-  role?: Role,
-  problem?: string,
-  file?: Blob,
+  name?: string;
+  role?: Role;
+  problem?: string;
+  file?: Blob;
 }>({
   name: "",
 });
@@ -40,27 +38,31 @@ let modal: Modal;
 async function openModal() {
   newProgData.value = {
     name: "",
-  }
+  };
   modal.show();
 }
 function selectFile(event: InputFileEvent) {
-  const files = event.target.files || event.dataTransfer?.files
+  const files = event.target.files || event.dataTransfer?.files;
   if (files && files.length != 0) {
-    newProgData.value.file = files[0]
+    newProgData.value.file = files[0];
   }
 }
 async function uploadProgram() {
-  if (!newProgData.value.file || newProgData.value.file.size == 0
-  || !newProgData.value.problem || !newProgData.value.role) {
-    return
+  if (
+    !newProgData.value.file ||
+    newProgData.value.file.size == 0 ||
+    !newProgData.value.problem ||
+    !newProgData.value.role
+  ) {
+    return;
   }
   const newProgram = await ProgramService.uploadProgram({
     role: newProgData.value.role,
     problem: newProgData.value.problem,
     formData: {
       file: newProgData.value.file,
-    }
-  })
+    },
+  });
   programs.value[newProgram.id] = newProgram;
   modal.hide();
 }
@@ -91,21 +93,45 @@ onMounted(() => {
         <td>{{ program.creation_time.toLocaleString() }}</td>
         <td>{{ program.name }}</td>
         <td>
-          <a role="button" class="btn btn-primary btn-sm" :href="program.file.location" title="Download program file">Download <i class="bi bi-download ms-1"></i></a>
+          <a
+            role="button"
+            class="btn btn-primary btn-sm"
+            :href="program.file.location"
+            title="Download program file"
+            >Download <i class="bi bi-download ms-1"></i
+          ></a>
         </td>
       </tr>
     </tbody>
   </table>
 
   <div class="d-flex mb-3 pe-2">
-    <button type="button" class="btn btn-primary btn-sm me-auto" @click="openModal">Upload new program</button>
+    <button type="button" class="btn btn-primary btn-sm me-auto" @click="openModal">
+      Upload new program
+    </button>
     <nav v-if="maxPage > 1" aria-label="Table pagination">
       <ul class="pagination pagination-sm justify-content-end mb-0 ms-2">
-        <li class="page-item"><a class="page-link" :class="{disabled: currPage <= 1}" @click="e => search(1)"><i class="bi bi-chevron-double-left"></i></a></li>
-        <li class="page-item"><a class="page-link" :class="{disabled: currPage <= 1}" @click="e => search(currPage - 1)"><i class="bi bi-chevron-compact-left"></i></a></li>
+        <li class="page-item">
+          <a class="page-link" :class="{ disabled: currPage <= 1 }" @click="(e) => search(1)"
+            ><i class="bi bi-chevron-double-left"></i
+          ></a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" :class="{ disabled: currPage <= 1 }" @click="(e) => search(currPage - 1)"
+            ><i class="bi bi-chevron-compact-left"></i
+          ></a>
+        </li>
         <li class="page-item">currPage / maxPage</li>
-        <li class="page-item"><a class="page-link" :class="{disabled: currPage >= maxPage}" @click="e => (currPage + 1)"><i class="bi bi-chevron-compact-right"></i></a></li>
-        <li class="page-item"><a class="page-link" :class="{disabled: currPage >= maxPage}" @click="e => (maxPage)"><i class="bi bi-chevron-double-right"></i></a></li>
+        <li class="page-item">
+          <a class="page-link" :class="{ disabled: currPage >= maxPage }" @click="(e) => currPage + 1"
+            ><i class="bi bi-chevron-compact-right"></i
+          ></a>
+        </li>
+        <li class="page-item">
+          <a class="page-link" :class="{ disabled: currPage >= maxPage }" @click="(e) => maxPage"
+            ><i class="bi bi-chevron-double-right"></i
+          ></a>
+        </li>
       </ul>
     </nav>
   </div>
@@ -121,13 +147,25 @@ onMounted(() => {
           <div class="col-md-6">
             <div class="mb-3">
               <label for="problem_sel" class="form-label">Problem</label>
-              <select class="form-select w-em" id="problem_sel" name="problem" required v-model="newProgData.problem">
-                <option v-for="(problem, id) in problems" :value="id">{{problem.name}}</option>
+              <select
+                class="form-select w-em"
+                id="problem_sel"
+                name="problem"
+                required
+                v-model="newProgData.problem"
+              >
+                <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>
               </select>
             </div>
             <div class="mb-3">
               <label for="prog_name" class="form-label">Name</label>
-              <input type="text" class="form-control w-em" name="name" id="prog_name" v-model="newProgData.name"/>
+              <input
+                type="text"
+                class="form-control w-em"
+                name="name"
+                id="prog_name"
+                v-model="newProgData.name"
+              />
             </div>
           </div>
           <div class="col-md-6">
@@ -138,12 +176,17 @@ onMounted(() => {
                 <option value="solver">Solver</option>
               </select>
             </div>
-            <div class="mb-3">  
+            <div class="mb-3">
               <label for="file_select" class="form-label mt-3">Select new program file</label>
-              <input type="file" class="form-control w-em" id="file_select" @change="(e) => selectFile(e as any)" required/>
+              <input
+                type="file"
+                class="form-control w-em"
+                id="file_select"
+                @change="(e) => selectFile(e as any)"
+                required
+              />
             </div>
           </div>
-
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Discard</button>

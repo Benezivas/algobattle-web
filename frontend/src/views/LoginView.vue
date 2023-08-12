@@ -1,21 +1,20 @@
 <script setup lang="ts">
 import { UserService } from "@client";
-import { ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref } from "vue";
+import { useRoute } from "vue-router";
 
-const route = useRoute()
-var email = ref("")
-var msg = ref("")
+const route = useRoute();
+var email = ref("");
+var msg = ref("");
 
 async function login() {
   try {
-    await UserService.login({requestBody: {email: email.value, target_url: route.fullPath}})
-    msg.value = "email_sent"
+    await UserService.login({ requestBody: { email: email.value, target_url: route.fullPath } });
+    msg.value = "email_sent";
   } catch {
-    msg.value = "error"
+    msg.value = "error";
   }
 }
-
 </script>
 
 <template>
@@ -30,7 +29,7 @@ async function login() {
   <form @submit.prevent="login">
     <div class="mb-3">
       <label for="email" class="form-label">Email address</label>
-      <input type="email" class="form-control w-em" id="email" required v-model="email">
+      <input type="email" class="form-control w-em" id="email" required v-model="email" />
     </div>
     <button type="submit" class="btn btn-primary">Login</button>
   </form>
