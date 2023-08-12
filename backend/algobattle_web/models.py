@@ -2,7 +2,7 @@
 from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
 from typing import IO, Callable, ClassVar, Iterable, Any
-from typing import Any, BinaryIO, Iterable, Literal, Mapping, Self, cast, overload, Annotated, Sequence
+from typing import Any, BinaryIO, Iterable, Literal, Self, cast, overload, Annotated, Sequence
 from uuid import UUID, uuid4
 from pathlib import Path
 from shutil import copyfileobj, copyfile

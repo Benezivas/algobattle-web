@@ -4,7 +4,7 @@ from enum import Enum
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated, Any, Callable, Literal, cast
+from typing import Any, Callable, Literal, cast
 from uuid import UUID
 from zipfile import ZipFile
 from urllib.parse import quote
@@ -15,7 +15,7 @@ from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse, Response
 from markdown import markdown
-from sqlalchemy import BinaryExpression, func, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from pydantic import Field
 
@@ -35,11 +35,9 @@ from algobattle_web.models import (
     ScheduledMatch,
     Team,
     User,
-    UserSettings,
 )
 from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Wrapped, send_email, ServerConfig
 from algobattle_web.dependencies import curr_user, check_if_admin, get_db
-from algobattle_web.models import UserSettings
 from pydantic_extra_types.color import Color
 
 
@@ -208,16 +206,21 @@ def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
 class EditSettings(BaseSchema):
     email: str | None = None
     selected_team: ID | None = None
+    selected_tournament: ID | None = None
 
 
 @router.patch("/user/settings", tags=["user"])
-def edit_self(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSettings) -> User:
+def settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSettings) -> User:
     if edit.email is not None:
         user.email = edit.email
     if edit.selected_team is not None:
         if not any(edit.selected_team == team.id for team in user.teams):
             raise HTTPException(400, "User is not in the selected team")
         user.settings.selected_team_id = edit.selected_team
+    if edit.selected_tournament is not None:
+        if not user.is_admin:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Only admin users can select tournaments")
+        user.settings.tournament = unwrap(db.get(Tournament, edit.selected_tournament))
     db.commit()
     return user
 
