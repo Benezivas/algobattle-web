@@ -27,17 +27,13 @@ onMounted(async () => {
   }
 });
 
-interface EditParticipant extends ResultParticipant {
-  editing?: boolean;
-}
-
 interface EditData {
   id?: string;
   status: MatchStatus;
   time: string;
   problem?: string;
   logs?: DbFile | null;
-  participants: EditParticipant[];
+  participants: Partial<ResultParticipant>[];
   confirmDelete: boolean;
 }
 
@@ -111,7 +107,7 @@ function getPrograms(team: string, role: Role) {
   </button>
 
   <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
       <form class="modal-content" @submit.prevent="sendData">
         <div class="modal-header">
           <h1 class="modal-title fs-5" id="modalLabel">
@@ -151,10 +147,21 @@ function getPrograms(team: string, role: Role) {
             </thead>
             <tbody>
               <tr v-for="participant in editData.participants">
-                <td>{{ teams[participant.team_id].name }}</td>
                 <td>
                   <select
-                    v-if="participant.editing"
+                    :id="participant.team_id + 'team'"
+                    class="form-select"
+                    required
+                    v-model="participant.team_id"
+                  >
+                    <option v-for="(team, id) in teams" :value="id">
+                      {{ team.name }}
+                    </option>
+                  </select>
+                </td>
+                <td>
+                  <select
+                    v-if="participant.team_id"
                     :id="participant.team_id + 'gen'"
                     class="form-select"
                     required
@@ -165,11 +172,10 @@ function getPrograms(team: string, role: Role) {
                       {{ `${prog.name}(${formatDateTime(prog.creation_time)})` }}
                     </option>
                   </select>
-                  <DownloadButtonVue v-else :file="participant.generator.file" />
                 </td>
                 <td>
                   <select
-                    v-if="participant.editing"
+                    v-if="participant.team_id"
                     :id="participant.team_id + 'gen'"
                     class="form-select"
                     required
@@ -180,32 +186,29 @@ function getPrograms(team: string, role: Role) {
                       {{ `${prog.name}(${formatDateTime(prog.creation_time)})` }}
                     </option>
                   </select>
-                  <DownloadButtonVue v-else :file="participant.solver.file" />
                 </td>
-                <td v-if="participant.editing">
-                  <input class="form-control" type="number" v-model="participant.points" required />
-                </td>
-                <td v-else>{{ participant.points }}</td>
                 <td>
-                  <div class="btn-group brn-group-sm" role="group">
-                    <button
-                      type="button"
-                      class="btn btn-warning"
-                      title="Edit"
-                      @click="participant.editing = !participant.editing"
-                    >
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-danger"
-                      title="Remove"
-                      @click="editData.participants.splice(editData.participants.indexOf(participant), 1)"
-                    >
-                      <i class="bi bi-x"></i>
-                    </button>
-                  </div>
+                  <template v-if="participant.team_id">
+                    <input class="form-control" type="number" v-model="participant.points" required />
+                  </template>
                 </td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-danger btn-sm"
+                    title="Remove"
+                    @click="editData.participants.splice(editData.participants.indexOf(participant), 1)"
+                  >
+                    <i class="bi bi-x"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td><button type="button" class="btn btn-sm btn-success" @click="editData.participants.push({})"><i class="bi bi-plus-square-dotted"></i></button></td>
               </tr>
             </tbody>
           </table>
