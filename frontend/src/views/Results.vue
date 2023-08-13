@@ -30,7 +30,7 @@ onMounted(async () => {
 interface EditData {
   id?: string;
   status: MatchStatus;
-  time: string;
+  time?: string;
   problem?: string;
   logs?: DbFile | null;
   participants: Partial<ResultParticipant>[];
@@ -39,7 +39,6 @@ interface EditData {
 
 const editData = ref<EditData>({
   status: MatchStatus.COMPLETE,
-  time: new Date().toLocaleString(),
   participants: [],
   confirmDelete: false,
 });
@@ -49,7 +48,6 @@ function openEdit(match: MatchResult | undefined) {
     ? { ...structuredClone(toRaw(match)), confirmDelete: false }
     : {
         status: MatchStatus.COMPLETE,
-        time: new Date().toLocaleString(),
         problem: undefined,
         participants: [],
         confirmDelete: false,
