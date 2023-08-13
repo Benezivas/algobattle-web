@@ -24,6 +24,7 @@ from algobattle.problem import Problem as AlgProblem, Instance, Solution
 from algobattle_web import schemas
 from algobattle_web.models import (
     File as DbFile,
+    ResultParticipant,
     encode,
     Session,
     ID,
@@ -36,7 +37,15 @@ from algobattle_web.models import (
     Team,
     User,
 )
-from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Wrapped, send_email, ServerConfig
+from algobattle_web.util import (
+    MatchStatus,
+    ValueTaken,
+    unwrap,
+    BaseSchema,
+    Wrapped,
+    send_email,
+    ServerConfig,
+)
 from algobattle_web.dependencies import CurrTournament, Database, curr_user, check_if_admin, get_db
 from pydantic_extra_types.color import Color
 
@@ -980,6 +989,38 @@ def delete_results(*, db: Database, ids: list[ID]) -> None:
     for id in ids:
         db.delete(unwrap(db.get(MatchResult, id)))
     db.commit()
+
+
+class CreateResult(BaseSchema):
+    class Participant(BaseSchema):
+        team: UUID
+        generator: UUID
+        solver: UUID
+        points: float
+
+    status: MatchStatus
+    time: datetime
+    problem: UUID
+    participants: list[Participant]
+
+
+@admin.post("/match/result", tags=["match"])
+def add_results(
+    *, db: Database, tournament: CurrTournament, results: list[CreateResult]
+) -> dict[UUID, schemas.MatchResult]:
+    res: list[MatchResult] = []
+    for result in results:
+        problem = unwrap(db.get(Problem, result.problem))
+        participants: set[ResultParticipant] = set()
+        for participant in result.participants:
+            team = unwrap(db.get(Team, participant.team))
+            gen = unwrap(db.get(Program, participant.generator))
+            sol = unwrap(db.get(Program, participant.solver))
+            participants.add(ResultParticipant(db, team=team, generator=gen, solver=sol, points=participant.points))
+        db_res = MatchResult(db, status=result.status, time=result.time, problem=problem, participants=participants)
+        db.add(db_res)
+    db.commit()
+    return encode(res)
 
 
 # * has to be executed after all route defns
