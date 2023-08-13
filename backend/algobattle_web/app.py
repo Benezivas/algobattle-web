@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     # however, that isn't easy here since alembic (presumably) expects a bunch of files in a certain structure.
     # this code's invocation of alembic will (probably) just break if you use esoteric install options 🤷‍♀️
     data_files = files("algobattle_web.alembic")
-    with (as_file(data_files / "alembic.ini") as alembic_ini):
+    with as_file(data_files / "alembic.ini") as alembic_ini:
         alembic_cfg = Config(alembic_ini)
         alembic_cfg.set_main_option("script_location", str(alembic_ini.parent))
         with engine.connect() as connection:
@@ -70,6 +70,8 @@ def custom_openapi():
     )
     app.openapi_schema = schema
     return schema
+
+
 app.openapi = custom_openapi
 
 
@@ -77,10 +79,12 @@ app.openapi = custom_openapi
 async def err_handler(request: Request, e: RequestValidationError):
     return JSONResponse(
         status_code=422,
-        content=jsonable_encoder({
-            "detail": e.errors(),
-            "body": e.body,
-        })
+        content=jsonable_encoder(
+            {
+                "detail": e.errors(),
+                "body": e.body,
+            }
+        ),
     )
 
 
@@ -93,12 +97,14 @@ async def perm_err(request: Request, e: PermissionError):
 async def val_taken_err(request: Request, e: ValueTaken):
     return JSONResponse(
         status_code=409,
-        content=jsonable_encoder({
-            "type": "value_taken",
-            "field": e.field,
-            "value": e.value,
-            "object": e.object,
-        })
+        content=jsonable_encoder(
+            {
+                "type": "value_taken",
+                "field": e.field,
+                "value": e.value,
+                "object": e.object,
+            }
+        ),
     )
 
 

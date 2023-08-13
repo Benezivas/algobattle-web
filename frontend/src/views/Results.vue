@@ -118,13 +118,7 @@ function getPrograms(team: string, role: Role) {
         </div>
         <div class="modal-body">
           <label for="time" class="form-label">Time</label>
-          <input
-            id="time"
-            class="form-control"
-            type="datetime-local"
-            required
-            v-model="editData.time"
-          />
+          <input id="time" class="form-control" type="datetime-local" required v-model="editData.time" />
           <label for="problem" class="form-label">Problem</label>
           <select id="problem" class="form-select" required v-model="editData.problem">
             <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>
@@ -208,7 +202,15 @@ function getPrograms(team: string, role: Role) {
                 <td></td>
                 <td></td>
                 <td></td>
-                <td><button type="button" class="btn btn-sm btn-success" @click="editData.participants.push({})"><i class="bi bi-plus-square-dotted"></i></button></td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-success"
+                    @click="editData.participants.push({})"
+                  >
+                    <i class="bi bi-plus-square-dotted"></i>
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>

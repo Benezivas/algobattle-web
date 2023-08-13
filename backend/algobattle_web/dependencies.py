@@ -15,7 +15,9 @@ async def get_db() -> AsyncIterable[Session]:
             raise
 
 
-def curr_user_maybe(db: Session = Depends(get_db), user_token: str | None = Depends(APIKeyHeader(name="X-User-Token"))) -> User | None:
+def curr_user_maybe(
+    db: Session = Depends(get_db), user_token: str | None = Depends(APIKeyHeader(name="X-User-Token"))
+) -> User | None:
     return User.decode_token(db, user_token)
 
 

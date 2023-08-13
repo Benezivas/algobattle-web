@@ -32,14 +32,24 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
 
         paricipants: dict[ID, ResultParticipant] = {}
         for team in scheduled_match.problem.tournament.teams:
-            gen = unwrap(db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.generator)).unique().first())
+            gen = unwrap(
+                db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.generator))
+                .unique()
+                .first()
+            )
             gen_path = _extract_to(gen.file.path, folder / team.id.hex / "generator")
-            sol = unwrap(db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.solver)).unique().first())
+            sol = unwrap(
+                db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.solver))
+                .unique()
+                .first()
+            )
             sol_path = _extract_to(sol.file.path, folder / team.id.hex / "solver")
 
             config.teams[team.name] = TeamInfo(generator=gen_path, solver=sol_path)
             paricipants[team.id] = ResultParticipant(db, team, gen, sol, 0)
-        db_result = MatchResult(db, MatchStatus.running, datetime.now(), scheduled_match.problem, set(paricipants.values()), config_file)
+        db_result = MatchResult(
+            db, MatchStatus.running, datetime.now(), scheduled_match.problem, set(paricipants.values()), config_file
+        )
         db.commit()
 
         result = run(Match.run, config, problem)
@@ -58,7 +68,11 @@ def run_scheduled_matches():
     time = datetime.now()
     first = time - ServerConfig.obj.match_execution_interval - timedelta(hours=1)
     with SessionLocal() as db:
-        scheduled_matches = db.scalars(select(ScheduledMatch).where(first <= ScheduledMatch.time, ScheduledMatch.time <= time)).unique().all()
+        scheduled_matches = (
+            db.scalars(select(ScheduledMatch).where(first <= ScheduledMatch.time, ScheduledMatch.time <= time))
+            .unique()
+            .all()
+        )
         if len(scheduled_matches) == 0:
             return
         # ! Temporary fix, come up with a better solution to this
@@ -80,7 +94,9 @@ def main():
     SessionLocal.configure(bind=engine)
     day = datetime.today()
     while True:
-        next_exec = ServerConfig.obj.match_execution_interval - (datetime.now() - day) % ServerConfig.obj.match_execution_interval
+        next_exec = (
+            ServerConfig.obj.match_execution_interval
+            - (datetime.now() - day) % ServerConfig.obj.match_execution_interval
+        )
         sleep(next_exec.seconds)
         run_scheduled_matches()
-

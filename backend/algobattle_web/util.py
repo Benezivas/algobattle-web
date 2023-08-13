@@ -11,7 +11,17 @@ from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 from os import environ
 
-from pydantic import Base64Bytes, BeforeValidator, ConfigDict, Field, ValidationError, field_validator, AnyUrl, BaseModel, Extra
+from pydantic import (
+    Base64Bytes,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    AnyUrl,
+    BaseModel,
+    Extra,
+)
 from fastapi import HTTPException
 from sqlalchemy.orm import sessionmaker
 
@@ -25,7 +35,7 @@ class BaseSchema(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
         extra=Extra.forbid,
-        )
+    )
 
 
 def model_to_id(obj: object) -> UUID:
@@ -33,8 +43,8 @@ def model_to_id(obj: object) -> UUID:
     if isinstance(obj, UUID):
         return obj
     elif hasattr(obj, "id"):
-        if isinstance(obj.id, UUID):    # type: ignore
-            return obj.id   # type: ignore
+        if isinstance(obj.id, UUID):  # type: ignore
+            return obj.id  # type: ignore
         else:
             raise ValueError
     elif isinstance(obj, str):
@@ -119,6 +129,8 @@ def send_email(email: str, content: str) -> None:
 
 
 T = TypeVar("T")
+
+
 def unwrap(arg: T | None) -> T:
     """Returns the argument if it is not `None`, otherwise raises a HTTPException."""
     if arg is None:
@@ -129,12 +141,14 @@ def unwrap(arg: T | None) -> T:
 
 class AlgobattleError(Exception):
     """Base exception class."""
+
     pass
 
 
 @dataclass
 class ValueTaken(AlgobattleError):
     """Raised when a uniqueness constrained would be violated."""
+
     field: str
     value: str
     object: UUID | None = None
@@ -143,11 +157,13 @@ class ValueTaken(AlgobattleError):
 @dataclass
 class ResourceNeeded(AlgobattleError):
     """Raised to indicate that a value can't be deleted or modified because of references to it."""
+
     err: str | None = None
 
 
 class PermissionExcpetion(AlgobattleError):
     """Raised when the user does not have the needed permissions"""
+
     pass
 
 
@@ -168,6 +184,7 @@ def guess_mimetype(info: str | Path) -> str:
 
 class Wrapped(BaseSchema, Generic[T]):
     """Wraps a value in a schema to force json encoding."""
+
     data: T
 
 

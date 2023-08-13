@@ -39,26 +39,29 @@ class RawBase(MappedAsDataclass, DeclarativeBase):
         }
     )
 
-    metadata = MetaData(naming_convention={
-        "ix": "ix_%(column_0_label)s",
-        "uq": "uq_%(table_name)s_%(column_0_name)s",
-        "ck": "ck_%(table_name)s_`%(constraint_name)s`",
-        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-        "pk": "pk_%(table_name)s"
-    })
+    metadata = MetaData(
+        naming_convention={
+            "ix": "ix_%(column_0_label)s",
+            "uq": "uq_%(table_name)s_%(column_0_name)s",
+            "ck": "ck_%(table_name)s_`%(constraint_name)s`",
+            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+            "pk": "pk_%(table_name)s",
+        }
+    )
 
     Schema: ClassVar[type[BaseSchema]]
 
-    def __init_subclass__(cls,
-            init: _NoArg | bool = _NoArg.NO_ARG,
-            repr: _NoArg | bool = _NoArg.NO_ARG,
-            eq: _NoArg | bool = _NoArg.NO_ARG,
-            order: _NoArg | bool = _NoArg.NO_ARG,
-            unsafe_hash: _NoArg | bool = _NoArg.NO_ARG,
-            match_args: _NoArg | bool = _NoArg.NO_ARG,
-            kw_only: _NoArg | bool = _NoArg.NO_ARG,
-            dataclass_callable: _NoArg | Callable[..., type] = _NoArg.NO_ARG
-        ) -> None:
+    def __init_subclass__(
+        cls,
+        init: _NoArg | bool = _NoArg.NO_ARG,
+        repr: _NoArg | bool = _NoArg.NO_ARG,
+        eq: _NoArg | bool = _NoArg.NO_ARG,
+        order: _NoArg | bool = _NoArg.NO_ARG,
+        unsafe_hash: _NoArg | bool = _NoArg.NO_ARG,
+        match_args: _NoArg | bool = _NoArg.NO_ARG,
+        kw_only: _NoArg | bool = _NoArg.NO_ARG,
+        dataclass_callable: _NoArg | Callable[..., type] = _NoArg.NO_ARG,
+    ) -> None:
         super().__init_subclass__(init, repr, eq, order, unsafe_hash, match_args, kw_only, dataclass_callable)
         del cls.__dataclass_fields__
 
@@ -79,16 +82,20 @@ class File(RawBase, init=False):
     _file: Path | BinaryIO | None = None
 
     @overload
-    def __init__(self, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str = ""): ...
+    def __init__(self, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str = ""):
+        ...
 
     @overload
-    def __init__(self, file: Self): ...
+    def __init__(self, file: Self):
+        ...
 
     @overload
-    def __init__(self, file: UploadFile, *, alt_text: str = ""): ...
+    def __init__(self, file: UploadFile, *, alt_text: str = ""):
+        ...
 
     @overload
-    def __init__(self, file: Path, *, media_type: str | None = None, alt_text: str = "", move: bool): ...
+    def __init__(self, file: Path, *, media_type: str | None = None, alt_text: str = "", move: bool):
+        ...
 
     def __init__(
         self,
@@ -171,10 +178,12 @@ class File(RawBase, init=False):
                 with open(self.path, "wb+") as target:
                     copyfileobj(self._file, target)
             self._file = None
-    
+
     def response(self, content_disposition: Literal["attachment", "inline"] = "attachment") -> FileResponse:
         """Creates a fastapi FileResponse that serves this file."""
-        return FileResponse(self.path, filename=self.filename, content_disposition_type=content_disposition, media_type=self.media_type)
+        return FileResponse(
+            self.path, filename=self.filename, content_disposition_type=content_disposition, media_type=self.media_type
+        )
 
     def open(self, mode: str = "rb") -> IO[Any]:
         """Opens the underlying file object."""
@@ -265,10 +274,10 @@ class Base(BaseNoID, unsafe_hash=True):
     id: Mapped[ID] = mapped_column(default_factory=uuid4, primary_key=True, init=False, autoincrement=False)
 
 
-
 def encode(col: Iterable[Base]) -> dict[ID, Any]:
     """Encodes a collection of database items into a jsonable container."""
     return {el.id: el.encode() for el in col}
+
 
 team_members = Table(
     "team_members",
@@ -287,7 +296,9 @@ class User(Base, unsafe_hash=True):
     selected_team: Mapped["Team | None"] = relationship(lazy="joined", default=None)
     selected_tournament: "Mapped[Tournament | None]" = relationship(default=None)
 
-    teams: Mapped[list["Team"]] = relationship(secondary=team_members, back_populates="members", lazy="joined", default_factory=list)
+    teams: Mapped[list["Team"]] = relationship(
+        secondary=team_members, back_populates="members", lazy="joined", default_factory=list
+    )
     token_id: Mapped[ID] = mapped_column(init=False)
     selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), init=False)
     selected_tournament_id: Mapped[UUID | None] = mapped_column(ForeignKey("tournaments.id"), init=False)
@@ -382,7 +393,9 @@ class Team(Base, unsafe_hash=True):
     name: Mapped[str32]
     tournament: Mapped[Tournament] = relationship(back_populates="teams", uselist=False, lazy="joined")
     tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
-    members: Mapped[list[User]] = relationship(secondary=team_members, back_populates="teams", lazy="joined", default_factory=list)
+    members: Mapped[list[User]] = relationship(
+        secondary=team_members, back_populates="teams", lazy="joined", default_factory=list
+    )
 
     __table_args__ = (UniqueConstraint("name", "tournament_id"),)
 
@@ -423,13 +436,21 @@ class Problem(Base, unsafe_hash=True):
     name: Mapped[str64]
     tournament: Mapped[Tournament] = relationship()
     tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
-    file: Mapped[File] = relationship(foreign_keys=file_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
-    config: Mapped[File] = relationship(foreign_keys=config_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
+    file: Mapped[File] = relationship(
+        foreign_keys=file_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin"
+    )
+    config: Mapped[File] = relationship(
+        foreign_keys=config_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin"
+    )
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
-    description: Mapped[File | None] = relationship(default=None, foreign_keys=description_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
+    description: Mapped[File | None] = relationship(
+        default=None, foreign_keys=description_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin"
+    )
     short_description: Mapped[str256] = mapped_column(default="")
-    image: Mapped[File | None] = relationship(default=None, foreign_keys=image_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
+    image: Mapped[File | None] = relationship(
+        default=None, foreign_keys=image_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin"
+    )
     problem_schema: Mapped[strText] = mapped_column(default="")
     solution_schema: Mapped[strText] = mapped_column(default="")
     colour: Mapped[str] = mapped_column(String(7), default="#FFFFFF")
@@ -470,7 +491,9 @@ class Documentation(Base, unsafe_hash=True):
         return user.is_admin or self.team in user.teams
 
     def editable(self, user: "User") -> bool:
-        return self.visible(user) and (user.is_admin or (self.problem.end is None or self.problem.end >= datetime.now()))
+        return self.visible(user) and (
+            user.is_admin or (self.problem.end is None or self.problem.end >= datetime.now())
+        )
 
     @classmethod
     def visible_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
@@ -538,14 +561,15 @@ class ResultParticipant(BaseNoID):
 
 
 class MatchResult(Base, unsafe_hash=True):
-
     status: Mapped[MatchStatus]
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id), init=False)
     participants: Mapped[set[ResultParticipant]] = relationship(default=set)
     logs_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
-    logs: Mapped[File | None] = relationship(default=None, foreign_keys=logs_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin")
+    logs: Mapped[File | None] = relationship(
+        default=None, foreign_keys=logs_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin"
+    )
 
     Schema = schemas.MatchResult
 

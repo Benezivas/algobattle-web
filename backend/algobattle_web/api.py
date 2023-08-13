@@ -51,7 +51,9 @@ class EditAction(Enum):
 class SchemaRoute(APIRoute):
     """Route that defaults to using the `Schema` entry of the returned object as a response_model."""
 
-    def __init__(self, path: str, endpoint: Callable[..., Any], *, response_model: Any = Default(None), **kwargs) -> None:
+    def __init__(
+        self, path: str, endpoint: Callable[..., Any], *, response_model: Any = Default(None), **kwargs
+    ) -> None:
         if isinstance(response_model, DefaultPlaceholder):
             return_annotation = get_typed_return_annotation(endpoint)
             if hasattr(return_annotation, "Schema"):
@@ -69,7 +71,7 @@ admin = APIRouter(dependencies=[Depends(check_if_admin)], route_class=SchemaRout
 
 
 @router.get("/files/{id}", tags=["files"])
-def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
+def get_file(db=Depends(get_db), *, id: ID) -> FileResponse:
     file = unwrap(db.get(DbFile, id))
     return file.response("inline" if file.media_type == "application/pdf" else "attachment")
 
@@ -80,7 +82,7 @@ def get_file(db = Depends(get_db), *, id: ID) -> FileResponse:
 
 
 @router.get("/user/self", tags=["user"], response_model=schemas.UserWithSettings)
-def get_self(*, user = Depends(curr_user)) -> User:
+def get_self(*, user=Depends(curr_user)) -> User:
     return user
 
 
@@ -94,7 +96,7 @@ class UserSearch(BaseSchema):
 @admin.get("/user", tags=["user"])
 def search_users(
     *,
-    db = Depends(get_db),
+    db=Depends(get_db),
     ids: list[UUID] = [],
     name: str | None = None,
     email: str | None = None,
@@ -104,7 +106,7 @@ def search_users(
     limit: int = 25,
     page: int = 1,
     exact_search: bool = False,
-    ) -> UserSearch:
+) -> UserSearch:
     filters = []
     if ids:
         filters.append(User.id.in_(ids))
@@ -125,18 +127,18 @@ def search_users(
     if team is not None:
         filters.append(User.teams.any(Team.id == team))
     page = max(page - 1, 0)
-    users = db.scalars(
-        select(User)
-        .where(*filters)
-        .order_by(User.is_admin.desc(), User.name.asc())
-        .limit(limit)
-        .offset(page * limit)
-    ).unique().all()
-    user_count = db.scalar(
-        select(func.count())
-        .select_from(User)
-        .where(*filters)
-    ) or 0
+    users = (
+        db.scalars(
+            select(User)
+            .where(*filters)
+            .order_by(User.is_admin.desc(), User.name.asc())
+            .limit(limit)
+            .offset(page * limit)
+        )
+        .unique()
+        .all()
+    )
+    user_count = db.scalar(select(func.count()).select_from(User).where(*filters)) or 0
     teams = [team for user in users for team in user.teams]
     return UserSearch(
         page=page + 1,
@@ -224,7 +226,7 @@ def settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), 
 
 
 @router.post("/user/login", tags=["user"])
-def login(*, db = Depends(get_db), email: str = Body(), target_url: str = Body(), tasks: BackgroundTasks) -> None:
+def login(*, db=Depends(get_db), email: str = Body(), target_url: str = Body(), tasks: BackgroundTasks) -> None:
     user = unwrap(User.get(db, email))
     token = user.login_token()
     url = str(ServerConfig.obj.frontend_base_url) + target_url + f"?login_token={token}"
@@ -237,7 +239,7 @@ class TokenData(BaseSchema):
 
 
 @router.post("/user/token", tags=["user"])
-def get_token(*, db = Depends(get_db), login_token: str) -> TokenData:
+def get_token(*, db=Depends(get_db), login_token: str) -> TokenData:
     user = User.decode_login_token(db, login_token)
     user.cookie()
     return TokenData(token=user.cookie(), expires=datetime.now() + timedelta(weeks=4))
@@ -249,11 +251,9 @@ def get_token(*, db = Depends(get_db), login_token: str) -> TokenData:
 
 
 @router.post("/tournament/all", tags=["tournament"])
-def all_tournaments(*, db = Depends(get_db), user = Depends(curr_user)) -> dict[ID, schemas.Tournament]:
+def all_tournaments(*, db=Depends(get_db), user=Depends(curr_user)) -> dict[ID, schemas.Tournament]:
     if user.is_admin:
-        tournaments = db.scalars(
-            select(Tournament)
-        ).unique().all()
+        tournaments = db.scalars(select(Tournament)).unique().all()
     else:
         team = user.settings.selected_team
         if team is not None:
@@ -264,11 +264,10 @@ def all_tournaments(*, db = Depends(get_db), user = Depends(curr_user)) -> dict[
 
 
 @router.post("/tournament", tags=["tournament"])
-def get_tournaments(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Tournament]:
-    tournaments = db.scalars(
-        select(Tournament)
-        .where(Tournament.id.in_(ids), Tournament.visible_sql(user))
-    ).unique().all()
+def get_tournaments(*, db=Depends(get_db), user=Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Tournament]:
+    tournaments = (
+        db.scalars(select(Tournament).where(Tournament.id.in_(ids), Tournament.visible_sql(user))).unique().all()
+    )
     return encode(tournaments)
 
 
@@ -291,7 +290,7 @@ class EditTournament(BaseSchema):
 
 @admin.post("/tournament/{id}/edit", tags=["tournament"])
 def edit_tournament(*, db: Session = Depends(get_db), id: ID, data: EditTournament) -> Tournament:
-    tournament = unwrap(Tournament.get(db, id))    
+    tournament = unwrap(Tournament.get(db, id))
     if data.name is not None:
         tournament.name = data.name
     try:
@@ -315,11 +314,8 @@ def delete_tournament(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 
 @router.post("/team", tags=["team"])
-def get_teams(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Team]:
-    teams = db.scalars(
-        select(Team)
-        .where(Team.id.in_(ids), Team.visible_sql(user))
-    ).unique().all()
+def get_teams(*, db=Depends(get_db), user=Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Team]:
+    teams = db.scalars(select(Team).where(Team.id.in_(ids), Team.visible_sql(user))).unique().all()
     return encode(teams)
 
 
@@ -333,13 +329,13 @@ class TeamSearch(BaseSchema):
 @admin.get("/team/search", tags=["team"])
 def search_team(
     *,
-    db = Depends(get_db),
+    db=Depends(get_db),
     name: str | None = None,
     tournament: ID | None = None,
     limit: int = 25,
     page: int = 1,
     exact_name: bool = False,
-    ) -> TeamSearch:
+) -> TeamSearch:
     filters = []
     if name is not None:
         if exact_name:
@@ -349,18 +345,18 @@ def search_team(
     if tournament is not None:
         filters.append(Team.tournament_id == tournament)
     page = max(page - 1, 0)
-    teams = db.scalars(
-        select(Team)
-        .where(*filters)
-        .order_by(Team.tournament_id.asc(), Team.name.asc())
-        .limit(limit)
-        .offset(page * limit)
-    ).unique().all()
-    team_count = db.scalar(
-        select(func.count())
-        .select_from(Team)
-        .where(*filters)
-    ) or 0
+    teams = (
+        db.scalars(
+            select(Team)
+            .where(*filters)
+            .order_by(Team.tournament_id.asc(), Team.name.asc())
+            .limit(limit)
+            .offset(page * limit)
+        )
+        .unique()
+        .all()
+    )
+    team_count = db.scalar(select(func.count()).select_from(Team).where(*filters)) or 0
     users = [user for team in teams for user in team.members]
     return TeamSearch(
         page=page + 1,
@@ -445,23 +441,19 @@ def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr
 
 
 @router.post("/problem", tags=["problem"])
-def get_problems(*, db = Depends(get_db), user = Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Problem]:
-    problems = db.scalars(
-        select(Problem)
-        .where(Problem.id.in_(ids), Problem.visible_sql(user))
-    ).unique().all()
+def get_problems(*, db=Depends(get_db), user=Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Problem]:
+    problems = db.scalars(select(Problem).where(Problem.id.in_(ids), Problem.visible_sql(user))).unique().all()
     return encode(problems)
 
 
 @router.post("/problem/all", tags=["problem"])
-def all_problems(*, db = Depends(get_db), user = Depends(curr_user), tournament: ID | None = None) -> dict[ID, schemas.Problem]:
+def all_problems(
+    *, db=Depends(get_db), user=Depends(curr_user), tournament: ID | None = None
+) -> dict[ID, schemas.Problem]:
     filters = []
     if tournament is not None:
         filters.append(Problem.tournament_id == tournament)
-    problems = db.scalars(
-        select(Problem)
-        .where(*filters, Problem.visible_sql(user))
-    ).unique().all()
+    problems = db.scalars(select(Problem).where(*filters, Problem.visible_sql(user))).unique().all()
     return encode(problems)
 
 
@@ -469,15 +461,19 @@ class ProblemInfo(BaseSchema):
     problem: schemas.Problem
     tournament: schemas.Tournament
 
+
 @router.get("/problem/{tournament_name}/{problem_name}", tags=["problem"], response_model=ProblemInfo)
-def problem_by_name(*, db = Depends(get_db), user = Depends(curr_user), tournament_name: str, problem_name: str):
-    problem = unwrap(db.scalars(
-        select(Problem)
-        .where(
-            Problem.name == problem_name,
-            Problem.tournament.has(Tournament.name == tournament_name),
+def problem_by_name(*, db=Depends(get_db), user=Depends(curr_user), tournament_name: str, problem_name: str):
+    problem = unwrap(
+        db.scalars(
+            select(Problem).where(
+                Problem.name == problem_name,
+                Problem.tournament.has(Tournament.name == tournament_name),
+            )
         )
-    ).unique().first())
+        .unique()
+        .first()
+    )
     problem.assert_visible(user)
     return {"problem": problem, "tournament": problem.tournament}
 
@@ -506,27 +502,33 @@ def verify(*, file: Annotated[UploadFile, File()]) -> ProblemMetadata | str:
 
 
 @admin.get("/problem/{tournament}/{problem}", tags=["problem"], response_model=schemas.Problem)
-def get_problem(*, db = Depends(get_db), tournament: str, problem: str):
-    return unwrap(db.scalars(select(Problem).join(Tournament).where(Problem.name == problem, Tournament.name == tournament)).unique().first())
+def get_problem(*, db=Depends(get_db), tournament: str, problem: str):
+    return unwrap(
+        db.scalars(select(Problem).join(Tournament).where(Problem.name == problem, Tournament.name == tournament))
+        .unique()
+        .first()
+    )
 
 
 @admin.post("/problem/create", tags=["problem"])
-def create_problem(*, db: Session = Depends(get_db), 
-        file: UploadFile | None = File(None),
-        problem_id: ID | None = Form(None),
-        name: str = Form(),
-        description: UploadFile | None = File(None),
-        problem_schema: str = Form(""),
-        solution_schema: str = Form(""),
-        tournament: ID = Form(),
-        config: UploadFile | None = File(None),
-        start: datetime | None = Form(None),
-        end: datetime | None = Form(None),
-        image: UploadFile | None = File(None),
-        alt_text: str = Form(""),
-        short_description: str = Form(""),
-        colour: Color = Form(Color("#ffffff")),
-    ) -> Wrapped[str]:
+def create_problem(
+    *,
+    db: Session = Depends(get_db),
+    file: UploadFile | None = File(None),
+    problem_id: ID | None = Form(None),
+    name: str = Form(),
+    description: UploadFile | None = File(None),
+    problem_schema: str = Form(""),
+    solution_schema: str = Form(""),
+    tournament: ID = Form(),
+    config: UploadFile | None = File(None),
+    start: datetime | None = Form(None),
+    end: datetime | None = Form(None),
+    image: UploadFile | None = File(None),
+    alt_text: str = Form(""),
+    short_description: str = Form(""),
+    colour: Color = Form(Color("#ffffff")),
+) -> Wrapped[str]:
     if file is None == problem_id is None:
         raise HTTPException(400)
     if file is not None:
@@ -610,11 +612,11 @@ def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit) ->
 @admin.post("/problem/{id}/editFile", tags=["problem"])
 def edit_problem_file(
     *,
-    db = Depends(get_db),
+    db=Depends(get_db),
     id: ID,
     name: Literal["file", "config", "description", "image"] = Form(),
     file: UploadFile | None = File(None),
-    ) -> Problem:
+) -> Problem:
     problem = unwrap(db.get(Problem, id))
     if file is None and name in ("file", "config"):
         raise HTTPException(400)
@@ -632,7 +634,7 @@ def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 
 @router.get("/problem/{id}/download_all", tags=["problem"])
-def download_problem(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> Response:
+def download_problem(*, db=Depends(get_db), user=Depends(curr_user), id: ID) -> Response:
     problem = unwrap(db.get(Problem, id))
     problem.assert_visible(user)
     with BytesIO() as file:
@@ -656,7 +658,7 @@ def download_problem(*, db = Depends(get_db), user = Depends(curr_user), id: ID)
 
 
 @router.post("/problem/description_content", tags=["problem"])
-def problem_desc(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> Wrapped[str | None]:
+def problem_desc(*, db=Depends(get_db), user=Depends(curr_user), id: ID) -> Wrapped[str | None]:
     problem = unwrap(db.get(Problem, id))
     problem.assert_visible(user)
     if problem.description is None:
@@ -687,12 +689,12 @@ def problem_desc(*, db = Depends(get_db), user = Depends(curr_user), id: ID) -> 
 
 @router.post("/documentation/{problem_id}", tags=["docs"])
 def upload_own_docs(
-        *,
-        db: Session = Depends(get_db),
-        user: User = Depends(curr_user),
-        problem_id: ID,
-        file: UploadFile = File(),
-    ) -> Documentation:
+    *,
+    db: Session = Depends(get_db),
+    user: User = Depends(curr_user),
+    problem_id: ID,
+    file: UploadFile = File(),
+) -> Documentation:
     problem = unwrap(db.get(Problem, problem_id))
     team = unwrap(user.selected_team)
     return docs_edit(db, user, problem, team, file)
@@ -700,29 +702,33 @@ def upload_own_docs(
 
 @admin.post("/documentation/{problem_id}/{team_id}", tags=["docs"])
 def upload_docs(
-        *,
-        db = Depends(get_db),
-        user = Depends(curr_user),
-        problem_id: ID,
-        team_id: ID,
-        file: UploadFile = File(),
-    ) -> Documentation:
+    *,
+    db=Depends(get_db),
+    user=Depends(curr_user),
+    problem_id: ID,
+    team_id: ID,
+    file: UploadFile = File(),
+) -> Documentation:
     problem = unwrap(db.get(Problem, problem_id))
     team = unwrap(db.get(Team, team_id))
     return docs_edit(db, user, problem, team, file)
 
 
 def docs_edit(
-        db: Session,
-        user: User,
-        problem: Problem,
-        team: Team,
-        file: UploadFile = File(),
-    ) -> Documentation:
+    db: Session,
+    user: User,
+    problem: Problem,
+    team: Team,
+    file: UploadFile = File(),
+) -> Documentation:
     problem.assert_editable(user)
     if problem.tournament != team.tournament:
         raise HTTPException(400)
-    docs = db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem)).unique().first()
+    docs = (
+        db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem))
+        .unique()
+        .first()
+    )
     if docs is None:
         docs = Documentation(db, team, problem, DbFile(file))
     else:
@@ -732,20 +738,24 @@ def docs_edit(
 
 
 @router.post("/documentation/{problem_id}/delete", tags=["docs"])
-def delete_own_docs(*, db = Depends(get_db), user = Depends(curr_user), problem_id: ID):
+def delete_own_docs(*, db=Depends(get_db), user=Depends(curr_user), problem_id: ID):
     team = unwrap(user.settings.selected_team)
     delete_docs(db, user, problem_id, team)
 
 
 @admin.post("/documentation/{problem_id}/{team_id}/delete", tags=["docs"])
-def delete_admin_docs(*, db = Depends(get_db), user = Depends(curr_user), problem_id: ID, team_id: ID):
+def delete_admin_docs(*, db=Depends(get_db), user=Depends(curr_user), problem_id: ID, team_id: ID):
     team = unwrap(db.get(Team, team_id))
     delete_docs(db, user, problem_id, team)
 
 
 def delete_docs(db: Session, user: User, problem_id: ID, team: Team):
     problem = unwrap(db.get(Problem, problem_id))
-    docs = unwrap(db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem)).unique().first())
+    docs = unwrap(
+        db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem))
+        .unique()
+        .first()
+    )
     docs.assert_editable(user)
     db.delete(docs)
     db.commit()
@@ -757,7 +767,9 @@ class GetDocs(BaseSchema):
 
 
 @router.post("/documentation", tags=["docs"])
-def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs, page: int = 0, limit: int = 25) -> dict[ID, schemas.Documentation]:
+def get_docs(
+    *, db=Depends(get_db), user=Depends(curr_user), data: GetDocs, page: int = 0, limit: int = 25
+) -> dict[ID, schemas.Documentation]:
     filters = [Documentation.visible_sql(user)]
     if isinstance(data.problem, UUID):
         filters.append(Documentation.problem_id == data.problem)
@@ -771,12 +783,7 @@ def get_docs(*, db = Depends(get_db), user = Depends(curr_user), data: GetDocs, 
         team = unwrap(user.settings.selected_team)
         filters.append(Documentation.team == team)
 
-    docs = db.scalars(
-        select(Documentation)
-        .where(*filters)
-        .limit(limit)
-        .offset(page * limit)
-    ).unique().all()
+    docs = db.scalars(select(Documentation).where(*filters).limit(limit).offset(page * limit)).unique().all()
     return encode(docs)
 
 
@@ -796,7 +803,7 @@ class ProgramResults(BaseSchema):
 @router.get("/program/search", tags=["program"])
 def search_program(
     *,
-    db = Depends(get_db),
+    db=Depends(get_db),
     user: User = Depends(curr_user),
     name: str | None = None,
     team: ID | None = None,
@@ -804,13 +811,20 @@ def search_program(
     problem: ID | None = None,
     limit: int = 25,
     page: int = 1,
-    ) -> ProgramResults:
+) -> ProgramResults:
     if user.is_admin:
         problems = Problem.get_all(db)
     else:
         assert user.selected_team is not None
-        problems = db.scalars(select(Problem).where(Problem.visible_sql(user),
-                    Problem.tournament_id == user.selected_team.tournament_id)).unique().all()
+        problems = (
+            db.scalars(
+                select(Problem).where(
+                    Problem.visible_sql(user), Problem.tournament_id == user.selected_team.tournament_id
+                )
+            )
+            .unique()
+            .all()
+        )
     filters = [Program.visible_sql(user)]
     if name is not None:
         filters.append(Program.name.contains(name, autoescape=True))
@@ -821,18 +835,14 @@ def search_program(
     if problem is not None:
         filters.append(Program.problem_id == problem)
     page = max(page - 1, 0)
-    programs = db.scalars(
-        select(Program)
-        .where(*filters)
-        .order_by(Program.creation_time.desc())
-        .limit(limit)
-        .offset(page * limit)
-    ).unique().all()
-    total_count = db.scalar(
-        select(func.count())
-        .select_from(Program)
-        .where(*filters)
-    ) or 0
+    programs = (
+        db.scalars(
+            select(Program).where(*filters).order_by(Program.creation_time.desc()).limit(limit).offset(page * limit)
+        )
+        .unique()
+        .all()
+    )
+    total_count = db.scalar(select(func.count()).select_from(Program).where(*filters)) or 0
     teams = [program.team for program in programs]
     return ProgramResults(
         programs=encode(programs),
@@ -862,7 +872,7 @@ def upload_program(
 
 
 @router.post("/program/{id}/delete", tags=["program"])
-def delete_program(*, db: Session = Depends(get_db), user = Depends(curr_user), id: ID) -> bool:
+def delete_program(*, db: Session = Depends(get_db), user=Depends(curr_user), id: ID) -> bool:
     program = unwrap(db.get(Program, id))
     program.assert_editable(user)
     db.delete(program)
@@ -886,20 +896,21 @@ def scheduled_matches(
     db: Session = Depends(get_db),
     user: User = Depends(curr_user),
     tournament: str | None = None,
-    ) -> ScheduleInfo:
+) -> ScheduleInfo:
     if tournament is None:
         tournament_ = unwrap(user.selected_team).tournament
     else:
         tournament_ = unwrap(db.get(Tournament, tournament))
-    matches = db.scalars(
-        select(ScheduledMatch)
-        .join(ScheduledMatch.problem)
-        .where(Problem.tournament_id == tournament_.id, Problem.visible_sql(user))
-    ).unique().all()
-    return ScheduleInfo(
-        matches=encode(matches),
-        problems=encode(match.problem for match in matches)
+    matches = (
+        db.scalars(
+            select(ScheduledMatch)
+            .join(ScheduledMatch.problem)
+            .where(Problem.tournament_id == tournament_.id, Problem.visible_sql(user))
+        )
+        .unique()
+        .all()
     )
+    return ScheduleInfo(matches=encode(matches), problems=encode(match.problem for match in matches))
 
 
 @admin.post("/match/schedule/create", tags=["match"])
@@ -910,7 +921,7 @@ def create_schedule(
     time: datetime,
     problem: ID,
     points: float,
-    ) -> ScheduledMatch:
+) -> ScheduledMatch:
     problem_ = unwrap(db.get(Problem, problem))
     schedule = ScheduledMatch(db, time=time, problem=problem_, name=name, points=points)
     db.commit()
@@ -926,7 +937,7 @@ def edit_schedule(
     time: datetime | None = None,
     problem: ID | None = None,
     points: float | None = None,
-    ) -> ScheduledMatch:
+) -> ScheduledMatch:
     match = unwrap(db.get(ScheduledMatch, id))
     if name is not None:
         match.name = name
@@ -955,16 +966,14 @@ class MatchResultData(BaseSchema):
 
 
 @router.get("/match/results", tags=["match"])
-def results(*, db: Session = Depends(get_db), tournament: Annotated[Tournament, Depends(curr_tournament)]) -> MatchResultData:
-    results = db.scalars(
-        select(MatchResult)
-        .join(Problem)
-        .where(Problem.tournament_id == tournament.id)
-    ).unique().all()
+def results(
+    *, db: Session = Depends(get_db), tournament: Annotated[Tournament, Depends(curr_tournament)]
+) -> MatchResultData:
+    results = db.scalars(select(MatchResult).join(Problem).where(Problem.tournament_id == tournament.id)).unique().all()
     return MatchResultData(
         results=encode(results),
         problems=encode({result.problem for result in results}),
-        teams=encode({participant.team for result in results for participant in result.participants})
+        teams=encode({participant.team for result in results for participant in result.participants}),
     )
 
 
