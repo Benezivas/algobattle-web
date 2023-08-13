@@ -948,14 +948,6 @@ def delete_schedule(*, db: Session = Depends(get_db), id: ID) -> bool:
     return True
 
 
-@admin.post("/match/result/{id}/delete", tags=["match"])
-def delete_result(*, db: Session = Depends(get_db), id: ID) -> bool:
-    result = unwrap(db.get(MatchResult, id))
-    db.delete(result)
-    db.commit()
-    return True
-
-
 class MatchResultData(BaseSchema):
     problems: dict[ID, schemas.Problem]
     results: dict[ID, schemas.MatchResult]
@@ -963,7 +955,7 @@ class MatchResultData(BaseSchema):
 
 
 @router.get("/match/results", tags=["match"])
-def get_match_results(*, db: Session = Depends(get_db), tournament: Annotated[Tournament, Depends(curr_tournament)]) -> MatchResultData:
+def results(*, db: Session = Depends(get_db), tournament: Annotated[Tournament, Depends(curr_tournament)]) -> MatchResultData:
     results = db.scalars(
         select(MatchResult)
         .join(Problem)
@@ -974,6 +966,13 @@ def get_match_results(*, db: Session = Depends(get_db), tournament: Annotated[To
         problems=encode({result.problem for result in results}),
         teams=encode({participant.team for result in results for participant in result.participants})
     )
+
+
+@admin.delete("/match/result", tags=["match"])
+def delete_results(*, db: Session = Depends(get_db), ids: list[ID]) -> None:
+    for id in ids:
+        db.delete(unwrap(db.get(MatchResult, id)))
+    db.commit()
 
 
 # * has to be executed after all route defns

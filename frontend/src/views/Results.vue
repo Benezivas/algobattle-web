@@ -15,7 +15,7 @@ const programs = ref<{ [team_id: string]: { [role in Role]: Program[] } }>({});
 let editModal: Modal;
 onMounted(async () => {
   tournaments.value = await TournamentService.allTournaments();
-  const res = await MatchService.getMatchResults();
+  const res = await MatchService.results();
   problems.value = res.problems;
   results.value = res.results;
   teams.value = res.teams;
