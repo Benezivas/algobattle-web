@@ -37,7 +37,7 @@ from algobattle_web.models import (
     User,
 )
 from algobattle_web.util import ValueTaken, unwrap, BaseSchema, Wrapped, send_email, ServerConfig
-from algobattle_web.dependencies import curr_tournament, curr_user, check_if_admin, get_db
+from algobattle_web.dependencies import CurrTournament, Database, curr_user, check_if_admin, get_db
 from pydantic_extra_types.color import Color
 
 __all__ = ("router", "admin")
@@ -966,9 +966,7 @@ class MatchResultData(BaseSchema):
 
 
 @router.get("/match/results", tags=["match"])
-def results(
-    *, db: Session = Depends(get_db), tournament: Annotated[Tournament, Depends(curr_tournament)]
-) -> MatchResultData:
+def results(*, db: Database, tournament: CurrTournament) -> MatchResultData:
     results = db.scalars(select(MatchResult).join(Problem).where(Problem.tournament_id == tournament.id)).unique().all()
     return MatchResultData(
         results=encode(results),
@@ -978,7 +976,7 @@ def results(
 
 
 @admin.delete("/match/result", tags=["match"])
-def delete_results(*, db: Session = Depends(get_db), ids: list[ID]) -> None:
+def delete_results(*, db: Database, ids: list[ID]) -> None:
     for id in ids:
         db.delete(unwrap(db.get(MatchResult, id)))
     db.commit()

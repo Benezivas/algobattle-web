@@ -1,4 +1,4 @@
-from typing import AsyncIterable
+from typing import Annotated, AsyncIterable
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
 
@@ -15,6 +15,9 @@ async def get_db() -> AsyncIterable[Session]:
             raise
 
 
+Database = Annotated[Session, Depends(get_db)]
+
+
 def curr_user_maybe(
     db: Session = Depends(get_db), user_token: str | None = Depends(APIKeyHeader(name="X-User-Token"))
 ) -> User | None:
@@ -28,6 +31,9 @@ def curr_user(user: User | None = Depends(curr_user_maybe)) -> User:
         return user
 
 
+CurrUser = Annotated[User, Depends(curr_user)]
+
+
 def curr_team(user: User = Depends(curr_user)) -> Team:
     team = user.selected_team
     if team is None:
@@ -35,10 +41,16 @@ def curr_team(user: User = Depends(curr_user)) -> Team:
     return team
 
 
+CurrTeam = Annotated[Team, Depends(curr_team)]
+
+
 def curr_tournament(user: User = Depends(curr_user)) -> Tournament:
     if user.current_tournament is None:
         raise HTTPException(400, "User has not selected a team or tournament")
     return user.current_tournament
+
+
+CurrTournament = Annotated[Tournament, Depends(curr_tournament)]
 
 
 def check_if_admin(user: User = Depends(curr_user)):
