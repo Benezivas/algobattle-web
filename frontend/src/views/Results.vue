@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { store, type ModelDict, formatDateTime } from "@/main";
-import { MatchService, TournamentService, ProblemService, MatchStatus, ProgramService, Role, TeamService } from "@client";
+import {
+  MatchService,
+  TournamentService,
+  ProblemService,
+  MatchStatus,
+  ProgramService,
+  Role,
+  TeamService,
+} from "@client";
 import { Modal } from "bootstrap";
 import type { Problem, Tournament, MatchResult, Team, DbFile, ResultParticipant, Program } from "@client";
 import { onMounted, ref, toRaw } from "vue";
@@ -18,7 +26,7 @@ onMounted(async () => {
   results.value = res.results;
   teams.value = res.teams;
   if (store.user.is_admin) {
-    const res = await TeamService.searchTeam({tournament: store.user.current_tournament?.id});
+    const res = await TeamService.searchTeam({ tournament: store.user.current_tournament?.id });
     // TODO: get all teams not just first page
     teams.value = res.teams;
   }
@@ -131,7 +139,13 @@ function getAllPrograms() {
           <label for="time" class="form-label">Time</label>
           <input id="time" class="form-control" type="datetime-local" required v-model="editData.time" />
           <label for="problem" class="form-label">Problem</label>
-          <select id="problem" class="form-select" required v-model="editData.problem" @click="getAllPrograms">
+          <select
+            id="problem"
+            class="form-select"
+            required
+            v-model="editData.problem"
+            @click="getAllPrograms"
+          >
             <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>
           </select>
           <label for="status" class="form-label">Status</label>
@@ -173,7 +187,10 @@ function getAllPrograms() {
                     v-model="participant.generator"
                     @click="getPrograms(participant.team_id, Role.GENERATOR)"
                   >
-                    <option v-for="prog in programs[editData.problem + participant.team_id + Role.GENERATOR]" :value="prog">
+                    <option
+                      v-for="prog in programs[editData.problem + participant.team_id + Role.GENERATOR]"
+                      :value="prog"
+                    >
                       {{ `${prog.name}(${formatDateTime(prog.creation_time)})` }}
                     </option>
                   </select>
@@ -187,7 +204,10 @@ function getAllPrograms() {
                     v-model="participant.solver"
                     @click="getPrograms(participant.team_id, Role.SOLVER)"
                   >
-                    <option v-for="prog in programs[editData.problem + participant.team_id + Role.SOLVER]" :value="prog">
+                    <option
+                      v-for="prog in programs[editData.problem + participant.team_id + Role.SOLVER]"
+                      :value="prog"
+                    >
                       {{ `${prog.name}(${formatDateTime(prog.creation_time)})` }}
                     </option>
                   </select>
