@@ -20,7 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import Field
 
 from algobattle.util import Role
-from algobattle.problem import Problem as AlgProblem
+from algobattle.problem import Problem as AlgProblem, Instance, Solution
 from algobattle_web import schemas
 from algobattle_web.models import (
     File as DbFile,
@@ -484,26 +484,25 @@ def problem_by_name(*, db = Depends(get_db), user = Depends(curr_user), tourname
 
 class ProblemMetadata(BaseSchema):
     name: str
-    problem_schema: str | None = None
-    solution_schema: str | None = None
+    problem_schema: str
+    solution_schema: str
 
-@admin.post("/problem/verify", tags=["problem"], response_model=ProblemMetadata)
-def verify_problem(*, db = Depends(get_db), file: UploadFile | None = File(None), problem_id: ID | None = Form(None)):
-    if file is None == problem_id is None:
-        raise ValueError
-    if file is not None:
-        with TemporaryDirectory() as folder:
-            folder = Path(folder)
-            with open(folder / "problem.py", "wb+") as _file:
-                _file.write(file.file.read())
-            try:
-                prob = AlgProblem.import_from_path(folder / "problem.py")
-            except ValueError as e:
-                print(e)
-                raise HTTPException(400)
-            return ProblemMetadata(name=prob.name, problem_schema=prob.instance_cls.io_schema(), solution_schema=prob.solution_cls.io_schema())
-    else:
-        return unwrap(db.get(Problem, problem_id))
+
+@admin.post("/problem/verify", tags=["problem"])
+def verify(*, file: Annotated[UploadFile, File()]) -> ProblemMetadata | str:
+    with TemporaryDirectory() as folder:
+        folder = Path(folder)
+        with open(folder / "problem.py", "wb+") as _file:
+            _file.write(file.file.read())
+        try:
+            prob: AlgProblem[Instance, Solution[Instance]] = AlgProblem.import_from_path(folder / "problem.py")
+        except ValueError as e:
+            return str(e)
+        return ProblemMetadata(
+            name=prob.name,
+            problem_schema=prob.instance_cls.io_schema() or "",
+            solution_schema=prob.solution_cls.io_schema() or "",
+        )
 
 
 @admin.get("/problem/{tournament}/{problem}", tags=["problem"], response_model=schemas.Problem)

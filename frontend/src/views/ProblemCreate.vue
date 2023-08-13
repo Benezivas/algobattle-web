@@ -6,7 +6,10 @@ import type { Tournament, Problem } from "@client";
 import { computed, onMounted, ref } from "vue";
 
 const page = ref(0);
-const error = ref("");
+const error = ref<{
+  type?: string,
+  detail?: string,
+}>({});
 const problems = ref<{ [key: string]: Problem }>({});
 const tournaments = ref<{ [key: string]: Tournament }>({});
 const data = ref({
@@ -38,26 +41,27 @@ onMounted(async () => {
 });
 
 async function sendFile() {
-  try {
-    const problemInfo = await ProblemService.verifyProblem({
-      formData: { file: data.value.file, problem_id: data.value.copyFrom },
-    });
-    data.value.name = problemInfo.name;
-    data.value.problemSchema = problemInfo.problem_schema || "";
-    data.value.solutionSchema = problemInfo.solution_schema || "";
-    error.value = "";
-    page.value = 1;
-    checkName();
-  } catch {
-    error.value = "file";
+  const problemInfo = await ProblemService.verify({
+    formData: { file: data.value.file! },
+  });
+  if (typeof problemInfo === "string") {
+    error.value.type = "file";
+    error.value.detail = problemInfo
+    return
   }
+  data.value.name = problemInfo.name;
+  data.value.problemSchema = problemInfo.problem_schema;
+  data.value.solutionSchema = problemInfo.solution_schema;
+  error.value = {};
+  page.value = 1;
+  checkName();
 }
 async function createProblem() {
   try {
     const location = await ProblemService.createProblem({ formData: data.value });
     router.push(location.data);
   } catch {
-    error.value = "server";
+    error.value.type = "server";
   }
 }
 function checkName() {
@@ -66,9 +70,9 @@ function checkName() {
       (prob) => prob.name == data.value.name && prob.tournament == data.value.tournament
     ).length != 0
   ) {
-    error.value = "name";
+    error.value.type = "name";
   } else {
-    error.value = "";
+    error.value = {};
   }
 }
 </script>
@@ -105,14 +109,15 @@ function checkName() {
             @submit.prevent="sendFile"
             novalidate
           >
-            <div class="alert alert-danger" role="alert" v-if="error == 'missing'">
+            <div class="alert alert-danger" role="alert" v-if="error.type == 'missing'">
               Select either a problem file to upload, or an already existing problem to copy.
             </div>
-            <div class="alert alert-danger" role="alert" v-if="error == 'duplicate'">
+            <div class="alert alert-danger" role="alert" v-if="error.type == 'duplicate'">
               You can only select one source for the problem file at once.
             </div>
-            <div class="alert alert-danger" role="alert" v-if="error == 'file'">
-              The uploaded file does not contain a valid problem class.
+            <div class="alert alert-danger" role="alert" v-if="error.type == 'file'">
+              The uploaded file does not contain a valid problem class.<br />
+              {{ error.detail }}
             </div>
             <label for="prob_file" class="form-label">Upload a new problem file</label>
             <FileInput
@@ -168,7 +173,7 @@ function checkName() {
                 v-model="data.name"
                 required
                 @input="checkName"
-                :class="{ 'is-invalid': error == 'name' }"
+                :class="{ 'is-invalid': error.type == 'name' }"
               />
               <div class="invalid-feedback">A problem with this name already exists in this tournament.</div>
             </div>
@@ -229,7 +234,7 @@ function checkName() {
           >
             <div class="row">
               <div class="col-5">
-                <div class="alert alert-danger" role="alert" v-if="error == 'server'">
+                <div class="alert alert-danger" role="alert" v-if="error.type == 'server'">
                   There was an error when processing the submitted data.
                 </div>
                 <div class="mb-3">
