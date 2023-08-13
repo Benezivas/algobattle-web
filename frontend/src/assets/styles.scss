@@ -31,5 +31,8 @@
 
 .form-select, .form-control {
     max-width: 300px;
+}
+
+.form-select:not(td .form-select), .form-control:not(td .form-control) {
     margin-bottom: 1rem;
 }
