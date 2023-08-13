@@ -169,7 +169,8 @@ def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
     _teams = [unwrap(db.get(Team, id)) for id in user.teams]
     if db.scalars(select(User).filter(User.email == user.email)).unique().first() is not None:
         raise ValueTaken("email", user.email)
-    new = User(db=db, email=user.email, name=user.name, is_admin=user.is_admin, teams=_teams)
+    new = User(email=user.email, name=user.name, is_admin=user.is_admin, teams=_teams)
+    db.add(new)
     db.commit()
     return new
 
@@ -288,7 +289,8 @@ class CreateTournament(BaseSchema):
 def create_tournament(*, db: Session = Depends(get_db), tournament: CreateTournament) -> Tournament:
     if db.scalars(select(Tournament).filter(Tournament.name == tournament.name)).unique().first() is not None:
         raise ValueTaken("name", tournament.name)
-    _tournament = Tournament(db, tournament.name)
+    _tournament = Tournament(tournament.name)
+    db.add(_tournament)
     db.commit()
     return _tournament
 
@@ -385,8 +387,9 @@ class CreateTeam(BaseSchema):
 def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
     tournament = unwrap(Tournament.get(db, team.tournament))
     members = [unwrap(db.get(User, id)) for id in team.members]
-    _team = Team(db, team.name, tournament, members)
+    _team = Team(team.name, tournament, members)
     try:
+        db.add(_team)
         db.commit()
     except IntegrityError as e:
         raise ValueTaken("name", team.name) from e
@@ -561,7 +564,6 @@ def create_problem(
         _image = None
 
     prob = Problem(
-        db=db,
         file=_file,
         name=name,
         description=desc,
@@ -575,8 +577,8 @@ def create_problem(
         short_description=short_description,
         colour=colour.as_hex(),
     )
-    db.add(prob)
     try:
+        db.add(prob)
         db.commit()
     except IntegrityError as e:
         raise ValueTaken("name", name) from e
@@ -739,7 +741,8 @@ def docs_edit(
         .first()
     )
     if docs is None:
-        docs = Documentation(db, team, problem, DbFile(file))
+        docs = Documentation(team, problem, DbFile(file))
+        db.add(docs)
     else:
         docs.file = DbFile(file)
     db.commit()
@@ -875,7 +878,8 @@ def upload_program(
     team = unwrap(user.selected_team)
     problem_obj = unwrap(db.get(Problem, problem))
     problem_obj.assert_visible(user)
-    prog = Program(db, name, team, role, DbFile(file), problem_obj)
+    prog = Program(name, team, role, DbFile(file), problem_obj)
+    db.add(prog)
     db.commit()
     return prog
 
@@ -932,7 +936,8 @@ def create_schedule(
     points: float,
 ) -> ScheduledMatch:
     problem_ = unwrap(db.get(Problem, problem))
-    schedule = ScheduledMatch(db, time=time, problem=problem_, name=name, points=points)
+    schedule = ScheduledMatch(time=time, problem=problem_, name=name, points=points)
+    db.add(schedule)
     db.commit()
     return schedule
 
@@ -1005,9 +1010,7 @@ class CreateResult(BaseSchema):
 
 
 @admin.post("/match/result", tags=["match"])
-def add_results(
-    *, db: Database, tournament: CurrTournament, results: list[CreateResult]
-) -> dict[UUID, schemas.MatchResult]:
+def add_results(*, db: Database, results: list[CreateResult]) -> dict[UUID, schemas.MatchResult]:
     res: list[MatchResult] = []
     for result in results:
         problem = unwrap(db.get(Problem, result.problem))
@@ -1016,8 +1019,8 @@ def add_results(
             team = unwrap(db.get(Team, participant.team))
             gen = unwrap(db.get(Program, participant.generator))
             sol = unwrap(db.get(Program, participant.solver))
-            participants.add(ResultParticipant(db, team=team, generator=gen, solver=sol, points=participant.points))
-        db_res = MatchResult(db, status=result.status, time=result.time, problem=problem, participants=participants)
+            participants.add(ResultParticipant(team=team, generator=gen, solver=sol, points=participant.points))
+        db_res = MatchResult(status=result.status, time=result.time, problem=problem, participants=participants)
         db.add(db_res)
     db.commit()
     return encode(res)

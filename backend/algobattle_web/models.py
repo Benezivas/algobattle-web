@@ -1,5 +1,4 @@
 "Database models"
-from dataclasses import dataclass, InitVar
 from datetime import timedelta, datetime
 from typing import IO, Callable, ClassVar, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Self, cast, overload, Annotated, Sequence
@@ -21,7 +20,7 @@ from fastapi import UploadFile
 from fastapi.responses import FileResponse
 
 from algobattle.docker_util import Role as ProgramRole
-from algobattle_web.util import BaseSchema, MatchStatus, PermissionExcpetion, guess_mimetype, ServerConfig, SessionLocal
+from algobattle_web.util import BaseSchema, MatchStatus, PermissionExcpetion, guess_mimetype, ServerConfig, SessionLocal, unwrap
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
@@ -65,14 +64,66 @@ class RawBase(MappedAsDataclass, DeclarativeBase):
         super().__init_subclass__(init, repr, eq, order, unsafe_hash, match_args, kw_only, dataclass_callable)
         del cls.__dataclass_fields__
 
+    @classmethod
+    @property
+    def __tablename__(cls):
+        return cls.__name__.lower() + "s"
 
-class File(RawBase, init=False):
+    def encode(self) -> BaseSchema:
+        return self.Schema.model_validate(self)
+
+    @classmethod
+    def get_all(cls, db: Session) -> Sequence[Self]:
+        """Get all database entries of this type."""
+        return db.scalars(select(cls)).unique().all()
+
+    def visible(self, user: "User") -> bool:
+        """Checks wether this model is visible to a given user."""
+        return True
+
+    @classmethod
+    def visible_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
+        """Emits a sql filter expression that checks whether the model is visible to a given user."""
+        return sql_true
+
+    def assert_visible(self, user: "User") -> None:
+        """Asserts that this model is visible to a given user."""
+        if not self.visible(user):
+            raise PermissionExcpetion
+
+    def editable(self, user: "User") -> bool:
+        """Checks wether this model is editable by a given user."""
+        return self.visible(user)
+
+    @classmethod
+    def editable_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
+        """Emits a sql filter expression that checks whether the model is editable by a given user."""
+        return cls.visible_sql(user)
+
+    def assert_editable(self, user: "User") -> None:
+        """Asserts that this model is editable by a given user."""
+        if not self.editable(user):
+            raise PermissionExcpetion
+
+
+class Base(RawBase, unsafe_hash=True):
+    """Base class of ORM objects."""
+
+    __abstract__ = True
+
+    id: Mapped[ID] = mapped_column(default_factory=uuid4, primary_key=True, init=False, autoincrement=False)
+
+    @classmethod
+    def get_unwrap(cls, db: Session, id: ID) -> Self:
+        """Get the specified entry and raise an error if it does not exist."""
+        return unwrap(db.get(cls, id))
+
+
+class File(Base, init=False):
     """A file that is stored on disk with metadata in the database."""
 
-    __tablename__ = "files"
     Schema = schemas.DbFile
 
-    id: Mapped[ID] = mapped_column(primary_key=True)
     filename: Mapped[str128]
     media_type: Mapped[str32]
     alt_text: Mapped[str256]
@@ -212,66 +263,6 @@ def commit_files(db: Session):
     for file in db.info.get("deleted_files", []):
         assert isinstance(file, File)
         file.remove()
-
-
-@dataclass
-class BaseNoID(RawBase):
-    __abstract__ = True
-
-    db: InitVar[Session]
-
-    def __post_init__(self, db: Session) -> None:
-        db.add(self)
-
-    @classmethod
-    @property
-    def __tablename__(cls):
-        return cls.__name__.lower() + "s"
-
-    def encode(self) -> BaseSchema:
-        return self.Schema.model_validate(self)
-
-    @classmethod
-    def get_all(cls, db: Session) -> Sequence[Self]:
-        """Get all database entries of this type."""
-        return db.scalars(select(cls)).unique().all()
-
-    def visible(self, user: "User") -> bool:
-        """Checks wether this model is visible to a given user."""
-        return True
-
-    @classmethod
-    def visible_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
-        """Emits a sql filter expression that checks whether the model is visible to a given user."""
-        return sql_true
-
-    def assert_visible(self, user: "User") -> None:
-        """Asserts that this model is visible to a given user."""
-        if not self.visible(user):
-            raise PermissionExcpetion
-
-    def editable(self, user: "User") -> bool:
-        """Checks wether this model is editable by a given user."""
-        return self.visible(user)
-
-    @classmethod
-    def editable_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
-        """Emits a sql filter expression that checks whether the model is editable by a given user."""
-        return cls.visible_sql(user)
-
-    def assert_editable(self, user: "User") -> None:
-        """Asserts that this model is editable by a given user."""
-        if not self.editable(user):
-            raise PermissionExcpetion
-
-
-class Base(BaseNoID, unsafe_hash=True):
-    """Base class of ORM objects."""
-
-    __abstract__ = True
-    Schema = schemas.Base
-
-    id: Mapped[ID] = mapped_column(default_factory=uuid4, primary_key=True, init=False, autoincrement=False)
 
 
 def encode(col: Iterable[Base]) -> dict[ID, Any]:
@@ -543,7 +534,7 @@ class ScheduledMatch(Base, unsafe_hash=True):
     points: Mapped[float] = mapped_column(default=100)
 
 
-class ResultParticipant(BaseNoID):
+class ResultParticipant(RawBase):
     match: Mapped["MatchResult"] = relationship(back_populates="participants", init=False)
     match_id: Mapped[ID] = mapped_column(ForeignKey("matchresults.id"), primary_key=True, init=False)
     team: Mapped[Team] = relationship()

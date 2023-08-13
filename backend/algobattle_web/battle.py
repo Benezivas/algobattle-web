@@ -46,10 +46,11 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
             sol_path = _extract_to(sol.file.path, folder / team.id.hex / "solver")
 
             config.teams[team.name] = TeamInfo(generator=gen_path, solver=sol_path)
-            paricipants[team.id] = ResultParticipant(db, team, gen, sol, 0)
+            paricipants[team.id] = ResultParticipant(team, gen, sol, 0)
         db_result = MatchResult(
-            db, MatchStatus.running, datetime.now(), scheduled_match.problem, set(paricipants.values()), config_file
+            MatchStatus.running, datetime.now(), scheduled_match.problem, set(paricipants.values()), config_file
         )
+        db.add(db_result)
         db.commit()
 
         result = run(Match.run, config, problem)

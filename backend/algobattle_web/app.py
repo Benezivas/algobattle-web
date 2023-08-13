@@ -51,7 +51,8 @@ async def lifespan(app: FastAPI):
     # create the default admin user
     with SessionLocal() as db:
         if User.get(db, ServerConfig.obj.admin_email) is None:
-            User(db, email=ServerConfig.obj.admin_email, name="Admin", is_admin=True)
+            admin = User(email=ServerConfig.obj.admin_email, name="Admin", is_admin=True)
+            db.add(admin)
             db.commit()
     yield
 
