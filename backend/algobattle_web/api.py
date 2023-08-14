@@ -544,13 +544,13 @@ def create_problem(
     if file is None == problem_id is None:
         raise HTTPException(400)
     if file is not None:
-        _file = DbFile(file)
+        _file = DbFile.from_file(file)
     else:
         template_prob = unwrap(db.get(Problem, problem_id))
-        _file = DbFile(template_prob.file)
+        _file = template_prob.file
 
     if description is not None:
-        desc = DbFile(description)
+        desc = DbFile.from_file(description)
     else:
         desc = None
 
@@ -559,7 +559,7 @@ def create_problem(
         config = UploadFile(BytesIO(b"\n"), filename="config.toml")
 
     if image is not None:
-        _image = DbFile(image, alt_text=alt_text)
+        _image = DbFile.from_file(image, alt_text=alt_text)
     else:
         _image = None
 
@@ -570,7 +570,7 @@ def create_problem(
         problem_schema=problem_schema,
         solution_schema=solution_schema,
         tournament=_tournament,
-        config=DbFile(config),
+        config=DbFile.from_file(config),
         start=start,
         end=end,
         image=_image,
@@ -741,10 +741,10 @@ def docs_edit(
         .first()
     )
     if docs is None:
-        docs = Documentation(team, problem, DbFile(file))
+        docs = Documentation(team, problem, DbFile.from_file(file))
         db.add(docs)
     else:
-        docs.file = DbFile(file)
+        docs.file = DbFile.from_file(file)
     db.commit()
     return docs
 
@@ -878,7 +878,7 @@ def upload_program(
     team = unwrap(user.selected_team)
     problem_obj = unwrap(db.get(Problem, problem))
     problem_obj.assert_visible(user)
-    prog = Program(name, team, role, DbFile(file), problem_obj)
+    prog = Program(name, team, role, DbFile.from_file(file), problem_obj)
     db.add(prog)
     db.commit()
     return prog

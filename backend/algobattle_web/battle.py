@@ -61,7 +61,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         db_result.status = MatchStatus.complete
         with open(folder / "result.json", "x") as f:
             f.write(result.model_dump_json())
-        db_result.logs = File(folder / "result.json", move=True)
+        db_result.logs = File.from_file(folder / "result.json", move=True)
         db.commit()
 
 

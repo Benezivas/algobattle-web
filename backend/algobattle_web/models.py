@@ -1,4 +1,5 @@
 "Database models"
+from dataclasses import InitVar
 from datetime import timedelta, datetime
 from typing import IO, Callable, ClassVar, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Self, cast, overload, Annotated, Sequence
@@ -111,7 +112,7 @@ class Base(RawBase, unsafe_hash=True):
 
     __abstract__ = True
 
-    id: Mapped[ID] = mapped_column(default_factory=uuid4, primary_key=True, init=False, autoincrement=False)
+    id: Mapped[UUID] = mapped_column(default_factory=uuid4, primary_key=True, init=False, autoincrement=False)
 
     @classmethod
     def get_unwrap(cls, db: Session, id: ID) -> Self:
@@ -119,11 +120,12 @@ class Base(RawBase, unsafe_hash=True):
         return unwrap(db.get(cls, id))
 
 
-class File(Base, init=False):
+class File(Base):
     """A file that is stored on disk with metadata in the database."""
 
     Schema = schemas.DbFile
 
+    file: InitVar[Path | BinaryIO]
     filename: Mapped[str128]
     media_type: Mapped[str32]
     alt_text: Mapped[str256]
@@ -133,63 +135,43 @@ class File(Base, init=False):
     _file: Path | BinaryIO | None = None
 
     @overload
-    def __init__(self, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str = ""):
+    @classmethod
+    def from_file(cls, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str = ""):
         ...
 
     @overload
-    def __init__(self, file: Self):
+    @classmethod
+    def from_file(cls, file: UploadFile, *, alt_text: str = ""):
         ...
 
     @overload
-    def __init__(self, file: UploadFile, *, alt_text: str = ""):
+    @classmethod
+    def from_file(cls, file: Path, *, media_type: str | None = None, alt_text: str = "", move: bool):
         ...
 
-    @overload
-    def __init__(self, file: Path, *, media_type: str | None = None, alt_text: str = "", move: bool):
-        ...
-
-    def __init__(
-        self,
-        file: BinaryIO | Path | Self | UploadFile,
+    @classmethod
+    def from_file(
+        cls,
+        file: BinaryIO | Path | UploadFile,
         filename: str | None = None,
         *,
         media_type: str | None = None,
         alt_text: str = "",
         move: bool = False,
-    ) -> None:
-        self.id = uuid4()
-
-        if isinstance(file, File):
-            self._file = file.path
-            self._move = False
-            self.filename = file.filename
-            self.media_type = file.media_type
-            self.alt_text = file.alt_text
-            self.timestamp = file.timestamp
-            super().__init__()
-            return
-
-        self.alt_text = alt_text
-        self.timestamp = datetime.now()
+    ) -> Self:
         if isinstance(file, BinaryIO):
             if filename is None:
                 raise TypeError
-            self._file = file
-            self.filename = filename
         elif isinstance(file, Path):
-            self._file = file
-            self._move = move
-            self.filename = file.name
+            filename = file.name
         else:
-            self._file = file.file
-            self.filename = file.filename or "UNNAMED_FILE"
+            filename = file.filename or "UNNAMED_FILE"
             if file.content_type != "application/octet-stream":
                 media_type = media_type or file.content_type
-        if media_type:
-            self.media_type = media_type
-        else:
-            self.media_type = guess_mimetype(self.filename)
-        super().__init__()
+            file = file.file
+        if media_type is None:
+            media_type = guess_mimetype(filename)
+        return cls(file=file, filename=filename, media_type=media_type, alt_text=alt_text, timestamp=datetime.now(), _move=move)
 
     @classmethod
     def maybe(cls, file: UploadFile | None, *, alt_text: str = "") -> Self | None:
@@ -197,7 +179,7 @@ class File(Base, init=False):
         if file is None:
             return None
         else:
-            return cls(file, alt_text=alt_text)
+            return cls.from_file(file, alt_text=alt_text)
 
     @property
     def path(self) -> Path:
