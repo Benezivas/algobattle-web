@@ -224,7 +224,7 @@ function getAllPrograms() {
                     title="Remove"
                     @click="editData.participants.splice(editData.participants.indexOf(participant), 1)"
                   >
-                    <i class="bi bi-x"></i>
+                    <i class="bi bi-x-lg"></i>
                   </button>
                 </td>
               </tr>
