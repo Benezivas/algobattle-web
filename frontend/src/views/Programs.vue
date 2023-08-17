@@ -86,7 +86,7 @@ onMounted(() => {
       </tr>
     </thead>
     <tbody>
-      <tr v-for="program in programs">
+      <tr v-for="(program, id) in programs" :key="id">
         <td>{{ problems[program.problem].name }}</td>
         <td v-if="store.user.is_admin">{{ teams[program.team].name }}</td>
         <td>{{ program.role }}</td>
