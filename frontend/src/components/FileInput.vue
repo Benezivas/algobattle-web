@@ -14,14 +14,14 @@ const emit = defineEmits<{
 
 watch(
   () => props.modelValue,
-  () => {
-    if (fileSelect.value) {
+  (value) => {
+    if (!value && fileSelect.value) {
       fileSelect.value.value = "";
     }
   }
 );
 
-const fileSelect = ref<HTMLInputElement | null>(null);
+const fileSelect = ref<HTMLInputElement>();
 
 function selectFile(event: InputFileEvent) {
   const files = event.target.files || event.dataTransfer?.files;
@@ -32,5 +32,5 @@ function selectFile(event: InputFileEvent) {
 </script>
 
 <template>
-  <input type="file" class="form-control" ref="fileSelect" @change="(e) => selectFile(e as any)" />
+  <input type="file" class="form-control" ref="fileSelect" @change="(e: any) => selectFile(e)" />
 </template>

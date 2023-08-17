@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ProgramService, Role } from "@client";
-import { store, type ModelDict, type InputFileEvent } from "@/main";
+import { store, type ModelDict } from "@/main";
 import { Modal } from "bootstrap";
 import type { Problem, Program, Team } from "@client";
 import { onMounted, ref } from "vue";
+import FileInput from "@/components/FileInput.vue";
 
 const programs = ref<ModelDict<Program>>({});
 const problems = ref<ModelDict<Problem>>({});
@@ -41,12 +42,7 @@ async function openModal() {
   };
   modal.show();
 }
-function selectFile(event: InputFileEvent) {
-  const files = event.target.files || event.dataTransfer?.files;
-  if (files && files.length != 0) {
-    newProgData.value.file = files[0];
-  }
-}
+
 async function uploadProgram() {
   if (
     !newProgData.value.file ||
@@ -178,11 +174,9 @@ onMounted(() => {
             </div>
             <div class="mb-3">
               <label for="file_select" class="form-label mt-3">Select new program file</label>
-              <input
-                type="file"
-                class="form-control "
+              <FileInput
                 id="file_select"
-                @change="(e) => selectFile(e as any)"
+                v-model="newProgData.file"
                 required
               />
             </div>
