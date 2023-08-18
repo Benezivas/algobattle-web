@@ -136,17 +136,17 @@ class File(Base):
 
     @overload
     @classmethod
-    def from_file(cls, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str = ""):
+    def from_file(cls, file: BinaryIO, filename: str, *, media_type: str | None = None, alt_text: str = "") -> Self:
         ...
 
     @overload
     @classmethod
-    def from_file(cls, file: UploadFile, *, alt_text: str = ""):
+    def from_file(cls, file: UploadFile, *, alt_text: str = "") -> Self:
         ...
 
     @overload
     @classmethod
-    def from_file(cls, file: Path, *, media_type: str | None = None, alt_text: str = "", move: bool):
+    def from_file(cls, file: Path, *, media_type: str | None = None, alt_text: str = "", move: bool) -> Self:
         ...
 
     @classmethod
@@ -224,14 +224,14 @@ class File(Base):
 
 
 @listens_for(File, "after_insert")
-def insert_file(_mapper, _connection, target: File):
+def insert_file(_mapper: Any, _connection: Any, target: File):
     inspector = inspect(target)
     assert inspector is not None
     inspector.session.info.setdefault("new_files", []).append(target)
 
 
 @listens_for(File, "after_delete")
-def delete_file(_mapper, _connection, target: File):
+def delete_file(_mapper: Any, _connection: Any, target: File):
     inspector = inspect(target)
     assert inspector is not None
     inspector.session.info.setdefault("deleted_files", []).append(target)

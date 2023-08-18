@@ -46,7 +46,7 @@ from algobattle_web.util import (
     send_email,
     ServerConfig,
 )
-from algobattle_web.dependencies import CurrTournament, Database, curr_user, check_if_admin, get_db
+from algobattle_web.dependencies import CurrTournament, CurrUser, Database, curr_user, check_if_admin, get_db
 from pydantic_extra_types.color import Color
 
 __all__ = ("router", "admin")
@@ -61,7 +61,7 @@ class SchemaRoute(APIRoute):
     """Route that defaults to using the `Schema` entry of the returned object as a response_model."""
 
     def __init__(
-        self, path: str, endpoint: Callable[..., Any], *, response_model: Any = Default(None), **kwargs
+        self, path: str, endpoint: Callable[..., Any], *, response_model: Any = Default(None), **kwargs: Any
     ) -> None:
         if isinstance(response_model, DefaultPlaceholder):
             return_annotation = get_typed_return_annotation(endpoint)
@@ -80,7 +80,7 @@ admin = APIRouter(dependencies=[Depends(check_if_admin)], route_class=SchemaRout
 
 
 @router.get("/files/{id}", tags=["files"])
-def get_file(db=Depends(get_db), *, id: ID) -> FileResponse:
+def get_file(db: Database, *, id: ID) -> FileResponse:
     file = unwrap(db.get(DbFile, id))
     return file.response("inline" if file.media_type == "application/pdf" else "attachment")
 
@@ -91,7 +91,7 @@ def get_file(db=Depends(get_db), *, id: ID) -> FileResponse:
 
 
 @router.get("/user/self", tags=["user"], response_model=schemas.UserWithSettings)
-def get_self(*, user=Depends(curr_user)) -> User:
+def get_self(*, user: CurrUser) -> User:
     return user
 
 
@@ -105,7 +105,7 @@ class UserSearch(BaseSchema):
 @admin.get("/user", tags=["user"])
 def search_users(
     *,
-    db=Depends(get_db),
+    db: Database,
     ids: list[UUID] = [],
     name: str | None = None,
     email: str | None = None,
@@ -116,7 +116,7 @@ def search_users(
     page: int = 1,
     exact_search: bool = False,
 ) -> UserSearch:
-    filters = []
+    filters: list[Any] = []
     if ids:
         filters.append(User.id.in_(ids))
     if name is not None:
@@ -236,7 +236,7 @@ def settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), 
 
 
 @router.post("/user/login", tags=["user"])
-def login(*, db=Depends(get_db), email: str = Body(), target_url: str = Body(), tasks: BackgroundTasks) -> None:
+def login(*, db: Database, email: str = Body(), target_url: str = Body(), tasks: BackgroundTasks) -> None:
     user = unwrap(User.get(db, email))
     token = user.login_token()
     url = str(ServerConfig.obj.frontend_base_url) + target_url + f"?login_token={token}"
@@ -249,7 +249,7 @@ class TokenData(BaseSchema):
 
 
 @router.post("/user/token", tags=["user"])
-def get_token(*, db=Depends(get_db), login_token: str) -> TokenData:
+def get_token(*, db: Database, login_token: str) -> TokenData:
     user = User.decode_login_token(db, login_token)
     user.cookie()
     return TokenData(token=user.cookie(), expires=datetime.now() + timedelta(weeks=4))
@@ -261,11 +261,11 @@ def get_token(*, db=Depends(get_db), login_token: str) -> TokenData:
 
 
 @router.post("/tournament/all", tags=["tournament"])
-def all_tournaments(*, db=Depends(get_db), user=Depends(curr_user)) -> dict[ID, schemas.Tournament]:
+def all_tournaments(*, db: Database, user: CurrUser) -> dict[ID, schemas.Tournament]:
     if user.is_admin:
         tournaments = db.scalars(select(Tournament)).unique().all()
     else:
-        team = user.settings.selected_team
+        team = user.selected_team
         if team is not None:
             tournaments = [team.tournament]
         else:
@@ -274,7 +274,7 @@ def all_tournaments(*, db=Depends(get_db), user=Depends(curr_user)) -> dict[ID, 
 
 
 @router.post("/tournament", tags=["tournament"])
-def get_tournaments(*, db=Depends(get_db), user=Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Tournament]:
+def get_tournaments(*, db: Database, user: CurrUser, ids: list[ID]) -> dict[ID, schemas.Tournament]:
     tournaments = (
         db.scalars(select(Tournament).where(Tournament.id.in_(ids), Tournament.visible_sql(user))).unique().all()
     )
@@ -325,7 +325,7 @@ def delete_tournament(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 
 @router.post("/team", tags=["team"])
-def get_teams(*, db=Depends(get_db), user=Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Team]:
+def get_teams(*, db: Database, user: CurrUser, ids: list[ID]) -> dict[ID, schemas.Team]:
     teams = db.scalars(select(Team).where(Team.id.in_(ids), Team.visible_sql(user))).unique().all()
     return encode(teams)
 
@@ -340,14 +340,14 @@ class TeamSearch(BaseSchema):
 @admin.get("/team/search", tags=["team"])
 def search_team(
     *,
-    db=Depends(get_db),
+    db: Database,
     name: str | None = None,
     tournament: ID | None = None,
     limit: int = 25,
     page: int = 1,
     exact_name: bool = False,
 ) -> TeamSearch:
-    filters = []
+    filters: list[Any] = []
     if name is not None:
         if exact_name:
             filters.append(Team.name == name)
@@ -453,16 +453,16 @@ def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr
 
 
 @router.post("/problem", tags=["problem"])
-def get_problems(*, db=Depends(get_db), user=Depends(curr_user), ids: list[ID]) -> dict[ID, schemas.Problem]:
+def get_problems(*, db: Database, user: CurrUser, ids: list[ID]) -> dict[ID, schemas.Problem]:
     problems = db.scalars(select(Problem).where(Problem.id.in_(ids), Problem.visible_sql(user))).unique().all()
     return encode(problems)
 
 
 @router.post("/problem/all", tags=["problem"])
 def all_problems(
-    *, db=Depends(get_db), user=Depends(curr_user), tournament: ID | None = None
+    *, db: Database, user: CurrUser, tournament: ID | None = None
 ) -> dict[ID, schemas.Problem]:
-    filters = []
+    filters: list[Any] = []
     if tournament is not None:
         filters.append(Problem.tournament_id == tournament)
     problems = db.scalars(select(Problem).where(*filters, Problem.visible_sql(user))).unique().all()
@@ -475,7 +475,7 @@ class ProblemInfo(BaseSchema):
 
 
 @router.get("/problem/{tournament_name}/{problem_name}", tags=["problem"], response_model=ProblemInfo)
-def problem_by_name(*, db=Depends(get_db), user=Depends(curr_user), tournament_name: str, problem_name: str):
+def problem_by_name(*, db: Database, user: CurrUser, tournament_name: str, problem_name: str):
     problem = unwrap(
         db.scalars(
             select(Problem).where(
@@ -514,7 +514,7 @@ def verify(*, file: Annotated[UploadFile, File()]) -> ProblemMetadata | str:
 
 
 @admin.get("/problem/{tournament}/{problem}", tags=["problem"], response_model=schemas.Problem)
-def get_problem(*, db=Depends(get_db), tournament: str, problem: str):
+def get_problem(*, db: Database, tournament: str, problem: str):
     return unwrap(
         db.scalars(select(Problem).join(Tournament).where(Problem.name == problem, Tournament.name == tournament))
         .unique()
@@ -623,7 +623,7 @@ def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit) ->
 @admin.post("/problem/{id}/editFile", tags=["problem"])
 def edit_problem_file(
     *,
-    db=Depends(get_db),
+    db: Database,
     id: ID,
     name: Literal["file", "config", "description", "image"] = Form(),
     file: UploadFile | None = File(None),
@@ -645,7 +645,7 @@ def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 
 @router.get("/problem/{id}/download_all", tags=["problem"])
-def download_problem(*, db=Depends(get_db), user=Depends(curr_user), id: ID) -> Response:
+def download_problem(*, db: Database, user: CurrUser, id: ID) -> Response:
     problem = unwrap(db.get(Problem, id))
     problem.assert_visible(user)
     with BytesIO() as file:
@@ -654,9 +654,9 @@ def download_problem(*, db=Depends(get_db), user=Depends(curr_user), id: ID) -> 
             if problem.description is not None:
                 zipfile.write(problem.description.path, problem.description.filename)
             zipfile.write(problem.config.path, problem.config.filename)
-            if problem.problem_schema is not None:
+            if problem.problem_schema:
                 zipfile.writestr("problem_schema.json", problem.problem_schema)
-            if problem.solution_schema is not None:
+            if problem.solution_schema:
                 zipfile.writestr("solution_schema.json", problem.solution_schema)
 
         file.seek(0)
@@ -669,7 +669,7 @@ def download_problem(*, db=Depends(get_db), user=Depends(curr_user), id: ID) -> 
 
 
 @router.post("/problem/description_content", tags=["problem"])
-def problem_desc(*, db=Depends(get_db), user=Depends(curr_user), id: ID) -> Wrapped[str | None]:
+def problem_desc(*, db: Database, user: CurrUser, id: ID) -> Wrapped[str | None]:
     problem = unwrap(db.get(Problem, id))
     problem.assert_visible(user)
     if problem.description is None:
@@ -714,8 +714,8 @@ def upload_own_docs(
 @admin.post("/documentation/{problem_id}/{team_id}", tags=["docs"])
 def upload_docs(
     *,
-    db=Depends(get_db),
-    user=Depends(curr_user),
+    db: Database,
+    user: CurrUser,
     problem_id: ID,
     team_id: ID,
     file: UploadFile = File(),
@@ -750,13 +750,13 @@ def docs_edit(
 
 
 @router.post("/documentation/{problem_id}/delete", tags=["docs"])
-def delete_own_docs(*, db=Depends(get_db), user=Depends(curr_user), problem_id: ID):
-    team = unwrap(user.settings.selected_team)
+def delete_own_docs(*, db: Database, user: CurrUser, problem_id: ID):
+    team = unwrap(user.selected_team)
     delete_docs(db, user, problem_id, team)
 
 
 @admin.post("/documentation/{problem_id}/{team_id}/delete", tags=["docs"])
-def delete_admin_docs(*, db=Depends(get_db), user=Depends(curr_user), problem_id: ID, team_id: ID):
+def delete_admin_docs(*, db: Database, user: CurrUser, problem_id: ID, team_id: ID):
     team = unwrap(db.get(Team, team_id))
     delete_docs(db, user, problem_id, team)
 
@@ -780,7 +780,7 @@ class GetDocs(BaseSchema):
 
 @router.post("/documentation", tags=["docs"])
 def get_docs(
-    *, db=Depends(get_db), user=Depends(curr_user), data: GetDocs, page: int = 0, limit: int = 25
+    *, db: Database, user: CurrUser, data: GetDocs, page: int = 0, limit: int = 25
 ) -> dict[ID, schemas.Documentation]:
     filters = [Documentation.visible_sql(user)]
     if isinstance(data.problem, UUID):
@@ -792,7 +792,7 @@ def get_docs(
     elif isinstance(data.team, list):
         filters.append(Documentation.team_id.in_(data.team))
     elif not user.is_admin:
-        team = unwrap(user.settings.selected_team)
+        team = unwrap(user.selected_team)
         filters.append(Documentation.team == team)
 
     docs = db.scalars(select(Documentation).where(*filters).limit(limit).offset(page * limit)).unique().all()
@@ -815,7 +815,7 @@ class ProgramResults(BaseSchema):
 @router.get("/program/search", tags=["program"])
 def search_program(
     *,
-    db=Depends(get_db),
+    db: Database,
     user: User = Depends(curr_user),
     name: str | None = None,
     team: ID | None = None,
@@ -885,7 +885,7 @@ def upload_program(
 
 
 @router.post("/program/{id}/delete", tags=["program"])
-def delete_program(*, db: Session = Depends(get_db), user=Depends(curr_user), id: ID) -> bool:
+def delete_program(*, db: Session = Depends(get_db), user: CurrUser, id: ID) -> bool:
     program = unwrap(db.get(Program, id))
     program.assert_editable(user)
     db.delete(program)

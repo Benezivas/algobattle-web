@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import sleep
+from typing import Any
 from zipfile import ZipFile
 from anyio import run
 from sqlalchemy import select, create_engine
@@ -28,7 +29,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         config_file = scheduled_match.problem.config
         config = BaseConfig.from_file(config_file.path)
         config.teams = {}
-        problem = Problem.import_from_path(scheduled_match.problem.file.path)
+        problem: Problem[Any, Any] = Problem.import_from_path(scheduled_match.problem.file.path)
 
         paricipants: dict[ID, ResultParticipant] = {}
         for team in scheduled_match.problem.tournament.teams:
