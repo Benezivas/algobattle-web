@@ -979,7 +979,7 @@ class MatchResultData(BaseSchema):
     teams: dict[ID, schemas.Team]
 
 
-@router.get("/match/results", tags=["match"])
+@router.get("/match/result", tags=["match"])
 def results(*, db: Database, tournament: CurrTournament) -> MatchResultData:
     results = db.scalars(select(MatchResult).join(Problem).where(Problem.tournament_id == tournament.id)).unique().all()
     return MatchResultData(
