@@ -4,7 +4,7 @@ from enum import Enum
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated, Any, Callable, Literal, TypeGuard, TypeVar, cast
+from typing import Annotated, Any, Callable, Literal, TypeVar, cast
 from uuid import UUID
 from zipfile import ZipFile
 from urllib.parse import quote
