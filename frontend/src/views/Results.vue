@@ -103,7 +103,15 @@ async function sendData() {
   }
 }
 
-async function deleteResult() {}
+async function deleteResult() {
+  if (editData.value.id) {
+    await MatchService.deleteResults({
+      requestBody: [editData.value.id],
+    })
+    delete results.value[editData.value.id];
+    editModal.hide();
+  }
+}
 
 function getPrograms(team: string, role: Role) {
   if (!editData.value.problem || programs.value[editData.value.problem + team + role]) {

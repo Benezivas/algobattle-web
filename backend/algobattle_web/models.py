@@ -538,7 +538,7 @@ class MatchResult(Base, unsafe_hash=True):
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey(Problem.id), init=False)
-    participants: Mapped[set[ResultParticipant]] = relationship(default=set)
+    participants: Mapped[set[ResultParticipant]] = relationship(default=set, cascade="all, delete-orphan")
     logs_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     logs: Mapped[File | None] = relationship(
         default=None, foreign_keys=logs_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin"

@@ -1070,5 +1070,6 @@ def update_result(
     db.commit()
     return res
 
+
 # * has to be executed after all route defns
 router.include_router(admin)
