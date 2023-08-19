@@ -6,7 +6,7 @@ interface InputFileEvent extends InputEvent {
 }
 
 const props = defineProps<{
-  modelValue: any;
+  modelValue?: File;
 }>();
 const emit = defineEmits<{
   (e: "update:modelValue", newValue: File): void;

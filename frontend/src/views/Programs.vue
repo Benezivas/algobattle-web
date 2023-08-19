@@ -31,7 +31,7 @@ const newProgData = ref<{
   name?: string;
   role?: Role;
   problem?: string;
-  file?: Blob;
+  file?: File;
 }>({
   name: "",
 });
