@@ -175,7 +175,7 @@ function getAllPrograms() {
             </option>
           </select>
           <label for="logs" class="form-label">Log file</label>
-          <FileInput id="logs" v-model="editData.newLogs" required />
+          <FileInput id="logs" v-model="editData.newLogs" />
           <table class="table">
             <thead>
               <tr>
