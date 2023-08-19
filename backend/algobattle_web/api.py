@@ -997,13 +997,6 @@ def delete_results(*, db: Database, ids: list[ID]) -> None:
     db.commit()
 
 
-class Participant(BaseSchema):
-    team: UUID
-    generator: UUID
-    solver: UUID
-    points: float
-
-
 @admin.post("/match/result", tags=["match"], response_model=schemas.MatchResult)
 def add_result(
     *,
@@ -1019,12 +1012,17 @@ def add_result(
 ) -> MatchResult:
     problem_model = unwrap(db.get(Problem, problem))
     file = DbFile.from_file(logs) if logs else None
-    participants: set[ResultParticipant] = set()
-    for team, gen, sol, p in zip(teams, generators, solvers, points, strict=True):
-        team = unwrap(db.get(Team, team))
-        gen = unwrap(db.get(Program, gen))
-        sol = unwrap(db.get(Program, sol))
-        participants.add(ResultParticipant(team=team, generator=gen, solver=sol, points=p))
+    if len(teams) != len(set(teams)):
+        raise HTTPException(422, "Each team can can only appear once in each match")
+    participants = {
+        ResultParticipant(
+            team=Team.get_unwrap(db, team),
+            generator=Program.get_unwrap(db, gen),
+            solver=Program.get_unwrap(db, sol),
+            points=p,
+        )
+        for team, gen, sol, p in zip(teams, generators, solvers, points, strict=True)
+    }
     db_res = MatchResult(status=status, time=time, problem=problem_model, participants=participants, logs=file)
     db.add(db_res)
     db.commit()
