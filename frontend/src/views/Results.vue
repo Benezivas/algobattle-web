@@ -163,7 +163,7 @@ function openDetail(result: MatchResult) {
     </thead>
     <tbody>
       <tr v-for="(result, id) in results" :result="result" :key="id">
-        <td>{{ result.time }}</td>
+        <td>{{ formatDateTime(result.time) }}</td>
         <td>
           <RouterLink :to="problems[result.problem].link">{{ problems[result.problem].name }}</RouterLink>
         </td>
