@@ -12,7 +12,8 @@ import {
 import { Modal } from "bootstrap";
 import type { Problem, Tournament, MatchResult, Team, DbFile, ResultParticipant, Program } from "@client";
 import { onMounted, ref, toRaw } from "vue";
-import DownloadButtonVue from "@/components/DownloadButton.vue";
+import DownloadButton from "@/components/DownloadButton.vue";
+import FileInput from "@/components/FileInput.vue";
 
 const problems = ref<ModelDict<Problem>>({});
 const results = ref<ModelDict<MatchResult>>({});
@@ -46,6 +47,7 @@ interface EditData {
   logs?: DbFile | null;
   participants: Partial<ResultParticipant>[];
   confirmDelete: boolean;
+  newLogs?: File;
 }
 
 const editData = ref<EditData>({
@@ -66,7 +68,25 @@ function openEdit(match: MatchResult | undefined) {
   editModal.show();
 }
 
-async function sendData() {}
+async function sendData() {
+  if (editData.value.id) {
+  } else {
+    const res = await MatchService.addResult({
+      problem: editData.value.problem!,
+      status: editData.value.status!,
+      time: editData.value.time!,
+      formData: {
+        logs: editData.value.newLogs,
+        teams: editData.value.participants.map(p => p.team_id!),
+        generators: editData.value.participants.map(p => p.generator?.id!),
+        solvers: editData.value.participants.map(p => p.solver?.id!),
+        points: editData.value.participants.map(p => p.points!),
+      },
+    });
+    results.value[res.id] = res;
+    editModal.hide();
+  }
+}
 
 async function deleteResult() {}
 
@@ -154,6 +174,8 @@ function getAllPrograms() {
               {{ status }}
             </option>
           </select>
+          <label for="logs" class="form-label">Log file</label>
+          <FileInput id="logs" v-model="editData.newLogs" required />
           <table class="table">
             <thead>
               <tr>

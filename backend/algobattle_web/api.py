@@ -51,6 +51,9 @@ from pydantic_extra_types.color import Color
 
 __all__ = ("router", "admin")
 
+T = TypeVar("T")
+InForm = Annotated[T, Form()]
+
 
 class EditAction(Enum):
     add = "add"
@@ -996,34 +999,38 @@ def delete_results(*, db: Database, ids: list[ID]) -> None:
     db.commit()
 
 
-class CreateResult(BaseSchema):
-    class Participant(BaseSchema):
-        team: UUID
-        generator: UUID
-        solver: UUID
-        points: float
-
-    status: MatchStatus
-    time: datetime
-    problem: UUID
-    participants: list[Participant]
+class Participant(BaseSchema):
+    team: UUID
+    generator: UUID
+    solver: UUID
+    points: float
 
 
-@admin.post("/match/result", tags=["match"])
-def add_results(*, db: Database, results: list[CreateResult]) -> dict[UUID, schemas.MatchResult]:
-    res: list[MatchResult] = []
-    for result in results:
-        problem = unwrap(db.get(Problem, result.problem))
-        participants: set[ResultParticipant] = set()
-        for participant in result.participants:
-            team = unwrap(db.get(Team, participant.team))
-            gen = unwrap(db.get(Program, participant.generator))
-            sol = unwrap(db.get(Program, participant.solver))
-            participants.add(ResultParticipant(team=team, generator=gen, solver=sol, points=participant.points))
-        db_res = MatchResult(status=result.status, time=result.time, problem=problem, participants=participants)
-        db.add(db_res)
+@admin.post("/match/result", tags=["match"], response_model=schemas.MatchResult)
+def add_result(
+    *,
+    db: Database,
+    status: MatchStatus,
+    time: datetime,
+    problem: UUID,
+    teams: InForm[list[UUID]],
+    generators: InForm[list[UUID]],
+    solvers: InForm[list[UUID]],
+    points: InForm[list[float]],
+    logs: UploadFile | None = None,
+) -> MatchResult:
+    problem_model = unwrap(db.get(Problem, problem))
+    file = DbFile.from_file(logs) if logs else None
+    participants: set[ResultParticipant] = set()
+    for team, gen, sol, p in zip(teams, generators, solvers, points, strict=True):
+        team = unwrap(db.get(Team, team))
+        gen = unwrap(db.get(Program, gen))
+        sol = unwrap(db.get(Program, sol))
+        participants.add(ResultParticipant(team=team, generator=gen, solver=sol, points=p))
+    db_res = MatchResult(status=status, time=time, problem=problem_model, participants=participants, logs=file)
+    db.add(db_res)
     db.commit()
-    return encode(res)
+    return db_res
 
 
 # * has to be executed after all route defns
