@@ -96,8 +96,8 @@ class ScheduledMatch(Base):
 
 class ResultParticipant(BaseSchema):
     team_id: UUID
-    generator: Program
-    solver: Program
+    generator: Program | None = None
+    solver: Program | None = None
     points: float
 
 

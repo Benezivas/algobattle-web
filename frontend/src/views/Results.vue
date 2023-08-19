@@ -11,7 +11,7 @@ import {
 } from "@client";
 import { Modal } from "bootstrap";
 import type { Problem, Tournament, MatchResult, Team, DbFile, ResultParticipant, Program } from "@client";
-import { onMounted, ref, toRaw } from "vue";
+import { computed, onMounted, ref, toRaw } from "vue";
 import DownloadButton from "@/components/DownloadButton.vue";
 import FileInput from "@/components/FileInput.vue";
 
@@ -21,6 +21,7 @@ const teams = ref<ModelDict<Team>>({});
 const programs = ref<{ [key: string]: Program[] }>({});
 
 let editModal: Modal;
+let detailModal: Modal;
 onMounted(async () => {
   const res = await MatchService.results();
   problems.value = res.problems;
@@ -37,6 +38,7 @@ onMounted(async () => {
       tournament: store.user.current_tournament?.id,
     });
   }
+  detailModal = Modal.getOrCreateInstance("#detailModal");
 });
 
 interface EditData {
@@ -77,10 +79,10 @@ async function sendData() {
       time: editData.value.time!,
       formData: {
         logs: editData.value.newLogs,
-        teams: editData.value.participants.map(p => p.team_id!),
-        generators: editData.value.participants.map(p => p.generator?.id!),
-        solvers: editData.value.participants.map(p => p.solver?.id!),
-        points: editData.value.participants.map(p => p.points!),
+        teams: editData.value.participants.map((p) => p.team_id!),
+        generators: editData.value.participants.map((p) => p.generator?.id!),
+        solvers: editData.value.participants.map((p) => p.solver?.id!),
+        points: editData.value.participants.map((p) => p.points!),
       },
     });
     results.value[res.id] = res;
@@ -92,10 +94,10 @@ async function sendData() {
       time: editData.value.time!,
       formData: {
         logs: editData.value.newLogs,
-        teams: editData.value.participants.map(p => p.team_id!),
-        generators: editData.value.participants.map(p => p.generator?.id!),
-        solvers: editData.value.participants.map(p => p.solver?.id!),
-        points: editData.value.participants.map(p => p.points!),
+        teams: editData.value.participants.map((p) => p.team_id!),
+        generators: editData.value.participants.map((p) => p.generator?.id!),
+        solvers: editData.value.participants.map((p) => p.solver?.id!),
+        points: editData.value.participants.map((p) => p.points!),
       },
     });
     results.value[res.id] = res;
@@ -107,7 +109,7 @@ async function deleteResult() {
   if (editData.value.id) {
     await MatchService.deleteResults({
       requestBody: [editData.value.id],
-    })
+    });
     delete results.value[editData.value.id];
     editModal.hide();
   }
@@ -135,6 +137,17 @@ function getAllPrograms() {
     }
   }
 }
+
+const detailView = ref<MatchResult>();
+const ownParticipant = computed(() => {
+  const list = detailView.value?.participants.filter((p) => p.team_id == store.user.selected_team?.id);
+  return list && list.length >= 1 ? list[0] : undefined;
+});
+
+function openDetail(result: MatchResult) {
+  detailView.value = result;
+  detailModal.show();
+}
 </script>
 
 <template>
@@ -155,7 +168,11 @@ function getAllPrograms() {
           <RouterLink :to="problems[result.problem].link">{{ problems[result.problem].name }}</RouterLink>
         </td>
         <td>{{ result.status }}</td>
-        <td>Details</td>
+        <td>
+          <button type="button" class="btn btn-outline-primary btn-sm" @click="openDetail(result)">
+            <i class="bi bi-eye-fill"></i>
+          </button>
+        </td>
         <td v-if="store.user.is_admin" class="text-end">
           <button type="button" class="btn btn-sm btn-warning" title="Edit" @click="(e) => openEdit(result)">
             <i class="bi bi-pencil"></i>
@@ -307,6 +324,63 @@ function getAllPrograms() {
           <button type="submit" class="btn btn-primary">{{ editData.id ? "Save" : "Add" }}</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-l">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Result details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <template v-if="detailView">
+            <table class="table">
+              <thead>
+                <th scope="col"></th>
+                <th scope="col"></th>
+              </thead>
+              <tbody>
+                <tr v-if="ownParticipant?.generator">
+                  <td>Generator used</td>
+                  <td>
+                    <DownloadButton
+                      :file="ownParticipant.generator.file"
+                      :label="ownParticipant.generator.name"
+                    />
+                  </td>
+                </tr>
+                <tr v-if="ownParticipant?.solver">
+                  <td>Solver used</td>
+                  <td>
+                    <DownloadButton :file="ownParticipant.solver.file" :label="ownParticipant.solver.name" />
+                  </td>
+                </tr>
+                <tr v-if="detailView.logs">
+                  <td>Log file</td>
+                  <td><DownloadButton :file="detailView.logs" /></td>
+                </tr>
+              </tbody>
+            </table>
+            <table class="table mt-3">
+              <thead>
+                <th scope="col">Team</th>
+                <th scope="col">Points</th>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="participant in detailView.participants"
+                  :class="{ 'table-primary': participant.team_id == store.user.selected_team?.id }"
+                >
+                  <td>{{ teams[participant.team_id].name }}</td>
+                  <td>{{ participant.points }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </template>
+        </div>
+      </div>
     </div>
   </div>
 </template>
