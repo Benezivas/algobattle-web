@@ -5,21 +5,18 @@ RUN pip install .
 COPY config.toml /algobattle/config.toml
 RUN algobattle_api > openapi.json
 
-FROM openapitools/openapi-generator-cli as ts_builder
-WORKDIR /code
-COPY --from=api_builder /code/openapi.json openapi.json
-RUN /usr/local/bin/docker-entrypoint.sh generate -g typescript-fetch -i openapi.json -o typescript_client
-
 FROM node as frontend_builder
 WORKDIR /code
-COPY --from=ts_builder /code/typescript_client typescript_client
-COPY frontend .
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
+COPY --from=api_builder /code/openapi.json openapi.json
+RUN npx openapi --input ./openapi.json --output ./typescript_client --useOptions
+COPY frontend .
 RUN npm run build
 
 FROM python:3.11 as docs_builder
 WORKDIR /code
-RUN git clone -b "4.0.0-rc" https://github.com/Benezivas/algobattle.git
+RUN git clone -b "4.0.0-rc" https://github.com/ImogenBits/algobattle.git
 WORKDIR /code/algobattle
 RUN pip install .[dev]
 RUN mkdocs build
