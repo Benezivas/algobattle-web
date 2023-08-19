@@ -70,6 +70,21 @@ function openEdit(match: MatchResult | undefined) {
 
 async function sendData() {
   if (editData.value.id) {
+    const res = await MatchService.updateResult({
+      result: editData.value.id,
+      problem: editData.value.problem!,
+      status: editData.value.status!,
+      time: editData.value.time!,
+      formData: {
+        logs: editData.value.newLogs,
+        teams: editData.value.participants.map(p => p.team_id!),
+        generators: editData.value.participants.map(p => p.generator?.id!),
+        solvers: editData.value.participants.map(p => p.solver?.id!),
+        points: editData.value.participants.map(p => p.points!),
+      },
+    });
+    results.value[res.id] = res;
+    editModal.hide();
   } else {
     const res = await MatchService.addResult({
       problem: editData.value.problem!,

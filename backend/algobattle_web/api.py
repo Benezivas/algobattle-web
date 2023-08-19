@@ -4,7 +4,7 @@ from enum import Enum
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated, Any, Callable, Literal, TypeVar, cast
+from typing import Annotated, Any, Callable, Literal, TypeGuard, TypeVar, cast
 from uuid import UUID
 from zipfile import ZipFile
 from urllib.parse import quote
@@ -1014,20 +1014,61 @@ def add_result(
     file = DbFile.from_file(logs) if logs else None
     if len(teams) != len(set(teams)):
         raise HTTPException(422, "Each team can can only appear once in each match")
-    participants = {
-        ResultParticipant(
-            team=Team.get_unwrap(db, team),
-            generator=Program.get_unwrap(db, gen),
-            solver=Program.get_unwrap(db, sol),
-            points=p,
-        )
-        for team, gen, sol, p in zip(teams, generators, solvers, points, strict=True)
-    }
+    try:
+        participants = {
+            ResultParticipant(
+                team=Team.get_unwrap(db, team),
+                generator=Program.get_unwrap(db, gen),
+                solver=Program.get_unwrap(db, sol),
+                points=p,
+            )
+            for team, gen, sol, p in zip(teams, generators, solvers, points, strict=True)
+        }
+    except ValueError:
+        raise HTTPException(422, "Length of participant field infos was not equal")
     db_res = MatchResult(status=status, time=time, problem=problem_model, participants=participants, logs=file)
     db.add(db_res)
     db.commit()
     return db_res
 
+
+@admin.put("/match/result", tags=["match"], response_model=schemas.MatchResult)
+def update_result(
+    db: Database,
+    result: UUID,
+    time: datetime,
+    problem: UUID,
+    status: MatchStatus,
+    teams: InForm[list[UUID]],
+    generators: InForm[list[UUID]],
+    solvers: InForm[list[UUID]],
+    points: InForm[list[float]],
+    logs: UploadFile | UUID | None = None,
+) -> MatchResult:
+    res = MatchResult.get_unwrap(db, result)
+    res.time = time
+    res.problem = Problem.get_unwrap(db, problem)
+    res.status = status
+    if logs is None:
+        res.logs = None
+    elif isinstance(logs, UUID):
+        res.logs = DbFile.get_unwrap(db, logs)
+    else:
+        res.logs = DbFile.from_file(logs)
+    try:
+        res.participants = {
+            ResultParticipant(
+                team=Team.get_unwrap(db, team),
+                generator=Program.get_unwrap(db, gen),
+                solver=Program.get_unwrap(db, sol),
+                points=p,
+            )
+            for team, gen, sol, p in zip(teams, generators, solvers, points, strict=True)
+        }
+    except ValueError:
+        raise HTTPException(422, "Length of participant field infos was not equal")
+    db.commit()
+    return res
 
 # * has to be executed after all route defns
 router.include_router(admin)
