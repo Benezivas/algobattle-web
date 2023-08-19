@@ -4,7 +4,7 @@ from enum import Enum
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated, Any, Callable, Literal, cast
+from typing import Annotated, Any, Callable, Literal, TypeVar, cast
 from uuid import UUID
 from zipfile import ZipFile
 from urllib.parse import quote
@@ -462,9 +462,7 @@ def get_problems(*, db: Database, user: CurrUser, ids: list[ID]) -> dict[ID, sch
 
 
 @router.post("/problem/all", tags=["problem"])
-def all_problems(
-    *, db: Database, user: CurrUser, tournament: ID | None = None
-) -> dict[ID, schemas.Problem]:
+def all_problems(*, db: Database, user: CurrUser, tournament: ID | None = None) -> dict[ID, schemas.Problem]:
     filters: list[Any] = []
     if tournament is not None:
         filters.append(Problem.tournament_id == tournament)
@@ -987,8 +985,8 @@ def results(*, db: Database, tournament: CurrTournament) -> MatchResultData:
     results = db.scalars(select(MatchResult).join(Problem).where(Problem.tournament_id == tournament.id)).unique().all()
     return MatchResultData(
         results=encode(results),
-        problems=encode({result.problem for result in results}),
-        teams=encode({participant.team for result in results for participant in result.participants}),
+        problems=encode(result.problem for result in results),
+        teams=encode(participant.team for result in results for participant in result.participants),
     )
 
 
