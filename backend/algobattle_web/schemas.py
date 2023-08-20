@@ -71,7 +71,7 @@ class Problem(Base):
     link: str
 
 
-class Documentation(Base):
+class Report(Base):
     team: ObjID
     problem: ObjID
     file: DbFile

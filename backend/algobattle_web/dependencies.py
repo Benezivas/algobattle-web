@@ -1,9 +1,11 @@
 from typing import Annotated, AsyncIterable
-from fastapi import Depends, HTTPException, status
+from uuid import UUID
+
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import APIKeyHeader
 
 from algobattle_web.models import Team, Tournament, User, Session
-from algobattle_web.util import SessionLocal
+from algobattle_web.util import SessionLocal, unwrap
 
 
 async def get_db() -> AsyncIterable[Session]:
@@ -56,3 +58,22 @@ CurrTournament = Annotated[Tournament, Depends(curr_tournament)]
 def check_if_admin(user: User = Depends(curr_user)):
     if not user.is_admin:
         raise HTTPException(status.HTTP_403_FORBIDDEN)
+
+
+def team_only_if_admin(
+    db: Database,
+    user: CurrUser,
+    team: Annotated[
+        UUID | None, Query(description="Can only be set if the user is an admin. Defaults to the user's selected team.")
+    ] = None,
+) -> Team:
+    if user.is_admin and team:
+        team_model = Team.get_unwrap(db, team)
+    else:
+        team_model = unwrap(user.selected_team)
+    if not user.is_admin and team_model.id != team:
+        raise HTTPException(422, "Non admin users cannot specify a different team than they have selected")
+    return team_model
+
+
+TeamIfAdmin = Annotated[Team, Depends(team_only_if_admin)]

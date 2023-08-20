@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Modal } from "bootstrap";
 import { store } from "../main";
-import { TournamentService, DocsService, ProblemService, TeamService, ApiError } from "@client";
-import type { Tournament, Documentation, DbFile, Problem, Team } from "@client";
-import type { InputFileEvent } from "@/main";
+import { TournamentService, ReportService, ProblemService, TeamService, ApiError } from "@client";
+import type { Tournament, Report, DbFile, Problem, Team } from "@client";
+import type { InputFileEvent, ModelDict } from "@/main";
 import { computed, onMounted, ref, type Ref } from "vue";
 import { useRoute } from "vue-router";
 import router from "@/router";
@@ -29,140 +29,126 @@ interface ProblemEdit {
   colour: string;
 }
 
-const problem = ref({} as Problem);
+const problem = ref<Problem>();
 const tournaments: Ref<{
   [key: string]: Tournament;
 }> = ref({});
-const selectedTeam: Ref<Team | null> = ref(null);
-const docs: Ref<{ [key: string]: Documentation }> = ref({});
-const description: Ref<string | null> = ref(null);
-const teams: Ref<{ [key: string]: Team }> = ref({});
+const selectedTeam = ref<Team | null>(null);
+const reports = ref<ModelDict<Report>>({});
+const description = ref<string | null>(null);
+const teams = ref<ModelDict<Team>>({});
 
 const route = useRoute();
 const error = ref(null as null | string);
-const ownDoc = computed(() => {
+const ownReport = computed(() => {
   const team = selectedTeam.value;
   if (!team) {
     return null;
   } else {
-    const docList = Object.values(docs.value).filter((doc) => doc.team == team.id);
-    return docList.length != 0 ? docList[0] : null;
+    const reportList = Object.values(reports.value).filter((report) => report.team == team.id);
+    return reportList.length != 0 ? reportList[0] : null;
   }
 });
 const now = new Date();
 
 onMounted(async () => {
   selectedTeam.value = store.user.selected_team;
-  try {
-    const problemInfo = await ProblemService.problemByName({
-      problemName: route.params.problemName as string,
-      tournamentName: route.params.tournamentName as string,
-    });
-    problem.value = problemInfo.problem;
-    if (store.user.is_admin) {
-      tournaments.value = await TournamentService.allTournaments();
-    } else {
-      tournaments.value = { [problemInfo.tournament.id]: problemInfo.tournament };
-    }
-    docs.value = await DocsService.getDocs({ requestBody: { problem: problem.value.id } });
-    description.value = (await ProblemService.problemDesc({ id: problem.value.id })).data;
-    teams.value = await TeamService.getTeams({
-      requestBody: Object.values(docs.value).map((doc) => doc.team),
-    });
-    if (selectedTeam.value) {
-      teams.value[selectedTeam.value.id] = selectedTeam.value;
-    }
-  } catch {
-    error.value = "problem";
+  const problemInfo = await ProblemService.problemByName({
+    problemName: route.params.problemName as string,
+    tournamentName: route.params.tournamentName as string,
+  });
+  problem.value = problemInfo.problem;
+  if (store.user.is_admin) {
+    tournaments.value = await TournamentService.allTournaments();
+  } else {
+    tournaments.value = { [problemInfo.tournament.id]: problemInfo.tournament };
+  }
+  reports.value = (await ReportService.getReports({ problem: problem.value.id })).reports;
+  description.value = (await ProblemService.problemDesc({ id: problem.value.id })).data;
+  teams.value = await TeamService.getTeams({
+    requestBody: Object.values(reports.value).map((report) => report.team),
+  });
+  if (selectedTeam.value) {
+    teams.value[selectedTeam.value.id] = selectedTeam.value;
   }
 });
 
-const editDoc = {
+const editReport = {
   problem: "",
   team: "",
   newFile: null as File | null,
   fileSelect: ref<HTMLInputElement | null>(null),
   confirmDelete: ref(false),
-  docId: ref<string | undefined>(undefined),
+  reportId: ref<string | undefined>(undefined),
 };
 function selectFile(event: InputFileEvent) {
   const files = event.target.files || event.dataTransfer?.files;
   if (files && files.length != 0) {
-    editDoc.newFile = files[0];
+    editReport.newFile = files[0];
   }
 }
-async function openDocEdit(docId: string | null) {
-  if (docId) {
-    editDoc.problem = docs.value[docId].problem;
-    editDoc.team = docs.value[docId].team;
-    editDoc.docId.value = docId;
+async function openReportEdit(reportId: string | null) {
+  if (reportId) {
+    editReport.problem = reports.value[reportId].problem;
+    editReport.team = reports.value[reportId].team;
+    editReport.reportId.value = reportId;
   } else if (store.user.selected_team) {
-    editDoc.problem = problem.value.id;
-    editDoc.team = store.user.selected_team.id;
-    editDoc.docId.value = ownDoc.value?.id;
+    editReport.problem = problem.value!.id;
+    editReport.team = store.user.selected_team.id;
+    editReport.reportId.value = ownReport.value?.id;
   } else {
     return;
   }
-  editDoc.confirmDelete.value = false;
-  editDoc.newFile = null;
-  if (editDoc.fileSelect.value) {
-    editDoc.fileSelect.value.value = "";
+  editReport.confirmDelete.value = false;
+  editReport.newFile = null;
+  if (editReport.fileSelect.value) {
+    editReport.fileSelect.value.value = "";
   }
-  Modal.getOrCreateInstance("#docModal").show();
+  Modal.getOrCreateInstance("#reportModal").show();
 }
-async function uploadDoc() {
-  if (!editDoc.newFile || editDoc.newFile.size == 0) {
+async function uploadReport() {
+  if (!editReport.newFile || editReport.newFile.size == 0) {
     return;
   }
-  var newDoc = null;
-  if (store.user.is_admin) {
-    newDoc = await DocsService.uploadDocs({
-      problemId: editDoc.problem,
-      teamId: editDoc.team,
-      formData: { file: editDoc.newFile },
+  var newReport = null;
+    newReport = await ReportService.addReport({
+      problem: editReport.problem,
+      team: editReport.team,
+      formData: { file: editReport.newFile },
     });
-  } else {
-    newDoc = await DocsService.uploadOwnDocs({
-      problemId: editDoc.problem,
-      formData: { file: editDoc.newFile },
-    });
+  reports.value[newReport.id] = newReport;
+  if (editReport.fileSelect.value) {
+    editReport.fileSelect.value.value = "";
   }
-  docs.value[newDoc.id] = newDoc;
-  if (editDoc.fileSelect.value) {
-    editDoc.fileSelect.value.value = "";
-  }
-  Modal.getOrCreateInstance("#docModal").hide();
+  Modal.getOrCreateInstance("#reportModal").hide();
 }
-async function removeDoc() {
-  if (!editDoc.docId.value) {
+async function removeReport() {
+  if (!editReport.reportId.value) {
     return;
   }
-  if (!editDoc.confirmDelete.value) {
-    editDoc.confirmDelete.value = true;
+  if (!editReport.confirmDelete.value) {
+    editReport.confirmDelete.value = true;
     return;
   }
-  if (store.user.is_admin) {
-    DocsService.deleteAdminDocs({ teamId: editDoc.team, problemId: editDoc.problem });
-  } else {
-    DocsService.deleteOwnDocs({ problemId: editDoc.problem });
+  ReportService.deleteReport({problem: editReport.problem, team: editReport.team});
+  editReport.confirmDelete.value = false;
+  if (editReport.fileSelect.value) {
+    editReport.fileSelect.value.value = "";
   }
-  editDoc.confirmDelete.value = false;
-  if (editDoc.fileSelect.value) {
-    editDoc.fileSelect.value.value = "";
-  }
-  delete docs.value[editDoc.docId.value];
-  Modal.getOrCreateInstance("#docModal").hide();
+  delete reports.value[editReport.reportId.value];
+  Modal.getOrCreateInstance("#reportModal").hide();
 }
-function docEditable() {
+function reportEditable() {
   return (
-    selectedTeam.value?.tournament === problem.value.tournament &&
-    (store.user.is_admin || !problem.value.end || new Date(problem.value.end) >= now)
+    selectedTeam.value?.tournament === problem.value?.tournament &&
+    (store.user.is_admin || !problem.value?.end || new Date(problem.value.end) >= now)
   );
 }
 
-let editProblem = ref(createProblemEdit(problem.value));
+let editProblem = ref<ProblemEdit>();
 let confirmDeleteProblem = ref(false);
 function createProblemEdit(problem: Problem): ProblemEdit {
+  console.log(problem);
   return {
     ...problem,
     problem_schema: problem.problem_schema || "",
@@ -175,16 +161,16 @@ function createProblemEdit(problem: Problem): ProblemEdit {
   };
 }
 function openEdit() {
-  editProblem.value = createProblemEdit(problem.value);
+  editProblem.value = createProblemEdit(problem.value!);
   confirmDeleteProblem.value = false;
   error.value = null;
   Modal.getOrCreateInstance("#problemModal").show();
 }
 async function submitEdit() {
   //try {
-  const prob = editProblem.value;
+  const prob = editProblem.value!;
   problem.value = await ProblemService.editProblem({
-    id: problem.value.id,
+    id: problem.value!.id,
     requestBody: {
       name: prob.name,
       tournament: prob.tournament,
@@ -204,7 +190,7 @@ async function submitEdit() {
   }*/
   for (const key of ["file", "config", "description", "image"] as (keyof ProblemEdit)[]) {
     try {
-      const editFile = editProblem.value[key] as DbFileEdit;
+      const editFile = editProblem.value![key] as DbFileEdit;
       if (editFile.edit !== undefined) {
         problem.value = await ProblemService.editProblemFile({
           id: problem.value.id,
@@ -222,16 +208,16 @@ async function submitEdit() {
   Modal.getOrCreateInstance("#problemModal").hide();
 }
 async function checkName() {
-  const tournament = tournaments.value[editProblem.value.tournament];
+  const tournament = tournaments.value[editProblem.value!.tournament];
   if (!tournament) {
     return;
   }
   try {
     const prob = await ProblemService.problemByName({
       tournamentName: tournament.name,
-      problemName: editProblem.value.name,
+      problemName: editProblem.value!.name,
     });
-    if (prob.problem.id != problem.value.id) {
+    if (prob.problem.id != problem.value!.id) {
       error.value = "name";
       return;
     }
@@ -243,13 +229,13 @@ async function deleteProblem() {
     confirmDeleteProblem.value = true;
     return;
   }
-  ProblemService.deleteProblem({ id: problem.value.id });
+  ProblemService.deleteProblem({ id: problem.value!.id });
   router.push("problems");
 }
 </script>
 
 <template>
-  <template v-if="error != 'problem'">
+  <template v-if="error != 'problem' && problem">
     <nav id="navbar" class="navbar bg-body-tertiary px-3 mb-3">
       <a class="navbar-brand" href="#">
         {{ problem.name + (store.user.is_admin ? ` (${tournaments[problem.tournament]?.name})` : "") }}
@@ -258,8 +244,8 @@ async function deleteProblem() {
         <li v-if="problem.description" class="nav-item">
           <a class="nav-link" href="#description">Description</a>
         </li>
-        <li v-if="store.user.is_admin || ownDoc" class="nav-item">
-          <a class="nav-link" href="#documentation">Documentation</a>
+        <li v-if="store.user.is_admin || ownReport" class="nav-item">
+          <a class="nav-link" href="#report">Report</a>
         </li>
         <li v-if="problem.problem_schema" class="nav-item">
           <a class="nav-link" href="#problem_schema">Problem schema</a>
@@ -316,14 +302,14 @@ async function deleteProblem() {
                 Edit problem<i class="bi bi-pencil ms-1"></i>
               </button>
             </li>
-            <li v-if="docEditable()" class="list-group-item bg-body-tertiary">
+            <li v-if="reportEditable()" class="list-group-item bg-body-tertiary">
               <button
                 role="button"
                 class="btn btn-warning btn-sm"
-                title="Edit documentation"
-                @click="(e) => openDocEdit(null)"
+                title="Edit report"
+                @click="(e) => openReportEdit(null)"
               >
-                Edit documentation<i class="bi bi-pencil ms-1"></i>
+                Edit report<i class="bi bi-pencil ms-1"></i>
               </button>
             </li>
           </ul>
@@ -341,15 +327,15 @@ async function deleteProblem() {
         ></a>
         <div v-else v-html="description"></div>
       </template>
-      <template v-if="ownDoc || store.user.is_admin">
-        <h4 id="documentation" class="mt-5">Documentation</h4>
+      <template v-if="ownReport || store.user.is_admin">
+        <h4 id="report" class="mt-5">Report</h4>
         <a
-          v-if="ownDoc && !store.user.is_admin"
+          v-if="ownReport && !store.user.is_admin"
           role="button"
           class="btn btn-primary btn-sm mb-3"
-          :href="ownDoc.file.location"
-          title="Download documentation"
-          >Download documentation<i class="bi bi-download ms-1"></i
+          :href="ownReport.file.location"
+          title="Download report"
+          >Download report<i class="bi bi-download ms-1"></i
         ></a>
         <table v-else class="table">
           <thead>
@@ -359,17 +345,17 @@ async function deleteProblem() {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(doc, id) in docs">
-              <td>{{ teams[doc.team]?.name }}</td>
+            <tr v-for="(report, id) in reports">
+              <td>{{ teams[report.team]?.name }}</td>
               <td>
-                <a class="btn btn-primary btn-sm" :href="doc.file.location" title="Download file"
+                <a class="btn btn-primary btn-sm" :href="report.file.location" title="Download file"
                   >Download <i class="bi bi-download ms-1"></i
                 ></a>
                 <button
                   role="button"
                   class="btn btn-warning btn-sm ms-2"
                   title="Edit"
-                  @click="(e) => openDocEdit(id as string)"
+                  @click="(e) => openReportEdit(id as string)"
                 >
                   Edit <i class="bi bi-pencil ms-1"></i>
                 </button>
@@ -393,11 +379,11 @@ async function deleteProblem() {
     <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
 
-  <div class="modal fade" id="docModal" tabindex="-1" aria-labelledby="docLabel" aria-hidden="true">
+  <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-      <form class="modal-content" @submit.prevent="uploadDoc">
+      <form class="modal-content" @submit.prevent="uploadReport">
         <div class="modal-header">
-          <h1 class="modal-title fs-5" id="docLabel">Edit documentation</h1>
+          <h1 class="modal-title fs-5" id="reportLabel">Edit report</h1>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body row">
@@ -406,21 +392,21 @@ async function deleteProblem() {
             type="file"
             class="form-control "
             id="file_select"
-            ref="editDoc.fileSelect"
+            ref="editReport.fileSelect"
             @change="(e) => selectFile(e as any)"
           />
         </div>
         <div class="modal-footer">
           <button
-            v-if="editDoc.confirmDelete.value"
+            v-if="editReport.confirmDelete.value"
             type="button"
             class="btn btn-secondary"
-            @click="(e) => (editDoc.confirmDelete.value = false)"
+            @click="(e) => (editReport.confirmDelete.value = false)"
           >
             Cancel
           </button>
-          <button v-if="editDoc.docId" type="button" class="btn btn-danger ms-2" @click="removeDoc">
-            {{ editDoc.confirmDelete.value ? "Confirm deletion" : "Delete documentation" }}
+          <button v-if="editReport.reportId" type="button" class="btn btn-danger ms-2" @click="removeReport">
+            {{ editReport.confirmDelete.value ? "Confirm deletion" : "Delete report" }}
           </button>
           <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Discard</button>
           <button type="submit" class="btn btn-primary">Upload</button>
@@ -436,7 +422,7 @@ async function deleteProblem() {
           <h1 class="modal-title fs-5" id="modalLabel">Edit problem</h1>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body row">
+        <div class="modal-body row" v-if="editProblem">
           <div class="col-md-6">
             <div class="mb-3">
               <label for="tournament_sel" class="form-label">Tournament</label>

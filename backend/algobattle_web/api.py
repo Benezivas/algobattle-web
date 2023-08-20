@@ -29,7 +29,7 @@ from algobattle_web.models import (
     Session,
     ID,
     Tournament,
-    Documentation,
+    Report,
     MatchResult,
     Problem,
     Program,
@@ -46,7 +46,15 @@ from algobattle_web.util import (
     send_email,
     ServerConfig,
 )
-from algobattle_web.dependencies import CurrTournament, CurrUser, Database, curr_user, check_if_admin, get_db
+from algobattle_web.dependencies import (
+    CurrTournament,
+    CurrUser,
+    Database,
+    TeamIfAdmin,
+    curr_user,
+    check_if_admin,
+    get_db,
+)
 from pydantic_extra_types.color import Color
 
 __all__ = ("router", "admin")
@@ -58,6 +66,9 @@ InForm = Annotated[T, Form()]
 class EditAction(Enum):
     add = "add"
     remove = "remove"
+
+
+SQL_LIMIT = 50
 
 
 class SchemaRoute(APIRoute):
@@ -74,7 +85,7 @@ class SchemaRoute(APIRoute):
 
 
 router = APIRouter(prefix="/api", route_class=SchemaRoute)
-admin = APIRouter(dependencies=[Depends(check_if_admin)], route_class=SchemaRoute)
+admin = APIRouter(prefix="/admin", dependencies=[Depends(check_if_admin)], route_class=SchemaRoute)
 
 
 # *******************************************************************************
@@ -695,109 +706,58 @@ def problem_desc(*, db: Database, user: CurrUser, id: ID) -> Wrapped[str | None]
 
 
 # *******************************************************************************
-# * Docs
+# * Reports
 # *******************************************************************************
 
 
-@router.post("/documentation/{problem_id}", tags=["docs"])
-def upload_own_docs(
-    *,
-    db: Session = Depends(get_db),
-    user: User = Depends(curr_user),
-    problem_id: ID,
-    file: UploadFile = File(),
-) -> Documentation:
-    problem = unwrap(db.get(Problem, problem_id))
-    team = unwrap(user.selected_team)
-    return docs_edit(db, user, problem, team, file)
-
-
-@admin.post("/documentation/{problem_id}/{team_id}", tags=["docs"])
-def upload_docs(
+@router.put("/report", tags=["report"])
+def add_report(
     *,
     db: Database,
-    user: CurrUser,
-    problem_id: ID,
-    team_id: ID,
-    file: UploadFile = File(),
-) -> Documentation:
-    problem = unwrap(db.get(Problem, problem_id))
-    team = unwrap(db.get(Team, team_id))
-    return docs_edit(db, user, problem, team, file)
-
-
-def docs_edit(
-    db: Session,
-    user: User,
-    problem: Problem,
-    team: Team,
-    file: UploadFile = File(),
-) -> Documentation:
-    problem.assert_editable(user)
-    if problem.tournament != team.tournament:
-        raise HTTPException(400)
-    docs = (
-        db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem))
-        .unique()
-        .first()
-    )
-    if docs is None:
-        docs = Documentation(team, problem, DbFile.from_file(file))
-        db.add(docs)
+    team: TeamIfAdmin,
+    problem: ID,
+    file: UploadFile,
+) -> Report:
+    problem_model = Problem.get_unwrap(db, problem)
+    if problem_model.tournament != team.tournament:
+        raise HTTPException(400, "Selected team and problem are not in the same tournament")
+    report = db.scalars(select(Report).where(Report.team == team, Report.problem == problem)).unique().first()
+    if report:
+        report.file = DbFile.from_file(file)
     else:
-        docs.file = DbFile.from_file(file)
+        report = Report(team, problem_model, DbFile.from_file(file))
+        db.add(report)
     db.commit()
-    return docs
+    return report
 
 
-@router.post("/documentation/{problem_id}/delete", tags=["docs"])
-def delete_own_docs(*, db: Database, user: CurrUser, problem_id: ID):
-    team = unwrap(user.selected_team)
-    delete_docs(db, user, problem_id, team)
-
-
-@admin.post("/documentation/{problem_id}/{team_id}/delete", tags=["docs"])
-def delete_admin_docs(*, db: Database, user: CurrUser, problem_id: ID, team_id: ID):
-    team = unwrap(db.get(Team, team_id))
-    delete_docs(db, user, problem_id, team)
-
-
-def delete_docs(db: Session, user: User, problem_id: ID, team: Team):
-    problem = unwrap(db.get(Problem, problem_id))
-    docs = unwrap(
-        db.scalars(select(Documentation).where(Documentation.team == team, Documentation.problem == problem))
-        .unique()
-        .first()
-    )
-    docs.assert_editable(user)
-    db.delete(docs)
+@router.delete("/report", tags=["report"])
+def delete_report(db: Database, team: TeamIfAdmin, problem: ID) -> None:
+    report = db.scalar(select(Report).where(Report.team == team, Report.problem_id == problem))
+    if report is None:
+        raise HTTPException(404, "No such report exists")
+    db.delete(report)
     db.commit()
 
 
-class GetDocs(BaseSchema):
-    problem: ID | list[ID] | Literal["all"] = "all"
-    team: ID | list[ID] | Literal["all"] = "all"
+class Reports(BaseSchema):
+    reports: dict[UUID, schemas.Report]
+    total: int
 
 
-@router.post("/documentation", tags=["docs"])
-def get_docs(
-    *, db: Database, user: CurrUser, data: GetDocs, page: int = 0, limit: int = 25
-) -> dict[ID, schemas.Documentation]:
-    filters = [Documentation.visible_sql(user)]
-    if isinstance(data.problem, UUID):
-        filters.append(Documentation.problem_id == data.problem)
-    elif isinstance(data.problem, list):
-        filters.append(Documentation.problem_id.in_(data.problem))
-    if isinstance(data.team, UUID):
-        filters.append(Documentation.team_id == data.team)
-    elif isinstance(data.team, list):
-        filters.append(Documentation.team_id.in_(data.team))
-    elif not user.is_admin:
-        team = unwrap(user.selected_team)
-        filters.append(Documentation.team == team)
+@router.get("/report", tags=["report"])
+def get_reports(
+    db: Database, user: CurrUser, problem: UUID | None = None, team: UUID | None = None, offset: int = 0
+) -> Reports:
+    filters = [Report.visible_sql(user)]
+    if problem:
+        filters.append(Report.problem_id == problem)
+    if team:
+        filters.append(Report.team_id == team)
 
-    docs = db.scalars(select(Documentation).where(*filters).limit(limit).offset(page * limit)).unique().all()
-    return encode(docs)
+    reports = db.scalars(select(Report).where(*filters).limit(SQL_LIMIT).offset(offset)).all()
+    count = db.scalar(select(func.count()).select_from(Report).where(*filters)) or 0
+    return Reports(reports=encode(reports), total=count)
 
 
 # *******************************************************************************

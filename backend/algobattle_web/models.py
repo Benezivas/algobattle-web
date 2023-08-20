@@ -449,7 +449,7 @@ class Problem(Base, unsafe_hash=True):
             return or_(cls.start.is_(None), cls.start < datetime.now())
 
 
-class Documentation(Base, unsafe_hash=True):
+class Report(Base, unsafe_hash=True):
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
@@ -458,7 +458,7 @@ class Documentation(Base, unsafe_hash=True):
     file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
 
     __table_args__ = (UniqueConstraint("team_id", "problem_id"),)
-    Schema = schemas.Documentation
+    Schema = schemas.Report
 
     def visible(self, user: "User") -> bool:
         return user.is_admin or self.team in user.teams
