@@ -11,7 +11,7 @@ WORKDIR /code
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY --from=api_builder /code/openapi.json openapi.json
-RUN npx openapi --input ./openapi.json --output ./typescript_client --useOptions
+RUN npx openapi-typescript-codegen --input ./openapi.json --output ./typescript_client --useOptions
 COPY frontend .
 RUN npm run build
 
