@@ -4,6 +4,7 @@ COPY backend .
 RUN pip install .
 COPY config.toml /algobattle/config.toml
 RUN algobattle_api > openapi.json
+RUN pip show algobattle_base | grep -oP "Version: \K[^\n]+" > algobattle_version.txt
 
 FROM node as frontend_builder
 WORKDIR /code
@@ -14,14 +15,9 @@ RUN npx openapi --input ./openapi.json --output ./typescript_client --useOptions
 COPY frontend .
 RUN npm run build
 
-FROM python:3.11 as docs_builder
-WORKDIR /code
-RUN git clone -b "4.0.0-rc" https://github.com/ImogenBits/algobattle.git
-WORKDIR /code/algobattle
-RUN pip install .[dev]
-RUN mkdocs build
-
 FROM nginx
 WORKDIR /code
+COPY --from=api_builder /code/algobattle_version.txt algobattle_version.txt
+RUN curl -OL https://github.com/ImogenBits/algobattle/releases/download/v`cat algobattle_version.txt`/docs.tar.gz
+RUN mkdir docs && tar xzf docs.tar.gz -C docs
 COPY --from=frontend_builder /code/dist frontend
-COPY --from=docs_builder /code/algobattle/site docs
