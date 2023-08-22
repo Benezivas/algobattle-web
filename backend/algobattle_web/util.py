@@ -88,14 +88,14 @@ class ServerConfig(BaseSchema):
         if environ.get("DEV"):
             return "http://localhost:5173"
         else:
-            return str(self.base_url)[::-1]
+            return str(self.base_url)[:-1]
 
     @property
     def backend_base_url(self) -> str:
         if environ.get("DEV"):
             return "http://127.0.0.1:8000"
         else:
-            return str(self.base_url)[::-1]
+            return str(self.base_url)[:-1]
 
     @classmethod
     def load(cls) -> None:
