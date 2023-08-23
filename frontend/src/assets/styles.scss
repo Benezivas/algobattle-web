@@ -1,0 +1,38 @@
+// Import all of Bootstrap's CSS
+@import "~bootstrap/scss/bootstrap";
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css");
+
+// bootstrap somhow seems to set this to a non zero value, which popper doesn't like
+.dropdown-menu {
+    margin: 0!important;
+}
+
+.w-es {
+    max-width: 150px;
+}
+.w-em {
+    max-width: 300px;
+}
+.w-xs {
+    max-width: 576px;
+}
+.w-sm {
+    max-width: 768px;
+}
+.w-md {
+    max-width: 992px;
+}
+.w-lg {
+    max-width: 1200px;
+}
+.w-xl {
+    max-width: 1400px;
+}
+
+.form-select, .form-control {
+    max-width: 300px;
+}
+
+.form-select:not(td .form-select), .form-control:not(td .form-control) {
+    margin-bottom: 1rem;
+}

@@ -1,0 +1,43 @@
+[project]
+name = "algobattle_web"
+version = "0.2.0"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "Imogen Hergeth"}, {name = "Henri Lotze"}]
+urls = {github = "https://github.com/Benezivas/algobattle-web"}
+classifiers = [
+    "Natural Language :: English",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Typing :: Typed",
+]
+dependencies = [
+    "algobattle-base @ git+https://github.com/ImogenBits/algobattle.git@4.0.0-rc",
+    "uvicorn",
+    "fastapi",
+    "python-jose[cryptography]",
+    "python-multipart",
+    "sqlalchemy >= 2.0.0b1",
+    "pydantic",
+    "pydantic-extra-types",
+    "markdown",
+    "mysqlclient",
+    "sqlalchemy-utils",
+    "alembic",
+]
+
+[project.optional-dependencies]
+dev = [
+    "watchfiles",
+]
+
+[project.scripts]
+algobattle_api = "algobattle_web.app:create_openapi"
+algobattle_runner = "algobattle_web.battle:main"
+
+[tool.setuptools]
+packages = ["algobattle_web", "algobattle_web.alembic"]
+
+[tool.setuptools.package-data]
+"algobattle_web.alembic" = ["*"]
