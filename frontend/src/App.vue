@@ -4,41 +4,54 @@ import PageNavbarIcon from "./components/HomeNavbarIcon.vue";
 import { store } from "./main";
 import { UserService, type Team } from "../typescript_client";
 import LoginPane from "./components/LoginPane.vue";
-import { useCookies } from "vue3-cookies";
+import { useCookies } from "@vueuse/integrations/useCookies";
 import { computed, watch } from "vue";
 
 const router = useRouter();
-const { cookies } = useCookies();
-const loginToken = computed(() => {
+const cookies = useCookies();
+
+const queryToken = computed(() => {
   let token = router.currentRoute.value.query.login_token;
   if (token instanceof Array) {
     token = token[0];
   }
   return token;
 });
-
-watch(loginToken, async (newToken) => {
+watch(queryToken, async (newToken) => {
   if (newToken) {
     const data = await UserService.getToken({ loginToken: newToken });
     cookies.set("algobattle_user_token", data.token, data.expires);
     router.replace({ path: router.currentRoute.value.path });
-    try {
-      const response = await UserService.getLogin();
-      if (response) {
-        store.user = response.user;
-        store.settings = response.settings;
-        store.logged_in = response.logged_in as any;
-        return;
-      }
-    } catch {}
   }
 });
 
+const userToken = computed(() => {
+  return cookies.get("algobattle_user_token");
+});
+watch(
+  userToken,
+  async (userToken) => {
+    console.log(userToken);
+    if (userToken) {
+      try {
+        const response = await UserService.getLogin();
+        if (response) {
+          store.user = response.user;
+          store.settings = response.settings;
+          store.logged_in = response.logged_in as any;
+          return;
+        }
+      } catch {}
+    }
+    store.user = null;
+    store.settings = null;
+    store.logged_in = null;
+  },
+  { immediate: true }
+);
+
 async function logout() {
   cookies.remove("algobattle_user_token");
-  store.user = null;
-  store.settings = null;
-  store.logged_in = null;
 }
 
 async function selectTeam(team: Team | "admin") {
