@@ -4,8 +4,8 @@ import { ref } from "vue";
 import { useRoute } from "vue-router";
 
 const route = useRoute();
-var email = ref("");
-var msg = ref("");
+const email = ref("");
+const msg = ref("");
 
 async function login() {
   try {
@@ -25,13 +25,11 @@ async function login() {
     <div v-if="msg == 'email_sent'" class="alert alert-success" role="alert">
       A login email has been sent to the address if it is registered to a user.
     </div>
-    <form @submit.prevent="login">
-      <div class="mb-3">
-        <label for="email" class="form-label">Email address</label>
-        <input type="email" class="form-control " id="email" required v-model="email" />
-      </div>
-      <button type="submit" class="btn btn-primary">Login</button>
-    </form>
+    <div class="mb-3">
+      <label for="email" class="form-label">Email address</label>
+      <input type="email" class="form-control" id="email" required v-model="email" @keyup.enter="login" />
+    </div>
+    <button type="button" class="btn btn-primary" @click="login">Login</button>
   </div>
 </template>
 
@@ -40,5 +38,4 @@ async function login() {
   min-width: 340px;
   padding: 20px;
 }
-
 </style>

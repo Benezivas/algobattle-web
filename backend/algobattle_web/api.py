@@ -1,6 +1,7 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
 from enum import Enum
+from types import EllipsisType
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
 
@@ -98,16 +99,9 @@ def get_file(db: Database, *, id: ID) -> FileResponse:
 # *******************************************************************************
 
 
-@router.get("/user/login", tags=["user"], name="getLogin", response_model=schemas.LoginState | None)
-def get_self(*, user: CurrUserMaybe) -> dict[str, Any] | None:
-    if user:
-        return {
-            "user": user,
-            "settings": user.settings,
-            "logged_in": user.logged_in,
-        }
-    else:
-        return None
+@router.get("/user/login", tags=["user"], name="getLogin", response_model=schemas.UserLogin | None)
+def get_self(*, user: CurrUserMaybe) -> User | None:
+    return user
 
 
 class UserSearch(BaseSchema):
@@ -228,19 +222,18 @@ def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
     return True
 
 
-class EditSettings(BaseSchema):
-    email: str | None = None
-    team: ID | None | Literal["noedit"] = "noedit"
-
-
-@router.patch("/user/settings", tags=["user"])
-def settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSettings) -> User:
-    if edit.email is not None:
-        user.email = edit.email
-    if edit.team != "noedit":
-        if edit.team is not None and not any(edit.team == team.id for team in user.teams):
+@router.patch("/user/settings", tags=["user"], response_model=schemas.UserLogin)
+def settings(*, db: Database, user: CurrUser, email: str | None = None, team: ID | Literal["admin"] | None = None) -> User:
+    if email is not None:
+        user.email = email
+    if team == "admin":
+        if not user.is_admin:
+            raise HTTPException(400, "User is not an admin")
+        user.settings.selected_team = None
+    elif team is not None:
+        if not any(team == t.id for t in user.teams):
             raise HTTPException(400, "User is not in the selected team")
-        user.settings.selected_team_id = edit.team
+        user.settings.selected_team_id = team
     db.commit()
     return user
 

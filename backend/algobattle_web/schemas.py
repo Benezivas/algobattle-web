@@ -1,7 +1,6 @@
 """Module containing db model's schemas to avoid namespacing issues."""
 from abc import ABC
 from datetime import datetime
-from enum import StrEnum
 from typing import Literal
 from urllib.parse import quote as urlencode
 from uuid import UUID
@@ -42,6 +41,10 @@ class Team(Base):
     members: list[ObjID]
 
 
+class UserSettings(Base):
+    selected_team: Team | None
+
+
 class User(Base):
     name: str
     email: str
@@ -49,18 +52,18 @@ class User(Base):
     teams: list[Team]
 
 
-class UserSettings(Base):
-    selected_team: Team | None
-
-
-class _Admin(StrEnum):
-    admin = "admin"
-
-
-class LoginState(BaseSchema):
-    user: User
+class UserLogin(User):
     settings: UserSettings
-    logged_in : Team | _Admin | None
+
+    @computed_field
+    @property
+    def logged_in(self) -> Team | Literal["admin"] | None:
+        if self.settings.selected_team is not None:
+            return self.settings.selected_team
+        elif self.is_admin:
+            return "admin"
+        else:
+            return None
 
 
 class Problem(Base):
