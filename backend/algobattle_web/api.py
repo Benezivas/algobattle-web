@@ -1,7 +1,6 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
 from enum import Enum
-from types import EllipsisType
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
 
