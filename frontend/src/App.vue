@@ -109,7 +109,7 @@ const displayName = computed(() => {
           </a>
           <ul v-if="store.logged_in" class="dropdown-menu">
             <li><RouterLink class="dropdown-item" to="settings">Settings</RouterLink></li>
-            <template v-if="store.user.is_admin || store.user.teams.length >= 2">
+            <template v-if="store.user.teams.length >= (store.user.is_admin ? 1 : 2)">
               <li><hr class="dropdown-divider" /></li>
               <li class="dropdown-header">Select team</li>
               <li class="dropdown-item" v-for="team in store.user.teams" @click="selectTeam(team)">
