@@ -1,6 +1,8 @@
 """Module containing db model's schemas to avoid namespacing issues."""
 from abc import ABC
 from datetime import datetime
+from enum import StrEnum
+from typing import Literal
 from urllib.parse import quote as urlencode
 from uuid import UUID
 
@@ -30,14 +32,6 @@ class DbFile(Base):
     def location(self) -> str:
         return f"{ServerConfig.obj.backend_base_url}/api/files/{urlencode(str(self.id))}"
 
-
-class User(Base):
-    name: str
-    email: str
-    is_admin: bool
-    teams: list[ObjID]
-
-
 class Tournament(Base):
     name: str
 
@@ -48,10 +42,25 @@ class Team(Base):
     members: list[ObjID]
 
 
-class UserWithSettings(User):
-    selected_team: Team | None
-    selected_tournament: Tournament | None
-    current_tournament: Tournament | None
+class User(Base):
+    name: str
+    email: str
+    is_admin: bool
+    teams: list[Team]
+
+
+class UserSettings(Base):
+    selected_team: Team
+
+
+class _Admin(StrEnum):
+    admin = "admin"
+
+
+class LoginState(BaseSchema):
+    user: User
+    settings: UserSettings
+    logged_in : Team | _Admin | None
 
 
 class Problem(Base):

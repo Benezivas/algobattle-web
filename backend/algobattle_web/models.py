@@ -292,21 +292,27 @@ team_members = Table(
 )
 
 
+class UserSettings(Base, unsafe_hash=True):
+    """Settings for each user."""
+
+    selected_team: Mapped["Team | None"] = relationship(lazy="joined", default=None)
+
+    selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), init=False)
+
+
 class User(Base, unsafe_hash=True):
     """A user object."""
 
     email: Mapped[str128] = mapped_column(unique=True)
     name: Mapped[str32]
     is_admin: Mapped[bool] = mapped_column(default=False)
-    selected_team: Mapped["Team | None"] = relationship(lazy="joined", default=None)
-    selected_tournament: "Mapped[Tournament | None]" = relationship(default=None)
+    settings: Mapped[UserSettings] = relationship(default_factory=UserSettings)
 
     teams: Mapped[list["Team"]] = relationship(
         secondary=team_members, back_populates="members", lazy="joined", default_factory=list
     )
     token_id: Mapped[ID] = mapped_column(init=False)
-    selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), init=False)
-    selected_tournament_id: Mapped[UUID | None] = mapped_column(ForeignKey("tournaments.id"), init=False)
+    settings_id: Mapped[UUID] = mapped_column(ForeignKey("usersettingss.id"), init=False)
 
     Schema = schemas.User
 
@@ -317,11 +323,11 @@ class User(Base, unsafe_hash=True):
         return user.is_admin
 
     @property
-    def current_tournament(self) -> "Tournament | None":
-        if self.selected_team is not None:
-            return self.selected_team.tournament
+    def logged_in(self) -> "Team | Literal['admin'] | None":
+        if self.settings.selected_team is not None:
+            return self.settings.selected_team
         elif self.is_admin:
-            return self.selected_tournament
+            return "admin"
         else:
             return None
 
@@ -552,7 +558,7 @@ class Program(Base, unsafe_hash=True):
         if user.is_admin:
             return sql_true
         else:
-            return cls.team_id == user.selected_team_id
+            return cls.team_id == user.settings.selected_team_id
 
 
 class ScheduledMatch(Base, unsafe_hash=True):

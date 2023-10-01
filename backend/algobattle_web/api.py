@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
@@ -42,6 +42,7 @@ from algobattle_web.util import (
 from algobattle_web.dependencies import (
     CurrTournament,
     CurrUser,
+    CurrUserMaybe,
     Database,
     TeamIfAdmin,
     curr_user,
@@ -97,9 +98,16 @@ def get_file(db: Database, *, id: ID) -> FileResponse:
 # *******************************************************************************
 
 
-@router.get("/user/self", tags=["user"], response_model=schemas.UserWithSettings)
-def get_self(*, user: CurrUser) -> User:
-    return user
+@router.get("/user/login", tags=["user"], name="getLogin", response_model=schemas.LoginState | None)
+def get_self(*, user: CurrUserMaybe) -> dict[str, Any] | None:
+    if user:
+        return {
+            "user": user,
+            "settings": user.settings,
+            "logged_in": user.logged_in,
+        }
+    else:
+        return None
 
 
 class UserSearch(BaseSchema):
@@ -222,22 +230,17 @@ def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 class EditSettings(BaseSchema):
     email: str | None = None
-    team: ID | None = None
-    tournament: ID | None = None
+    team: ID | None | Literal["noedit"] = "noedit"
 
 
 @router.patch("/user/settings", tags=["user"])
 def settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSettings) -> User:
     if edit.email is not None:
         user.email = edit.email
-    if edit.team is not None:
-        if not any(edit.team == team.id for team in user.teams):
+    if edit.team != "noedit":
+        if edit.team is not None and not any(edit.team == team.id for team in user.teams):
             raise HTTPException(400, "User is not in the selected team")
-        user.selected_team_id = edit.team
-    if edit.tournament is not None:
-        if not user.is_admin:
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Only admin users can select tournaments")
-        user.selected_tournament = unwrap(db.get(Tournament, edit.tournament))
+        user.settings.selected_team_id = edit.team
     db.commit()
     return user
 
@@ -272,7 +275,7 @@ def all_tournaments(*, db: Database, user: CurrUser) -> dict[ID, schemas.Tournam
     if user.is_admin:
         tournaments = db.scalars(select(Tournament)).unique().all()
     else:
-        team = user.selected_team
+        team = user.settings.selected_team
         if team is not None:
             tournaments = [team.tournament]
         else:
@@ -446,7 +449,7 @@ class MemberEditTeam(BaseSchema):
 
 @router.post("/team/self/edit", tags=["team"])
 def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: MemberEditTeam) -> Team:
-    team = unwrap(user.selected_team)
+    team = unwrap(user.settings.selected_team)
     team.assert_editable(user)
     if edit.name is not None:
         team.name = edit.name
@@ -666,11 +669,11 @@ def search_program(
     if user.is_admin:
         problems = Problem.get_all(db)
     else:
-        assert user.selected_team is not None
+        assert user.settings.selected_team is not None
         problems = (
             db.scalars(
                 select(Problem).where(
-                    Problem.visible_sql(user), Problem.tournament_id == user.selected_team.tournament_id
+                    Problem.visible_sql(user), Problem.tournament_id == user.settings.selected_team.tournament_id
                 )
             )
             .unique()
@@ -714,7 +717,7 @@ def upload_program(
     problem: ID,
     file: UploadFile = File(),
 ) -> Program:
-    team = unwrap(user.selected_team)
+    team = unwrap(user.settings.selected_team)
     problem_obj = unwrap(db.get(Problem, problem))
     problem_obj.assert_visible(user)
     prog = Program(name, team, role, DbFile.from_file(file), problem_obj)
@@ -750,7 +753,7 @@ def scheduled_matches(
     tournament: str | None = None,
 ) -> ScheduleInfo:
     if tournament is None:
-        tournament_ = unwrap(user.selected_team).tournament
+        tournament_ = unwrap(user.settings.selected_team).tournament
     else:
         tournament_ = unwrap(db.get(Tournament, tournament))
     matches = (

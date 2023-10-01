@@ -26,6 +26,9 @@ def curr_user_maybe(
     return User.decode_token(db, user_token)
 
 
+CurrUserMaybe = Annotated[User | None, Depends(curr_user_maybe)]
+
+
 def curr_user(user: User | None = Depends(curr_user_maybe)) -> User:
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
@@ -37,7 +40,7 @@ CurrUser = Annotated[User, Depends(curr_user)]
 
 
 def curr_team(user: User = Depends(curr_user)) -> Team:
-    team = user.selected_team
+    team = user.settings.selected_team
     if team is None:
         raise ValueError("User has not selected a team")
     return team
@@ -47,9 +50,9 @@ CurrTeam = Annotated[Team, Depends(curr_team)]
 
 
 def curr_tournament(user: User = Depends(curr_user)) -> Tournament:
-    if user.current_tournament is None:
+    if user.settings.selected_team is None:
         raise HTTPException(400, "User has not selected a team or tournament")
-    return user.current_tournament
+    return user.settings.selected_team.tournament
 
 
 CurrTournament = Annotated[Tournament, Depends(curr_tournament)]
@@ -70,7 +73,7 @@ def team_only_if_admin(
     if user.is_admin and team:
         team_model = Team.get_unwrap(db, team)
     else:
-        team_model = unwrap(user.selected_team)
+        team_model = unwrap(user.settings.selected_team)
     if not user.is_admin and team_model.id != team:
         raise HTTPException(422, "Non admin users cannot specify a different team than they have selected")
     return team_model
