@@ -50,7 +50,7 @@ class User(Base):
 
 
 class UserSettings(Base):
-    selected_team: Team
+    selected_team: Team | None
 
 
 class _Admin(StrEnum):

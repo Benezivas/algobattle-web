@@ -18,7 +18,7 @@ async function login() {
 </script>
 
 <template>
-  <div class="dropdown-menu" id="outer">
+  <div class="dropdown-menu dropdown-menu-end" id="outer">
     <div v-if="msg == 'error'" class="alert alert-danger" role="alert">
       There was an error logging you in.
     </div>

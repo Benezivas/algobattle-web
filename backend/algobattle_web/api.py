@@ -247,7 +247,9 @@ def settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), 
 
 @router.post("/user/login", tags=["user"])
 def login(*, db: Database, email: str = Body(), target_url: str = Body(), tasks: BackgroundTasks) -> None:
-    user = unwrap(User.get(db, email))
+    user = User.get(db, email)
+    if user is None:
+        return
     token = user.login_token()
     url = str(ServerConfig.obj.frontend_base_url) + target_url + f"?login_token={token}"
     tasks.add_task(send_email, email, url)
