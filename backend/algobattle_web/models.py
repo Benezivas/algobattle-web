@@ -1,16 +1,16 @@
 "Database models"
-from dataclasses import InitVar
 from datetime import timedelta, datetime
 from typing import IO, Callable, ClassVar, Iterable, Any
 from typing import Any, BinaryIO, Iterable, Literal, Self, cast, overload, Annotated, Sequence
+from typing_extensions import TypedDict
 from uuid import UUID, uuid4
 from pathlib import Path
 from shutil import copyfileobj, copyfile
-from algobattle_web import schemas
+from zipfile import ZipFile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
+from sqlalchemy import JSON, MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
 from sqlalchemy.event import listens_for
 from sqlalchemy.sql import true as sql_true, or_, and_
 from sqlalchemy.sql._typing import _ColumnExpressionArgument
@@ -20,8 +20,20 @@ from sqlalchemy.sql.base import _NoArg
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
 
-from algobattle.docker_util import Role as ProgramRole
-from algobattle_web.util import BaseSchema, MatchStatus, PermissionExcpetion, guess_mimetype, ServerConfig, SessionLocal, unwrap
+from algobattle.util import TempDir, Role as ProgramRole
+from algobattle.match import AlgobattleConfig
+from algobattle_web import schemas
+from algobattle_web.util import (
+    BaseSchema,
+    MatchStatus,
+    PermissionExcpetion,
+    guess_mimetype,
+    ServerConfig,
+    SessionLocal,
+    install_packages,
+    render_text,
+    unwrap,
+)
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
@@ -32,10 +44,19 @@ str256 = Annotated[str, mapped_column(String(256))]
 strText = Annotated[str, mapped_column(Text)]
 
 
+class ProblemPageData(TypedDict, total=True):
+    """Data needed to render a problem page."""
+
+    description: str | None
+    instance_schema: str | None
+    solution_schema: str | None
+
+
 class RawBase(MappedAsDataclass, DeclarativeBase):
     registry = registry(
         type_annotation_map={
             datetime: DateTime,
+            ProblemPageData: JSON,
         }
     )
 
@@ -125,13 +146,12 @@ class File(Base):
 
     Schema = schemas.DbFile
 
-    file: InitVar[Path | BinaryIO]
     filename: Mapped[str128]
     media_type: Mapped[str32]
     alt_text: Mapped[str256]
     timestamp: Mapped[datetime]
 
-    _move: bool = False
+    _action: Literal["move", "copy"] = "copy"
     _file: Path | BinaryIO | None = None
 
     @overload
@@ -146,7 +166,9 @@ class File(Base):
 
     @overload
     @classmethod
-    def from_file(cls, file: Path, *, media_type: str | None = None, alt_text: str = "", move: bool) -> Self:
+    def from_file(
+        cls, file: Path, *, media_type: str | None = None, alt_text: str = "", action: Literal["move", "copy"]
+    ) -> Self:
         ...
 
     @classmethod
@@ -157,7 +179,7 @@ class File(Base):
         *,
         media_type: str | None = None,
         alt_text: str = "",
-        move: bool = False,
+        action: Literal["move", "copy"] = "copy",
     ) -> Self:
         if isinstance(file, BinaryIO):
             if filename is None:
@@ -171,7 +193,14 @@ class File(Base):
             file = file.file
         if media_type is None:
             media_type = guess_mimetype(filename)
-        return cls(file=file, filename=filename, media_type=media_type, alt_text=alt_text, timestamp=datetime.now(), _move=move)
+        return cls(
+            _file=file,
+            filename=filename,
+            media_type=media_type,
+            alt_text=alt_text,
+            timestamp=datetime.now(),
+            _action=action,
+        )
 
     @classmethod
     def maybe(cls, file: UploadFile | None, *, alt_text: str = "") -> Self | None:
@@ -203,10 +232,11 @@ class File(Base):
         if self._file is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             if isinstance(self._file, Path):
-                if self._move:
-                    self._file.rename(self.path)
-                else:
-                    copyfile(self._file, self.path)
+                match self._action:
+                    case "move":
+                        self._file.rename(self.path)
+                    case "copy":
+                        copyfile(self._file, self.path)
             else:
                 with open(self.path, "wb+") as target:
                     copyfileobj(self._file, target)
@@ -227,6 +257,7 @@ class File(Base):
 def insert_file(_mapper: Any, _connection: Any, target: File):
     inspector = inspect(target)
     assert inspector is not None
+    assert inspector.session is not None
     inspector.session.info.setdefault("new_files", []).append(target)
 
 
@@ -234,6 +265,7 @@ def insert_file(_mapper: Any, _connection: Any, target: File):
 def delete_file(_mapper: Any, _connection: Any, target: File):
     inspector = inspect(target)
     assert inspector is not None
+    assert inspector.session is not None
     inspector.session.info.setdefault("deleted_files", []).append(target)
 
 
@@ -402,31 +434,22 @@ class Team(Base, unsafe_hash=True):
 
 class Problem(Base, unsafe_hash=True):
     file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
-    config_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
-    description_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     image_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
+    tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
 
     name: Mapped[str64]
     tournament: Mapped[Tournament] = relationship()
-    tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
     file: Mapped[File] = relationship(
         foreign_keys=file_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin"
     )
-    config: Mapped[File] = relationship(
-        foreign_keys=config_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin"
-    )
     start: Mapped[datetime | None] = mapped_column(default=None)
     end: Mapped[datetime | None] = mapped_column(default=None)
-    description: Mapped[File | None] = relationship(
-        default=None, foreign_keys=description_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin"
-    )
-    short_description: Mapped[str256] = mapped_column(default="")
+    description: Mapped[str256] = mapped_column(default="")
     image: Mapped[File | None] = relationship(
         default=None, foreign_keys=image_id, cascade="all, delete-orphan", single_parent=True, lazy="selectin"
     )
-    problem_schema: Mapped[strText] = mapped_column(default="")
-    solution_schema: Mapped[strText] = mapped_column(default="")
     colour: Mapped[str] = mapped_column(String(7), default="#FFFFFF")
+    page_data: Mapped[ProblemPageData | None] = mapped_column(default=None)
 
     __table_args__ = (UniqueConstraint("name", "tournament_id"),)
     Schema = schemas.Problem
@@ -447,6 +470,33 @@ class Problem(Base, unsafe_hash=True):
             return sql_true
         else:
             return or_(cls.start.is_(None), cls.start < datetime.now())
+
+    def compute_page_data(self) -> None:
+        """Prepares the problem for further use, installing dependencies and computing the page data table."""
+        with SessionLocal() as db, TempDir() as folder:
+            problem = db.merge(self)
+            with ZipFile(problem.file.path, "r") as spec:
+                spec.extractall(folder)
+            config = AlgobattleConfig.from_file(folder)
+            prob_name = config.match.problem
+            packages = config.problems[prob_name].dependencies
+
+            try:
+                install_packages(packages)
+            except RuntimeError:
+                pass
+            try:
+                desc_path = next(folder.glob("description.*"))
+                desc = render_text(desc_path.read_text(), guess_mimetype(desc_path))
+            except StopIteration:
+                desc = None
+
+            problem.page_data = ProblemPageData(
+                description=desc,
+                instance_schema=config.problem.instance_cls.io_schema(),
+                solution_schema=config.problem.solution_cls.io_schema(),
+            )
+            db.commit()
 
 
 class Report(Base, unsafe_hash=True):
@@ -513,7 +563,7 @@ class ScheduledMatch(Base, unsafe_hash=True):
     problem: Mapped[Problem] = relationship()
     problem_id: Mapped[ID] = mapped_column(ForeignKey("problems.id"), init=False)
     name: Mapped[str32] = mapped_column(default="")
-    points: Mapped[float] = mapped_column(default=100)
+    points: Mapped[int] = mapped_column(default=100)
 
 
 class ResultParticipant(RawBase):

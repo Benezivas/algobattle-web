@@ -14,12 +14,12 @@ const problems: Ref<{ [key: string]: Problem }> = ref({});
 onMounted(async () => {
   tournaments.value = await TournamentService.allTournaments();
   selectedTournament.value = store.user.selected_team?.tournament;
-  problems.value = await ProblemService.allProblems({ tournament: selectedTournament.value });
+  problems.value = await ProblemService.get({ tournament: selectedTournament.value });
 });
 
 watch(selectedTournament, async (newTournament: string | undefined, oldTournament: string | undefined) => {
   if (newTournament != oldTournament) {
-    problems.value = await ProblemService.allProblems({ tournament: newTournament });
+    problems.value = await ProblemService.get({ tournament: newTournament });
   }
 });
 
@@ -27,7 +27,7 @@ function inTournament(problem: Problem) {
   if (selectedTournament.value == undefined) {
     return true;
   } else {
-    return problem.tournament == selectedTournament.value;
+    return problem.tournament.id == selectedTournament.value;
   }
 }
 const now = new Date();
@@ -75,7 +75,7 @@ const past_problems = computed(() => {
       <ProblemCard
         v-for="(problem, id) in future_problems"
         :problem="problem"
-        :tournament="tournaments[problem.tournament]"
+        :tournament="problem.tournament"
         :key="id"
       />
       <div class="card border border-success-subtle m-2" style="width: 18rem; height: 24rem">
@@ -97,7 +97,7 @@ const past_problems = computed(() => {
     <ProblemCard
       v-for="(problem, id) in current_problems"
       :problem="problem"
-      :tournament="tournaments[problem.tournament]"
+      :tournament="problem.tournament"
       :key="id"
     />
   </div>
@@ -106,7 +106,7 @@ const past_problems = computed(() => {
     <ProblemCard
       v-for="(problem, id) in past_problems"
       :problem="problem"
-      :tournament="tournaments[problem.tournament]"
+      :tournament="problem.tournament"
       :key="id"
     />
   </div>

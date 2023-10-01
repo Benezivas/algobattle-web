@@ -5,11 +5,14 @@ from email.message import EmailMessage
 from enum import Enum
 from pathlib import Path
 from smtplib import SMTP
+from subprocess import run
+import sys
 import tomllib
 from typing import Annotated, ClassVar, Generic, Self, TypeVar
 from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 from os import environ
+from markdown import markdown
 
 from pydantic import (
     Base64Bytes,
@@ -20,7 +23,6 @@ from pydantic import (
     field_validator,
     AnyUrl,
     BaseModel,
-    Extra,
 )
 from fastapi import HTTPException
 from sqlalchemy.orm import sessionmaker
@@ -34,7 +36,7 @@ class BaseSchema(BaseModel):
 
     model_config = ConfigDict(
         from_attributes=True,
-        extra=Extra.forbid,
+        extra="forbid",
     )
 
 
@@ -194,3 +196,31 @@ class MatchStatus(Enum):
     complete = "complete"
     failed = "failed"
     running = "running"
+
+
+def install_packages(packages: list[str]) -> None:
+    """Installs the given packages."""
+    if not packages:
+        return
+    installer = run([sys.executable, "-m", "pip", "install"] + packages, env=environ.copy())
+    if installer.returncode:
+        raise RuntimeError
+
+
+def render_text(text: str, mime_type: str = "text/plain") -> str | None:
+    """Renders the text as html.
+
+    Accepts text containing plain text, html, or markdown.
+    """
+    try:
+        match mime_type:
+            case "text/plain":
+                return f"<p>{text}</p>"
+            case "text/html":
+                return text
+            case "text/markdown":
+                return markdown(text, extensions=[])
+            case _:
+                return None
+    except Exception:
+        return None

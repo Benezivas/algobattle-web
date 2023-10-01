@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
-interface DbFileEdit {
+export interface DbFileEdit {
   location?: string;
   edit?: File | null;
 }

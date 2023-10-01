@@ -34,7 +34,7 @@ onMounted(async () => {
   }
   editModal = Modal.getOrCreateInstance("#editModal");
   if (store.user.is_admin) {
-    problems.value = await ProblemService.allProblems({
+    problems.value = await ProblemService.get({
       tournament: store.user.current_tournament?.id,
     });
   }

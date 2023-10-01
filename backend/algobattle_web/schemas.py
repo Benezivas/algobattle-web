@@ -8,7 +8,7 @@ from pydantic import computed_field
 from pydantic_extra_types.color import Color
 
 from algobattle_web.util import BaseSchema, MatchStatus, ObjID, ServerConfig
-from algobattle.docker_util import Role
+from algobattle.util import Role
 
 
 class Base(BaseSchema, ABC):
@@ -56,16 +56,12 @@ class UserWithSettings(User):
 
 class Problem(Base):
     name: str
-    tournament: ObjID
+    tournament: Tournament
     file: DbFile
-    config: DbFile
     start: datetime | None = None
     end: datetime | None = None
-    description: DbFile | None = None
-    short_description: str
+    description: str
     image: DbFile | None = None
-    problem_schema: str | None = None
-    solution_schema: str | None = None
     colour: Color
     # property is defined on db model to make it have access to the tournament name
     link: str

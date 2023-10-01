@@ -17,7 +17,7 @@ onMounted(async () => {
   matches.value = results.matches;
   modal = Modal.getOrCreateInstance("#editModal");
   if (store.user.is_admin) {
-    problems.value = await ProblemService.allProblems({ tournament: store.user.current_tournament?.id });
+    problems.value = await ProblemService.get({ tournament: store.user.current_tournament?.id });
   }
 });
 

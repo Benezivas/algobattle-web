@@ -1,29 +1,23 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
 from enum import Enum
-from io import BytesIO
-from pathlib import Path
-from tempfile import TemporaryDirectory
-from typing import Annotated, Any, Callable, Literal, TypeVar, cast
+from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
-from zipfile import ZipFile
-from urllib.parse import quote
 
 from fastapi import APIRouter, Body, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
-from fastapi.responses import FileResponse, Response
-from markdown import markdown
+from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from pydantic import Field
 
 from algobattle.util import Role
-from algobattle.problem import Problem as AlgProblem, Instance, Solution
 from algobattle_web import schemas
 from algobattle_web.models import (
     File as DbFile,
+    ProblemPageData,
     ResultParticipant,
     encode,
     Session,
@@ -42,7 +36,6 @@ from algobattle_web.util import (
     ValueTaken,
     unwrap,
     BaseSchema,
-    Wrapped,
     send_email,
     ServerConfig,
 )
@@ -466,165 +459,115 @@ def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr
 # *******************************************************************************
 
 
-@router.post("/problem", tags=["problem"])
-def get_problems(*, db: Database, user: CurrUser, ids: list[ID]) -> dict[ID, schemas.Problem]:
-    problems = db.scalars(select(Problem).where(Problem.id.in_(ids), Problem.visible_sql(user))).unique().all()
-    return encode(problems)
-
-
-@router.post("/problem/all", tags=["problem"])
-def all_problems(*, db: Database, user: CurrUser, tournament: ID | None = None) -> dict[ID, schemas.Problem]:
-    filters: list[Any] = []
-    if tournament is not None:
+@router.get("/problem", tags=["problem"], name="get")
+def get_problems(
+    *, db: Database, user: CurrUser, ids: list[ID] | None = None, tournament: ID | str | None = None, name: str | None = None
+) -> dict[ID, schemas.Problem]:
+    filters = []
+    if ids:
+        filters.append(Problem.id.in_(ids))
+    if isinstance(tournament, UUID):
         filters.append(Problem.tournament_id == tournament)
+    elif isinstance(tournament, str):
+        filters.append(Problem.tournament.has(Tournament.name == tournament))
+    if name:
+        filters.append(Problem.name == name)
     problems = db.scalars(select(Problem).where(*filters, Problem.visible_sql(user))).unique().all()
     return encode(problems)
 
 
-class ProblemInfo(BaseSchema):
-    problem: schemas.Problem
-    tournament: schemas.Tournament
+@router.get("/problem/pagedata", tags=["problem"], name="pageData")
+def get_problem_page_data(*, db: Database, user: CurrUser, id: ID) -> ProblemPageData | None:
+    prob = db.scalars(select(Problem).where(Problem.id == id, Problem.visible_sql(user))).first()
+    if prob is None:
+        raise ValueError
+    return prob.page_data
 
 
-@router.get("/problem/{tournament_name}/{problem_name}", tags=["problem"], response_model=ProblemInfo)
-def problem_by_name(*, db: Database, user: CurrUser, tournament_name: str, problem_name: str):
-    problem = unwrap(
-        db.scalars(
-            select(Problem).where(
-                Problem.name == problem_name,
-                Problem.tournament.has(Tournament.name == tournament_name),
-            )
-        )
-        .unique()
-        .first()
-    )
-    problem.assert_visible(user)
-    return {"problem": problem, "tournament": problem.tournament}
-
-
-class ProblemMetadata(BaseSchema):
-    name: str
-    problem_schema: str
-    solution_schema: str
-
-
-@admin.post("/problem/verify", tags=["problem"])
-def verify(*, file: Annotated[UploadFile, File()]) -> ProblemMetadata | str:
-    with TemporaryDirectory() as folder:
-        folder = Path(folder)
-        with open(folder / "problem.py", "wb+") as _file:
-            _file.write(file.file.read())
-        try:
-            prob: AlgProblem[Instance, Solution[Instance]] = AlgProblem.import_from_path(folder / "problem.py")
-        except ValueError as e:
-            return str(e)
-        return ProblemMetadata(
-            name=prob.name,
-            problem_schema=prob.instance_cls.io_schema() or "",
-            solution_schema=prob.solution_cls.io_schema() or "",
-        )
-
-
-@admin.get("/problem/{tournament}/{problem}", tags=["problem"], response_model=schemas.Problem)
-def get_problem(*, db: Database, tournament: str, problem: str):
-    return unwrap(
-        db.scalars(select(Problem).join(Tournament).where(Problem.name == problem, Tournament.name == tournament))
-        .unique()
-        .first()
-    )
-
-
-@admin.post("/problem/create", tags=["problem"])
+@admin.post("/problem", tags=["problem"], name="create")
 def create_problem(
     *,
-    db: Session = Depends(get_db),
-    file: UploadFile | None = File(None),
-    problem_id: ID | None = Form(None),
+    db: Database,
+    problem: UploadFile | UUID,
     name: str = Form(),
-    description: UploadFile | None = File(None),
-    problem_schema: str = Form(""),
-    solution_schema: str = Form(""),
     tournament: ID = Form(),
-    config: UploadFile | None = File(None),
     start: datetime | None = Form(None),
     end: datetime | None = Form(None),
-    image: UploadFile | None = File(None),
+    image: UploadFile | None = None,
     alt_text: str = Form(""),
     short_description: str = Form(""),
     colour: Color = Form(Color("#ffffff")),
-) -> Wrapped[str]:
-    if file is None == problem_id is None:
-        raise HTTPException(400)
-    if file is not None:
-        _file = DbFile.from_file(file)
-    else:
-        template_prob = unwrap(db.get(Problem, problem_id))
-        _file = template_prob.file
-
-    if description is not None:
-        desc = DbFile.from_file(description)
-    else:
-        desc = None
-
+    background_tasks: BackgroundTasks,
+) -> str:
     _tournament = unwrap(db.get(Tournament, tournament))
-    if config is None:
-        config = UploadFile(BytesIO(b"\n"), filename="config.toml")
-
-    if image is not None:
-        _image = DbFile.from_file(image, alt_text=alt_text)
+    _image = DbFile.maybe(image, alt_text=alt_text)
+    if isinstance(problem, UUID):
+        template_prob = unwrap(db.get(Problem, problem))
+        file = DbFile.from_file(template_prob.file.path, action="copy")
+        page_data = template_prob.page_data
     else:
-        _image = None
+        file = DbFile.from_file(problem)
+        page_data = None
 
     prob = Problem(
-        file=_file,
+        file=file,
         name=name,
-        description=desc,
-        problem_schema=problem_schema,
-        solution_schema=solution_schema,
         tournament=_tournament,
-        config=DbFile.from_file(config),
         start=start,
         end=end,
         image=_image,
-        short_description=short_description,
+        description=short_description,
         colour=colour.as_hex(),
+        page_data=page_data
     )
     try:
         db.add(prob)
         db.commit()
     except IntegrityError as e:
         raise ValueTaken("name", name) from e
-    return Wrapped(data=f"/problems/{prob.tournament.name}/{prob.name}")
+    if page_data is None:
+        background_tasks.add_task(prob.compute_page_data)
+    return f"/problems/{prob.tournament.name}/{prob.name}"
 
 
-class ProblemEdit(BaseSchema):
-    name: str | None = None
-    tournament: ID | None = None
-    start: datetime | None = None
-    end: datetime | None = None
-    short_description: str | None = None
-    alt: str | None = None
-    problem_schema: str | None = None
-    solution_schema: str | None = None
-    colour: Color | None = None
-
-
-@admin.post("/problem/{id}/edit", tags=["problem"])
-def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit) -> Problem:
+@admin.patch("/problem", tags=["problem"], name="edit")
+def edit_problem(
+    *,
+    db: Database,
+    id: ID,
+    name: str | None = None,
+    tournament: ID | None = None,
+    start: datetime | None = None,
+    end: datetime | None = None,
+    description: str | None = None,
+    alt_text: str | None = None,
+    colour: Color | None = None,
+    file: UploadFile | None = None,
+    image: UploadFile | None | Literal["noedit"] = Form("noedit"),
+    tasks: BackgroundTasks,
+) -> Problem:
     problem = unwrap(db.get(Problem, id))
-    for key, val in edit.model_dump(exclude_unset=True).items():
-        if key == "tournament":
-            tournament_ = unwrap(db.get(Tournament, edit.tournament))
-            problem.tournament = tournament_
-        elif key == "alt":
-            if problem.image is None or edit.alt is None:
-                continue
-            problem.image.alt_text = edit.alt
-        elif key == "colour" and edit.colour is not None:
-            problem.colour = edit.colour.as_hex()
-        else:
-            setattr(problem, key, val)
-
+    if name:
+        problem.name = name
+    if tournament:
+        problem.tournament = unwrap(db.get(Tournament, tournament))
+    if start:
+        problem.start = start
+    if end:
+        problem.end = end
+    if description is not None:
+        problem.description = description
+    if alt_text is not None and problem.image is not None:
+        problem.image.alt_text = alt_text
+    if colour:
+        problem.colour = colour.as_hex()
+    if file:
+        problem.file = DbFile.from_file(file)
+        tasks.add_task(problem.compute_page_data)
+    if image is None:
+        problem.image = None
+    elif image != "noedit":
+        problem.image = DbFile.from_file(image)
     try:
         db.commit()
     except IntegrityError as e:
@@ -632,77 +575,12 @@ def edit_problem(*, db: Session = Depends(get_db), id: ID, edit: ProblemEdit) ->
     return problem
 
 
-@admin.post("/problem/{id}/editFile", tags=["problem"])
-def edit_problem_file(
-    *,
-    db: Database,
-    id: ID,
-    name: Literal["file", "config", "description", "image"] = Form(),
-    file: UploadFile | None = File(None),
-) -> Problem:
-    problem = unwrap(db.get(Problem, id))
-    if file is None and name in ("file", "config"):
-        raise HTTPException(400)
-    setattr(problem, name, DbFile.maybe(file))
-    db.commit()
-    return problem
-
-
-@admin.post("/problem/{id}/delete", tags=["problem"])
-def delete_problem(*, db: Session = Depends(get_db), id: ID) -> bool:
+@admin.delete("/problem", tags=["problem"], name="delete")
+def delete_problem(*, db: Database, id: ID) -> bool:
     problem = unwrap(db.get(Problem, id))
     db.delete(problem)
     db.commit()
     return True
-
-
-@router.get("/problem/{id}/download_all", tags=["problem"])
-def download_problem(*, db: Database, user: CurrUser, id: ID) -> Response:
-    problem = unwrap(db.get(Problem, id))
-    problem.assert_visible(user)
-    with BytesIO() as file:
-        with ZipFile(file, "w") as zipfile:
-            zipfile.write(problem.file.path, problem.file.filename)
-            if problem.description is not None:
-                zipfile.write(problem.description.path, problem.description.filename)
-            zipfile.write(problem.config.path, problem.config.filename)
-            if problem.problem_schema:
-                zipfile.writestr("problem_schema.json", problem.problem_schema)
-            if problem.solution_schema:
-                zipfile.writestr("solution_schema.json", problem.solution_schema)
-
-        file.seek(0)
-        quoted = quote(problem.name)
-        if quoted != problem.name:
-            disposition = f"attachment; filename*=utf-8''{quoted}.zip"
-        else:
-            disposition = f'attachment; filename="{quoted}.zip"'
-        return Response(file.getvalue(), headers={"content-disposition": disposition}, media_type="application/zip")
-
-
-@router.post("/problem/description_content", tags=["problem"])
-def problem_desc(*, db: Database, user: CurrUser, id: ID) -> Wrapped[str | None]:
-    problem = unwrap(db.get(Problem, id))
-    problem.assert_visible(user)
-    if problem.description is None:
-        return Wrapped(data=None)
-    else:
-        print(problem.description.media_type)
-        try:
-            match problem.description.media_type:
-                case "text/plain":
-                    with problem.description.open("r") as file:
-                        return Wrapped(data=f"<p>{file.read()}</p>")
-                case "text/html":
-                    with problem.description.open("r") as file:
-                        return file.read()
-                case "text/markdown":
-                    with problem.description.open("r") as file:
-                        return Wrapped(data=markdown(cast(str, file.read())))
-                case _:
-                    return Wrapped(data="__DOWNLOAD_BUTTON__")
-        except:
-            return Wrapped(data="__DOWNLOAD_BUTTON__")
 
 
 # *******************************************************************************
@@ -894,7 +772,7 @@ def create_schedule(
     name: str = "",
     time: datetime,
     problem: ID,
-    points: float,
+    points: int,
 ) -> ScheduledMatch:
     problem_ = unwrap(db.get(Problem, problem))
     schedule = ScheduledMatch(time=time, problem=problem_, name=name, points=points)

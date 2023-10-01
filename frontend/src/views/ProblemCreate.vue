@@ -18,15 +18,11 @@ const data = ref({
 
   name: "",
   tournament: "",
-  problemSchema: "",
-  solutionSchema: "",
-  config: undefined as File | undefined,
-  description: undefined as File | undefined,
   start: undefined as string | undefined,
   end: undefined as string | undefined,
   image: undefined as File | undefined,
   alt: "",
-  shortDescription: "",
+  description: "",
   color: "#000000",
 });
 const imageUrl = computed(() => {
@@ -36,30 +32,15 @@ const imageUrl = computed(() => {
 });
 
 onMounted(async () => {
-  problems.value = await ProblemService.allProblems({});
+  problems.value = await ProblemService.get({});
   tournaments.value = await TournamentService.allTournaments();
 });
 
-async function sendFile() {
-  const problemInfo = await ProblemService.verify({
-    formData: { file: data.value.file! },
-  });
-  if (typeof problemInfo === "string") {
-    error.value.type = "file";
-    error.value.detail = problemInfo
-    return
-  }
-  data.value.name = problemInfo.name;
-  data.value.problemSchema = problemInfo.problem_schema;
-  data.value.solutionSchema = problemInfo.solution_schema;
-  error.value = {};
-  page.value = 1;
-  checkName();
-}
 async function createProblem() {
   try {
-    const location = await ProblemService.createProblem({ formData: data.value });
-    router.push(location.data);
+    const {file, copyFrom, ...payload} = data.value;
+    const location = await ProblemService.create({ formData: {...payload, problem: file || copyFrom!} });
+    router.push(location);
   } catch {
     error.value.type = "server";
   }
@@ -67,7 +48,7 @@ async function createProblem() {
 function checkName() {
   if (
     Object.values(problems.value).filter(
-      (prob) => prob.name == data.value.name && prob.tournament == data.value.tournament
+      (prob) => prob.name == data.value.name && prob.tournament.id == data.value.tournament
     ).length != 0
   ) {
     error.value.type = "name";
@@ -92,10 +73,6 @@ function checkName() {
             <strong>Settings</strong>
           </li>
           <li :class="{ active: page == 2, set: page > 2 }">
-            <i class="bi bi-journal-text progress-icon"></i>
-            <strong>Documentation</strong>
-          </li>
-          <li :class="{ active: page == 3, set: page > 3 }">
             <i class="bi bi-image progress-icon"></i>
             <strong>Display</strong>
           </li>
@@ -106,7 +83,7 @@ function checkName() {
             id="file_form"
             ref="file_form"
             class="card-body"
-            @submit.prevent="sendFile"
+            @submit.prevent="page = 1"
             novalidate
           >
             <div class="alert alert-danger" role="alert" v-if="error.type == 'missing'">
@@ -135,7 +112,7 @@ function checkName() {
             >
               <option selected value=""></option>
               <option v-for="(problem, id) in problems" :value="id">
-                {{ problem.name + ` (${tournaments[problem.tournament]?.name})` }}
+                {{ problem.name + ` (${problem.tournament.name})` }}
               </option>
             </select>
             <div class="d-flex mt-3">
@@ -178,10 +155,6 @@ function checkName() {
               <div class="invalid-feedback">A problem with this name already exists in this tournament.</div>
             </div>
             <div class="mb-3">
-              <label for="config_file" class="form-label">Config file</label>
-              <FileInput class="w-em" id="config_file" v-model="data.config" />
-            </div>
-            <div class="mb-3">
               <label for="start_time" class="form-label">Starting time</label>
               <input type="datetime-local" class="form-control " id="start_time" v-model="data.start" />
             </div>
@@ -198,35 +171,6 @@ function checkName() {
 
           <form
             v-if="page == 2"
-            id="docs_form"
-            ref="docs_form"
-            class="card-body"
-            @submit.prevent="(e) => page++"
-          >
-            <div class="mb-3">
-              <label for="desc_file" class="form-label">Description file</label>
-              <FileInput class="w-em" id="desc_file" v-model="data.description" />
-            </div>
-            <div class="mb-3">
-              <label for="prob_schema" class="form-label">Problem schema</label>
-              <textarea
-                class="form-control"
-                id="prob_schema"
-                rows="10"
-                v-model="data.problemSchema"
-              ></textarea>
-            </div>
-            <label for="sol_schema" class="form-label">Solution schema</label>
-            <textarea class="form-control" id="sol_schema" rows="10" v-model="data.solutionSchema"></textarea>
-
-            <div class="d-flex mt-3">
-              <button class="btn btn-secondary" @click="(e) => page--">Back</button>
-              <button class="btn btn-primary ms-auto" type="submit">Next</button>
-            </div>
-          </form>
-
-          <form
-            v-if="page == 3"
             id="display_form"
             ref="display_form"
             class="card-body"
@@ -252,13 +196,13 @@ function checkName() {
                   />
                 </div>
                 <div class="mb-3">
-                  <label for="short_desc" class="form-label">Short description</label>
+                  <label for="short_desc" class="form-label">Description</label>
                   <textarea
                     class="form-control "
                     name="short_description"
                     id="short_desc"
                     rows="5"
-                    v-model="data.shortDescription"
+                    v-model="data.description"
                   ></textarea>
                 </div>
                 <div class="mb-3">
@@ -289,7 +233,7 @@ function checkName() {
                   />
                   <div class="card-body d-flex flex-column" style="height: 13.5rem">
                     <h5 class="card-title">{{ data.name }}</h5>
-                    <p class="card-text overflow-hidden">{{ data.shortDescription }}</p>
+                    <p class="card-text overflow-hidden">{{ data.description }}</p>
                     <a class="btn btn-sm btn-primary mt-auto disabled" aria-disabled="true">View details</a>
                   </div>
                 </div>
