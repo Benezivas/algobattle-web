@@ -21,7 +21,7 @@ const queryToken = computed(() => {
 watch(queryToken, async (newToken) => {
   if (newToken) {
     const data = await UserService.getToken({ loginToken: newToken });
-    cookies.set("algobattle_user_token", data.token, {expires: new Date(data.expires)});
+    cookies.set("algobattle_user_token", data.token, { expires: new Date(data.expires) });
     router.replace({ path: router.currentRoute.value.path });
   }
 });
@@ -62,7 +62,7 @@ async function selectTeam(team: Team | "admin") {
 
 const displayName = computed(() => {
   if (!store.user) {
-    return "Log in"
+    return "Log in";
   } else if (store.user.logged_in == "admin") {
     return "Admin";
   } else if (store.user.logged_in) {
@@ -120,10 +120,22 @@ const displayName = computed(() => {
             <template v-if="store.user.teams.length >= (store.user.is_admin ? 1 : 2)">
               <li><hr class="dropdown-divider" /></li>
               <li class="dropdown-header">View as</li>
-              <li class="dropdown-item" v-for="team in store.user.teams" @click="selectTeam(team)">
+              <li
+                class="dropdown-item"
+                v-for="team in store.user.teams"
+                :class="{ active: store.user.logged_in != 'admin' && store.user.logged_in.id == team.id }"
+                @click="selectTeam(team)"
+              >
                 {{ team.name }}
               </li>
-              <li class="dropdown-item" v-if="store.user.is_admin" @click="selectTeam('admin')">Admin</li>
+              <li
+                class="dropdown-item"
+                v-if="store.user.is_admin"
+                :class="{ active: store.user.logged_in == 'admin' }"
+                @click="selectTeam('admin')"
+              >
+                Admin
+              </li>
             </template>
             <li><hr class="dropdown-divider" /></li>
             <li>
