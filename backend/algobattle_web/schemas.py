@@ -37,7 +37,7 @@ class Tournament(Base):
 
 class Team(Base):
     name: str
-    tournament: ObjID
+    tournament: Tournament
     members: list[ObjID]
 
 
@@ -45,14 +45,18 @@ class UserSettings(Base):
     selected_team: Team | None
 
 
-class User(Base):
+class _User(Base):
     name: str
     email: str
     is_admin: bool
+
+
+class User(_User):
+    teams: list[ObjID]
+
+
+class UserLogin(_User):
     teams: list[Team]
-
-
-class UserLogin(User):
     settings: UserSettings
 
     @computed_field

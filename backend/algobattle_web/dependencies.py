@@ -1,10 +1,10 @@
-from typing import Annotated, AsyncIterable
+from typing import Annotated, AsyncIterable, Literal
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import APIKeyHeader
 
-from algobattle_web.models import Team, Tournament, User, Session
+from algobattle_web.models import Team, User, Session
 from algobattle_web.util import SessionLocal, unwrap
 
 
@@ -49,13 +49,11 @@ def curr_team(user: User = Depends(curr_user)) -> Team:
 CurrTeam = Annotated[Team, Depends(curr_team)]
 
 
-def curr_tournament(user: User = Depends(curr_user)) -> Tournament:
-    if user.settings.selected_team is None:
-        raise HTTPException(400, "User has not selected a team or tournament")
-    return user.settings.selected_team.tournament
+def logged_in(user: CurrUser) -> Team | Literal["admin"] | None:
+    return user.logged_in
 
 
-CurrTournament = Annotated[Tournament, Depends(curr_tournament)]
+LoggedIn = Annotated[Team | Literal["admin"] | None, logged_in]
 
 
 def check_if_admin(user: User = Depends(curr_user)):
