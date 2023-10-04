@@ -40,14 +40,12 @@ from algobattle_web.util import (
     ServerConfig,
 )
 from algobattle_web.dependencies import (
-    CurrTeam,
     CurrUser,
-    CurrUserMaybe,
     Database,
     LoggedIn,
-    TeamIfAdmin,
     check_if_admin,
     get_db,
+    TeamIfAdmin,
 )
 from pydantic_extra_types.color import Color
 
@@ -227,8 +225,14 @@ def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 @router.patch("/user/settings", tags=["user"], response_model=schemas.UserLogin)
 def settings(
-    *, db: Database, user: CurrUser, email: str | None = None, team: ID | Literal["admin"] | None = None, tournament: ID | None = None,
+    *,
+    db: Database,
+    login: LoggedIn,
+    email: str | None = None,
+    team: ID | Literal["admin"] | None = None,
+    tournament: ID | None = None,
 ) -> User:
+    user = login.user
     if email is not None:
         user.email = email
     if team == "admin":
@@ -248,7 +252,7 @@ def settings(
 
 
 @router.get("/user/login", tags=["user"], name="getLogin", response_model=schemas.UserLogin | None)
-def get_self(*, user: CurrUserMaybe) -> User | None:
+def get_self(*, user: CurrUser) -> User | None:
     if user and user.logged_in is None and user.teams:
         user.settings.selected_team = user.teams[0]
     return user
@@ -283,14 +287,14 @@ def get_token(*, db: Database, login_token: str) -> TokenData:
 
 @router.get("/tournament", tags=["tournament"], name="get")
 def all_tournaments(
-    *, db: Database, team: LoggedIn, name: str32 | None = None, id: ID | None = None
+    *, db: Database, login: LoggedIn, name: str32 | None = None, id: ID | None = None
 ) -> dict[ID, schemas.Tournament]:
     filters = []
     if name:
         filters.append(Tournament.name == name)
     if id:
         filters.append(Tournament.id == id)
-    tournaments = db.scalars(select(Tournament).where(*filters, Tournament.visible_sql(team))).all()
+    tournaments = db.scalars(select(Tournament).where(*filters, Tournament.visible_sql(login.team))).all()
     return encode(tournaments)
 
 
@@ -417,7 +421,10 @@ def delete_team(*, db: Database, id: ID):
 
 
 @router.patch("/team/settings", tags=["team"], name="settings")
-def member_edit_team(*, db: Database, team: CurrTeam, name: str32) -> Team:
+def member_edit_team(*, db: Database, login: LoggedIn, name: str32) -> Team:
+    team = login.team
+    if not isinstance(team, Team):
+        raise HTTPException(400, "User has not selected a team.")
     team.name = name
     db.commit()
     return team
@@ -432,27 +439,22 @@ def member_edit_team(*, db: Database, team: CurrTeam, name: str32) -> Team:
 def get_problems(
     *,
     db: Database,
-    team: LoggedIn,
+    login: LoggedIn,
     ids: list[ID] | None = None,
-    tournament: ID | str | None = None,
     name: str | None = None,
 ) -> dict[ID, schemas.Problem]:
-    filters = []
+    filters = [Problem.tournament == login.tournament]
     if ids:
         filters.append(Problem.id.in_(ids))
-    if isinstance(tournament, UUID):
-        filters.append(Problem.tournament_id == tournament)
-    elif isinstance(tournament, str):
-        filters.append(Problem.tournament.has(Tournament.name == tournament))
     if name:
         filters.append(Problem.name == name)
-    problems = db.scalars(select(Problem).where(*filters, Problem.visible_sql(team))).unique().all()
+    problems = db.scalars(select(Problem).where(*filters, Problem.visible_sql(login.team))).unique().all()
     return encode(problems)
 
 
 @router.get("/problem/pagedata", tags=["problem"], name="pageData")
-def get_problem_page_data(*, db: Database, team: LoggedIn, id: ID) -> ProblemPageData | None:
-    prob = db.scalars(select(Problem).where(Problem.id == id, Problem.visible_sql(team))).first()
+def get_problem_page_data(*, db: Database, login: LoggedIn, id: ID) -> ProblemPageData | None:
+    prob = db.scalars(select(Problem).where(Problem.id == id, Problem.visible_sql(login.team))).first()
     if prob is None:
         raise ValueError
     return prob.page_data
@@ -584,8 +586,10 @@ def add_report(
 
 
 @router.delete("/report", tags=["report"], name="delete")
-def delete_report(db: Database, team: TeamIfAdmin, problem: ID) -> None:
-    report = db.scalar(select(Report).where(Report.team == team, Report.problem_id == problem))
+def delete_report(db: Database, login: LoggedIn, team: ID, problem: ID) -> None:
+    if isinstance(login.team, Team) and team != login.team.id:
+        raise HTTPException(403)
+    report = db.scalar(select(Report).where(Report.team_id == team, Report.problem_id == problem))
     if report is None:
         raise HTTPException(404, "No such report exists")
     db.delete(report)
@@ -601,7 +605,7 @@ class Reports(BaseSchema):
 def get_reports(
     db: Database, login: LoggedIn, problem: UUID | None = None, team: UUID | None = None, offset: int = 0
 ) -> Reports:
-    filters = [Report.visible_sql(login)]
+    filters = [Report.visible_sql(login.team)]
     if problem:
         filters.append(Report.problem_id == problem)
     if team:
@@ -629,12 +633,12 @@ def search_program(
     db: Database,
     login: LoggedIn,
     name: str | None = None,
-    team: TeamIfAdmin | None = None,
+    team: ID | None = None,
     role: Role | None = None,
     problem: ID | None = None,
     offset: int = 0,
 ) -> ProgramResults:
-    filters = [Program.visible_sql(login)]
+    filters = [Program.visible_sql(login.team)]
     if name is not None:
         filters.append(Program.name.contains(name, autoescape=True))
     if team is not None:
@@ -659,28 +663,30 @@ def search_program(
     )
 
 
-@router.post("/program", tags=["program"],  name="create")
+@router.post("/program", tags=["program"], name="create")
 def upload_program(
     *,
     db: Database,
-    team: CurrTeam,
+    login: LoggedIn,
     name: str = "",
     role: Role,
     problem: ID,
     file: UploadFile,
 ) -> Program:
     problem_obj = unwrap(db.get(Problem, problem))
-    problem_obj.assert_visible(team)
-    prog = Program(name, team, role, DbFile.from_file(file), problem_obj)
+    problem_obj.assert_visible(login.team)
+    if not isinstance(login.team, Team):
+        raise HTTPException(400, "User has not selected a team")
+    prog = Program(name, login.team, role, DbFile.from_file(file), problem_obj)
     db.add(prog)
     db.commit()
     return prog
 
 
 @router.post("/program", tags=["program"], name="delete")
-def delete_program(*, db: Database, team: LoggedIn, id: ID) -> bool:
+def delete_program(*, db: Database, login: LoggedIn, id: ID) -> bool:
     program = Program.get_unwrap(db, id)
-    program.assert_editable(team)
+    program.assert_editable(login.team)
     db.delete(program)
     db.commit()
     return True
@@ -697,17 +703,13 @@ class ScheduleInfo(BaseSchema):
 
 
 @router.get("/match/schedule", tags=["match"], name="getScheduled")
-def scheduled_matches(*, db: Database, team: LoggedIn, tournament: ID | None = None) -> ScheduleInfo:
-    filters = []
-    if isinstance(team, Team):
-        if tournament is not None:
-            raise ValueError
-        filters.append(Tournament.id == team.tournament_id)
-    elif tournament is not None:
-        filters.append(Tournament.id == tournament)
-
+def scheduled_matches(*, db: Database, login: LoggedIn) -> ScheduleInfo:
     matches = (
-        db.scalars(select(ScheduledMatch).join(ScheduledMatch.problem).where(*filters, Problem.visible_sql(team)))
+        db.scalars(
+            select(ScheduledMatch).where(
+                ScheduledMatch.problem.has((Problem.tournament == login.tournament) & Problem.visible_sql(login.team))
+            )
+        )
         .unique()
         .all()
     )
@@ -768,8 +770,8 @@ class MatchResultData(BaseSchema):
 
 
 @router.get("/match/result", tags=["match"], name="getResult")
-def results(*, db: Database, team: LoggedIn) -> MatchResultData:
-    results = db.scalars(select(MatchResult).where(MatchResult.problem.has(Problem.visible_sql(team)))).all()
+def results(*, db: Database, login: LoggedIn) -> MatchResultData:
+    results = db.scalars(select(MatchResult).where(MatchResult.problem.has(Problem.visible_sql(login.team)))).all()
     return MatchResultData(
         results=encode(results),
         problems=encode(result.problem for result in results),

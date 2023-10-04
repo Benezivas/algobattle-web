@@ -1,10 +1,11 @@
-from typing import Annotated, AsyncIterable, Literal
+from dataclasses import dataclass
+from typing import Annotated, AsyncIterable, Literal, Self
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import APIKeyHeader
 
-from algobattle_web.models import Team, User, Session
+from algobattle_web.models import Team, Tournament, User, Session
 from algobattle_web.util import SessionLocal, unwrap
 
 
@@ -20,40 +21,30 @@ async def get_db() -> AsyncIterable[Session]:
 Database = Annotated[Session, Depends(get_db)]
 
 
-def curr_user_maybe(
+def curr_user(
     db: Session = Depends(get_db), user_token: str | None = Depends(APIKeyHeader(name="X-User-Token"))
 ) -> User | None:
     return User.decode_token(db, user_token)
 
 
-CurrUserMaybe = Annotated[User | None, Depends(curr_user_maybe)]
+CurrUser = Annotated[User | None, Depends(curr_user)]
 
 
-def curr_user(user: User | None = Depends(curr_user_maybe)) -> User:
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    else:
-        return user
+@dataclass
+class LoginInfo:
+    user: User
+    team: Team | Literal["admin"] | None
+    tournament: Tournament | None
+
+    @classmethod
+    def dependency(cls, user: CurrUser) -> Self:
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        else:
+            return cls(user, user.logged_in, user.tournament)
 
 
-CurrUser = Annotated[User, Depends(curr_user)]
-
-
-def curr_team(user: User = Depends(curr_user)) -> Team:
-    team = user.settings.selected_team
-    if team is None:
-        raise ValueError("User has not selected a team")
-    return team
-
-
-CurrTeam = Annotated[Team, Depends(curr_team)]
-
-
-def logged_in(user: CurrUser) -> Team | Literal["admin"] | None:
-    return user.logged_in
-
-
-LoggedIn = Annotated[Team | Literal["admin"] | None, Depends(logged_in)]
+LoggedIn = Annotated[LoginInfo, Depends(LoginInfo.dependency)]
 
 
 def check_if_admin(user: User = Depends(curr_user)):
@@ -63,18 +54,18 @@ def check_if_admin(user: User = Depends(curr_user)):
 
 def team_only_if_admin(
     db: Database,
-    user: CurrUser,
+    login: LoggedIn,
     team: Annotated[
         UUID | None, Query(description="Can only be set if the user is an admin. Defaults to the user's selected team.")
     ] = None,
 ) -> Team:
-    if user.is_admin and team:
-        team_model = Team.get_unwrap(db, team)
-    else:
-        team_model = unwrap(user.settings.selected_team)
-    if not user.is_admin and team_model.id != team:
-        raise HTTPException(422, "Non admin users cannot specify a different team than they have selected")
-    return team_model
+    match login.team:
+        case Team(id=team):
+            return Team.get_unwrap(db, team)
+        case "admin" if team is not None:
+            return Team.get_unwrap(db, team)
+        case _:
+            raise HTTPException(422, "Non admin users cannot specify a different team than they have selected")
 
 
 TeamIfAdmin = Annotated[Team, Depends(team_only_if_admin)]
