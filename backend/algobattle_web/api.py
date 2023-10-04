@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, BackgroundTasks, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, BackgroundTasks, Query, status
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
@@ -19,6 +19,7 @@ from algobattle_web.models import (
     File as DbFile,
     ProblemPageData,
     ResultParticipant,
+    UserSettings,
     encode,
     Session,
     ID,
@@ -223,39 +224,17 @@ def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
     return True
 
 
-@router.patch("/user/settings", tags=["user"], response_model=schemas.UserLogin)
-def settings(
-    *,
-    db: Database,
-    login: LoggedIn,
-    email: str | None = None,
-    team: ID | Literal["admin"] | None = None,
-    tournament: ID | None = None,
-) -> User:
-    user = login.user
-    if email is not None:
-        user.email = email
-    if team == "admin":
-        if not user.is_admin:
-            raise HTTPException(400, "User is not an admin")
-        user.settings.selected_team = None
-    elif team is not None:
-        if not any(team == t.id for t in user.teams):
-            raise HTTPException(400, "User is not in the selected team")
-        user.settings.selected_team_id = team
-    if tournament is not None:
-        if not user.is_admin:
-            raise HTTPException(400, "User is not an admin")
-        user.settings.selected_tournament_id = tournament
-    db.commit()
-    return user
+class LoginInfo(BaseSchema):
+    user: schemas.UserLogin | None
+    team: schemas.Team | Literal["admin"] | None
+    tournament: schemas.Tournament | None
 
 
-@router.get("/user/login", tags=["user"], name="getLogin", response_model=schemas.UserLogin | None)
-def get_self(*, user: CurrUser) -> User | None:
-    if user and user.logged_in is None and user.teams:
-        user.settings.selected_team = user.teams[0]
-    return user
+@router.get("/user/login", tags=["user"], name="getLogin", response_model=LoginInfo)
+def get_self(*, login: LoggedIn) -> LoggedIn:
+    if login.user and login.team is None and login.user.teams:
+        login.user.settings.selected_team = login.user.teams[0]
+    return login
 
 
 @router.post("/user/login", tags=["user"])
@@ -278,6 +257,55 @@ def get_token(*, db: Database, login_token: str) -> TokenData:
     user = User.decode_login_token(db, login_token)
     user.cookie()
     return TokenData(token=user.cookie(), expires=datetime.now() + timedelta(weeks=4))
+
+
+# *******************************************************************************
+# * Tournament
+# *******************************************************************************
+
+
+@router.get("/settings/user", tags=["settings"], name="getUser")
+def get_user_settings(*, db: Database, user: CurrUser) -> UserSettings:
+    if user is None:
+        raise HTTPException(404, "Not logged in")
+    return user.settings
+
+
+@router.patch("/settings/user", tags=["settings"])
+def settings(
+    *,
+    db: Database,
+    login: LoggedIn,
+    email: str | None = None,
+    team: ID | Literal["admin"] | None = None,
+    tournament: ID | None = None,
+):
+    user = login.user
+    if email is not None:
+        user.email = email
+    if team == "admin":
+        if not user.is_admin:
+            raise HTTPException(400, "User is not an admin")
+        user.settings.selected_team = None
+    elif team is not None:
+        if not any(team == t.id for t in user.teams):
+            raise HTTPException(400, "User is not in the selected team")
+        user.settings.selected_team_id = team
+    if tournament is not None:
+        if not user.is_admin:
+            raise HTTPException(400, "User is not an admin")
+        user.settings.selected_tournament_id = tournament
+    db.commit()
+
+
+@router.patch("/settings/team", tags=["settings"], name="settings")
+def member_edit_team(*, db: Database, login: LoggedIn, name: str32) -> Team:
+    team = login.team
+    if not isinstance(team, Team):
+        raise HTTPException(404, "User has not selected a team")
+    team.name = name
+    db.commit()
+    return team
 
 
 # *******************************************************************************
@@ -420,16 +448,6 @@ def delete_team(*, db: Database, id: ID):
     db.commit()
 
 
-@router.patch("/team/settings", tags=["team"], name="settings")
-def member_edit_team(*, db: Database, login: LoggedIn, name: str32) -> Team:
-    team = login.team
-    if not isinstance(team, Team):
-        raise HTTPException(400, "User has not selected a team.")
-    team.name = name
-    db.commit()
-    return team
-
-
 # *******************************************************************************
 # * Problem
 # *******************************************************************************
@@ -442,8 +460,15 @@ def get_problems(
     login: LoggedIn,
     ids: list[ID] | None = None,
     name: str | None = None,
+    tournament: ID | None = None,
 ) -> dict[ID, schemas.Problem]:
-    filters = [Problem.tournament == login.tournament]
+    filters = []
+    if tournament:
+        if login.team != "admin" and (not login.tournament or tournament != login.tournament):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Only admins can select a different team")
+        filters.append(Problem.tournament_id == tournament)
+    else:
+        filters.append(Problem.tournament == login.tournament)
     if ids:
         filters.append(Problem.id.in_(ids))
     if name:
@@ -716,7 +741,7 @@ def scheduled_matches(*, db: Database, login: LoggedIn) -> ScheduleInfo:
     return ScheduleInfo(matches=encode(matches), problems=encode(match.problem for match in matches))
 
 
-@admin.post("/match/schedule", tags=["match"], name="schedule")
+@admin.post("/match/schedule", tags=["match"], name="createSchedule")
 def create_schedule(
     *,
     db: Database,
@@ -755,7 +780,7 @@ def edit_schedule(
     return match
 
 
-@admin.post("/match/schedule", tags=["match"], name="deleteSchedule")
+@admin.delete("/match/schedule", tags=["match"], name="deleteSchedule")
 def delete_schedule(*, db: Database, id: ID) -> bool:
     match = unwrap(db.get(ScheduledMatch, id))
     db.delete(match)
