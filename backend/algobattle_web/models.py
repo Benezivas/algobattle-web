@@ -422,6 +422,7 @@ class User(Base, unsafe_hash=True):
 
 class Tournament(Base, PermissionCheck, unsafe_hash=True):
     name: Mapped[str32] = mapped_column(unique=True)
+    order: Mapped[int] = mapped_column(autoincrement=True, init=False)
 
     teams: "Mapped[list[Team]]" = relationship(back_populates="tournament", init=False)
 
