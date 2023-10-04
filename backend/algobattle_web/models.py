@@ -367,6 +367,16 @@ class User(Base, unsafe_hash=True):
         else:
             return None
 
+    @property
+    def tournament(self) -> "Tournament | None":
+        match self.logged_in:
+            case Team(tournament=t):
+                return t
+            case "admin":
+                return self.settings.selected_tournament
+            case None:
+                return None
+
     @classmethod
     def get(cls, db: Session, identifier: ID | str) -> Self | None:
         """Queries the user db by either the user id or their email."""

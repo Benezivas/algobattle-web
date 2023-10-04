@@ -59,27 +59,8 @@ class User(_User):
 class UserLogin(_User):
     teams: list[Team]
     settings: UserSettings
-
-    @computed_field
-    @property
-    def logged_in(self) -> Team | Literal["admin"] | None:
-        if self.settings.selected_team is not None:
-            return self.settings.selected_team
-        elif self.is_admin:
-            return "admin"
-        else:
-            return None
-
-    @computed_field
-    @property
-    def tournament(self) -> Tournament | None:
-        match self.logged_in:
-            case Team(tournament=t):
-                return t
-            case "admin":
-                return self.settings.selected_tournament
-            case None:
-                return None
+    tournament: Tournament | None
+    logged_in: Team | Literal["admin"] | None
 
 
 class Problem(Base):
