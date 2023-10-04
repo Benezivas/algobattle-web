@@ -11,8 +11,8 @@ const tournaments = ref<ModelDict<Tournament>>({});
 
 let modal: Modal;
 onMounted(async () => {
-  const results = await MatchService.scheduledMatches({});
-  tournaments.value = await TournamentService.allTournaments();
+  const results = await MatchService.getScheduled({});
+  tournaments.value = await TournamentService.get();
   problems.value = results.problems;
   matches.value = results.matches;
   modal = Modal.getOrCreateInstance("#editModal");

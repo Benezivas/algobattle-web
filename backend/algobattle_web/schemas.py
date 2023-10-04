@@ -43,6 +43,7 @@ class Team(Base):
 
 class UserSettings(Base):
     selected_team: Team | None
+    selected_tournament: Tournament | None
 
 
 class _User(Base):
@@ -68,6 +69,17 @@ class UserLogin(_User):
             return "admin"
         else:
             return None
+
+    @computed_field
+    @property
+    def tournament(self) -> Tournament | None:
+        match self.logged_in:
+            case Team(tournament=t):
+                return t
+            case "admin":
+                return self.settings.selected_tournament
+            case None:
+                return None
 
 
 class Problem(Base):

@@ -53,7 +53,7 @@ def logged_in(user: CurrUser) -> Team | Literal["admin"] | None:
     return user.logged_in
 
 
-LoggedIn = Annotated[Team | Literal["admin"] | None, logged_in]
+LoggedIn = Annotated[Team | Literal["admin"] | None, Depends(logged_in)]
 
 
 def check_if_admin(user: User = Depends(curr_user)):

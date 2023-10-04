@@ -2,7 +2,7 @@ import * as bootstrap from "bootstrap";
 import { createApp, reactive } from "vue";
 import App from "./App.vue";
 import router from "./router";
-import { OpenAPI, type UserLogin, type Team } from "../typescript_client";
+import { OpenAPI, type UserLogin, type Team_Output as Team } from "../typescript_client";
 
 import "./assets/styles.scss";
 import { useCookies } from "@vueuse/integrations/useCookies";

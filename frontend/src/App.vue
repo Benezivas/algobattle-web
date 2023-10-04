@@ -2,7 +2,7 @@
 import { RouterView, useRouter } from "vue-router";
 import PageNavbarIcon from "./components/HomeNavbarIcon.vue";
 import { store, type FixedLogin } from "./main";
-import { UserService, type Team } from "../typescript_client";
+import { UserService, type Team_Output as Team } from "../typescript_client";
 import LoginPane from "./components/LoginPane.vue";
 import { useCookies } from "@vueuse/integrations/useCookies";
 import { computed, watch } from "vue";

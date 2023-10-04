@@ -102,13 +102,6 @@ def get_file(db: Database, *, id: ID) -> FileResponse:
 # *******************************************************************************
 
 
-@router.get("/user/login", tags=["user"], name="getLogin", response_model=schemas.UserLogin | None)
-def get_self(*, user: CurrUserMaybe) -> User | None:
-    if user and user.logged_in is None and user.teams:
-        user.settings.selected_team = user.teams[0]
-    return user
-
-
 class UserSearch(BaseSchema):
     page: int
     max_page: int
@@ -229,7 +222,7 @@ def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
 
 @router.patch("/user/settings", tags=["user"], response_model=schemas.UserLogin)
 def settings(
-    *, db: Database, user: CurrUser, email: str | None = None, team: ID | Literal["admin"] | None = None
+    *, db: Database, user: CurrUser, email: str | None = None, team: ID | Literal["admin"] | None = None, tournament: ID | None = None,
 ) -> User:
     if email is not None:
         user.email = email
@@ -241,7 +234,18 @@ def settings(
         if not any(team == t.id for t in user.teams):
             raise HTTPException(400, "User is not in the selected team")
         user.settings.selected_team_id = team
+    if tournament is not None:
+        if not user.is_admin:
+            raise HTTPException(400, "User is not an admin")
+        user.settings.selected_tournament_id = tournament
     db.commit()
+    return user
+
+
+@router.get("/user/login", tags=["user"], name="getLogin", response_model=schemas.UserLogin | None)
+def get_self(*, user: CurrUserMaybe) -> User | None:
+    if user and user.logged_in is None and user.teams:
+        user.settings.selected_team = user.teams[0]
     return user
 
 
