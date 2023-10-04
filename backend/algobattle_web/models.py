@@ -53,8 +53,8 @@ class PermissionCheck:
     def _visible(self, team: "Team") -> bool:
         raise NotImplementedError
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def _visible_sql(cls, team: "Team") -> ColumnElement[bool]:
         raise NotImplementedError
 
@@ -421,7 +421,7 @@ class User(Base, unsafe_hash=True):
 class Tournament(Base, PermissionCheck, unsafe_hash=True):
     name: Mapped[str32] = mapped_column(unique=True)
 
-    teams: Mapped[list["Team"]] = relationship(back_populates="tournament", init=False)
+    teams: "Mapped[list[Team]]" = relationship(back_populates="tournament", init=False)
 
     Schema = schemas.Tournament
 

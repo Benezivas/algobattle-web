@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, BackgroundTasks
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, BackgroundTasks, Query
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
@@ -30,7 +30,6 @@ from algobattle_web.models import (
     ScheduledMatch,
     Team,
     User,
-    str32,
 )
 from algobattle_web.util import (
     MatchStatus,
@@ -64,6 +63,10 @@ class EditAction(Enum):
 
 
 SQL_LIMIT = 50
+str32 = Annotated[str, Query(max_length=32)]
+str64 = Annotated[str, Query(max_length=64)]
+str128 = Annotated[str, Query(max_length=128)]
+str256 = Annotated[str, Query(max_length=256)]
 
 
 class SchemaRoute(APIRoute):
@@ -269,7 +272,7 @@ def get_token(*, db: Database, login_token: str) -> TokenData:
 # *******************************************************************************
 
 
-@router.get("/tournament/all", tags=["tournament"], name="get")
+@router.get("/tournament", tags=["tournament"], name="get")
 def all_tournaments(
     *, db: Database, team: LoggedIn, name: str32 | None = None, id: ID | None = None
 ) -> dict[ID, schemas.Tournament]:
