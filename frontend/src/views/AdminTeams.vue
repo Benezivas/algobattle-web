@@ -77,8 +77,6 @@ async function userSearch() {
   const result = await UserService.searchUsers({
     name: userSearchData.value.name || undefined,
     email: userSearchData.value.email || undefined,
-    limit: editData.value.members.length + 5,
-    page: 1,
   });
   userSearchData.value.result = Object.values(result.users)
     .filter((u) => !editData.value.members.includes(u.id))
@@ -99,8 +97,8 @@ async function sendData() {
       teams.value[editData.value.id] = await TeamService.edit({
         id: editData.value.id,
         name: editData.value.name,
-        tournament: editData.value.tournament?.id,
         requestBody: {
+          tournament: editData.value.tournament?.id,
           members: Object.fromEntries(
             newMembers.map((id) => [id, "add"]).concat(deletedMembers.map((id) => [id, "remove"]))
           ),
@@ -108,9 +106,11 @@ async function sendData() {
       });
     } else {
       const newTeam = await TeamService.create({
-        name: editData.value.name,
-        tournament: editData.value.tournament!.id,
-        requestBody: editData.value.members,
+        requestBody: {
+          name: editData.value.name,
+          tournament: editData.value.tournament!.id,
+          members: editData.value.members,
+        },
       });
       teams.value[newTeam.id] = newTeam;
     }
@@ -208,7 +208,7 @@ async function checkName() {
             <label for="tournamentFilter" class="form-label mb-1">Tournament</label>
             <select class="form-select" id="tournamentFilter" v-model="searchData.tournament">
               <option value=""></option>
-              <option v-for="(tournament, id) in tournaments" :value="id">{{ tournament.name }}</option>
+              <option v-for="(tournament, id) in tournaments" :value="tournament" :key="id">{{ tournament.name }}</option>
             </select>
           </div>
         </div>
@@ -261,7 +261,7 @@ async function checkName() {
             :required="editData.id != ''"
             @change="checkName"
           >
-            <option v-for="(tournament, id) in tournaments" :value="id" :selected="id == editData.tournament?.id">
+            <option v-for="(tournament, id) in tournaments" :value="tournament" :selected="id == editData.tournament?.id">
               {{ tournament.name }}
             </option>
           </select>

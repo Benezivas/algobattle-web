@@ -52,20 +52,20 @@ from pydantic_extra_types.color import Color
 
 __all__ = ("router", "admin")
 
-T = TypeVar("T")
-InForm = Annotated[T, Form()]
-
 
 class EditAction(Enum):
     add = "add"
     remove = "remove"
 
 
+T = TypeVar("T")
+str32 = Annotated[str, Body(max_length=32)]
+str64 = Annotated[str, Body(max_length=64)]
+str128 = Annotated[str, Body(max_length=128)]
+str256 = Annotated[str, Body(max_length=256)]
+InForm = Annotated[T, Form()]
+InBody = Annotated[T, Body()]
 SQL_LIMIT = 50
-str32 = Annotated[str, Query(max_length=32)]
-str64 = Annotated[str, Query(max_length=64)]
-str128 = Annotated[str, Query(max_length=128)]
-str256 = Annotated[str, Query(max_length=256)]
 
 
 class SchemaRoute(APIRoute):
@@ -311,7 +311,7 @@ def member_edit_team(*, db: Database, login: LoggedIn, name: str32) -> Team:
 
 @router.get("/tournament", tags=["tournament"], name="get")
 def all_tournaments(
-    *, db: Database, login: LoggedIn, name: str32 | None = None, id: ID | None = None
+    *, db: Database, login: LoggedIn, name: str | None = None, id: ID | None = None
 ) -> dict[ID, schemas.Tournament]:
     filters = []
     if name:
@@ -330,10 +330,6 @@ def create_tournament(*, db: Database, name: str32) -> Tournament:
     db.add(tournament)
     db.commit()
     return tournament
-
-
-class EditTournament(BaseSchema):
-    name: str | None = None
 
 
 @admin.patch("/tournament", tags=["tournament"], name="edit")
@@ -369,7 +365,7 @@ def get_teams(
     *,
     db: Database,
     ids: list[ID] = [],
-    name: str32 | None = None,
+    name: str | None = None,
     tournament: ID | None = None,
     offset: int = 0,
 ) -> TeamSearch:
@@ -401,7 +397,7 @@ def get_teams(
 
 
 @admin.post("/team", tags=["team"], name="create")
-def create_team(*, db: Database, name: str32, tournament: ID, members: set[ID]) -> Team:
+def create_team(*, db: Database, name: str32, tournament: InBody[ID], members: InBody[set[ID]]) -> Team:
     tournament_ = unwrap(Tournament.get(db, tournament))
     if name in (t.name for t in tournament_.teams):
         raise ValueTaken("name", name)
@@ -414,7 +410,7 @@ def create_team(*, db: Database, name: str32, tournament: ID, members: set[ID]) 
 
 @admin.patch("/team", tags=["team"], name="edit")
 def edit_team(
-    *, db: Database, id: ID, name: str32 | None = None, tournament: ID | None = None, members: dict[ID, EditAction] = {}
+    *, db: Database, id: ID, name: str32 | None = None, tournament: InBody[ID | None] = None, members: dict[ID, EditAction] = {}
 ) -> Team:
     team = unwrap(Team.get(db, id))
     if name is not None:

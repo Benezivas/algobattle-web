@@ -38,13 +38,13 @@ async function submitEdit() {
   try {
     if (data.value.action == "create") {
       const newTournament = await TournamentService.create({
-        name: data.value.name,
+        requestBody: data.value.name,
       });
       tournaments.value[newTournament.id] = newTournament;
     } else {
       const edited = await TournamentService.edit({
         id: data.value.id,
-        name: data.value.name,
+        requestBody: data.value.name,
       });
       tournaments.value[edited.id] = edited;
     }
