@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import APIKeyHeader
 
 from algobattle_web.models import Team, Tournament, User, Session
-from algobattle_web.util import SessionLocal, unwrap
+from algobattle_web.util import SessionLocal
 
 
 async def get_db() -> AsyncIterable[Session]:

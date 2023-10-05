@@ -1,7 +1,6 @@
 """Module containing db model's schemas to avoid namespacing issues."""
 from abc import ABC
 from datetime import datetime
-from typing import Literal
 from urllib.parse import quote as urlencode
 from uuid import UUID
 
