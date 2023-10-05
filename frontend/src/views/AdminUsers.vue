@@ -307,7 +307,7 @@ async function checkEmail() {
         </div>
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
-          <div class="input-group w-em input-group-sm mb-3" name="name">
+          <div class="input-group w-em" name="name">
             <input class="form-control " type="text" v-model="editData.name" required />
             <input
               type="checkbox"
@@ -326,7 +326,7 @@ async function checkEmail() {
           </div>
           <label for="email" class="form-label">Email</label>
           <input
-            class="form-control  form-control-sm"
+            class="form-control"
             :class="{ 'is-invalid': error == 'email' }"
             name="email"
             type="email"
@@ -350,7 +350,7 @@ async function checkEmail() {
                 <div class="col">
                   <label for="searchTournament" class="form-label">Tournament</label>
                   <select
-                    class="form-select form-select-sm"
+                    class="form-select"
                     id="searchTournament"
                     v-model="teamSearchData.tournament"
                     @change="searchTeam"
@@ -369,7 +369,7 @@ async function checkEmail() {
                   <label for="searchName" class="form-label">Name</label>
                   <input
                     type="text"
-                    class="form-control form-control-sm"
+                    class="form-control"
                     id="searchName"
                     v-model="teamSearchData.name"
                     @input="searchTeam"
