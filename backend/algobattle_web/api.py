@@ -462,15 +462,14 @@ def get_problems(
     login: LoggedIn,
     ids: list[ID] | None = None,
     name: str | None = None,
-    tournament: ID | str | None = None,
+    tournament: ID | None = None,
+    tournament_name: str | None = None,
 ) -> dict[ID, schemas.Problem]:
     filters = []
-    if isinstance(tournament, UUID):
+    if tournament:
         filters.append(Problem.tournament_id == tournament)
-    elif isinstance(tournament, str):
+    if tournament_name:
         filters.append(Problem.tournament.has(Tournament.name == tournament))
-    else:
-        filters.append(Problem.tournament == login.tournament)
     if ids:
         filters.append(Problem.id.in_(ids))
     if name:

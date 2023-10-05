@@ -31,7 +31,7 @@ const now = new Date();
 onMounted(async () => {
   const problems = await ProblemService.get({
     name: route.params.problemName as string,
-    tournament: route.params.tournamentName as string,
+    tournamentName: route.params.tournamentName as string,
   });
   if (Object.values(problems).length === 1) {
     problem.value = Object.values(problems)[0];

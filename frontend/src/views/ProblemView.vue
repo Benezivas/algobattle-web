@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import ProblemCard from "@/components/ProblemCard.vue";
-import { store } from "../main";
+import { type ModelDict, store } from "../main";
 import { ProblemService } from "@client";
 import type { Problem } from "@client";
-import { computed, onMounted, ref, type Ref } from "vue";
+import { computed, onMounted, ref, watch, type Ref } from "vue";
 
-const problems: Ref<{ [key: string]: Problem }> = ref({});
+const problems = ref<ModelDict<Problem>>({});
 
-onMounted(async () => {
-  problems.value = await ProblemService.get({ tournament: store.tournament?.id });
-});
+watch(() => store.tournament, async (newTournament) => {
+  if (newTournament) {
+    problems.value = await ProblemService.get({ tournament: newTournament.id });
+  }
+}, {immediate: true})
 const now = new Date();
 
 const future_problems = computed(() => {
