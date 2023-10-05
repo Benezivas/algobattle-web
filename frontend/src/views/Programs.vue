@@ -104,7 +104,7 @@ onMounted(() => {
     </div>
 
     <div class="d-flex mb-3 pe-2">
-      <button type="button" class="btn btn-primary btn-sm me-auto" @click="openModal">
+      <button v-if="store.team !== 'admin'" type="button" class="btn btn-primary btn-sm me-auto" @click="openModal">
         Upload new program
       </button>
       <Paginator :total="total" @update="search"/>
