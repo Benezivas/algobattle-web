@@ -211,10 +211,10 @@ async function deleteProblem() {
               {{ problem.description }}
             </li>
             <li v-if="problem.start" class="list-group-item bg-body-tertiary">
-              Start: {{ problem.start.toLocaleString() }}
+              Start: {{ new Date(problem.start).toLocaleString() }}
             </li>
             <li v-if="problem.end" class="list-group-item bg-body-tertiary">
-              End: {{ problem.end.toLocaleString() }}
+              End: {{ new Date(problem.end).toLocaleString() }}
             </li>
             <li class="list-group-item bg-body-tertiary">
               <a

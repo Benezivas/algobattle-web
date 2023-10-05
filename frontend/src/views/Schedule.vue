@@ -68,7 +68,7 @@ async function deleteMatch() {
       <tbody>
         <tr v-for="(match, id) in matches" :match="match" :key="id">
           <td>{{ match.name }}</td>
-          <td>{{ match.time.toLocaleString() }}</td>
+          <td>{{ new Date(match.time).toLocaleString() }}</td>
           <td>
             <RouterLink :to="problems[match.problem].link">{{ problems[match.problem].name }}</RouterLink>
           </td>

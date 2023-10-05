@@ -85,7 +85,7 @@ onMounted(() => {
           <td>{{ problems[program.problem].name }}</td>
           <td v-if="store.team == 'admin'">{{ teams[program.team].name }}</td>
           <td>{{ program.role }}</td>
-          <td>{{ program.creation_time.toLocaleString() }}</td>
+          <td>{{ new Date(program.creation_time).toLocaleString() }}</td>
           <td>{{ program.name }}</td>
           <td>
             <a
