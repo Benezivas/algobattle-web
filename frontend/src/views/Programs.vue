@@ -5,26 +5,24 @@ import { Modal } from "bootstrap";
 import type { Problem, Program, Team } from "@client";
 import { onMounted, ref } from "vue";
 import FileInput from "@/components/FileInput.vue";
+import Paginator from "@/components/Paginator.vue";
 
 const programs = ref<ModelDict<Program>>({});
 const problems = ref<ModelDict<Problem>>({});
 const teams = ref<ModelDict<Team>>({});
-const currPage = ref(1);
-const maxPage = ref(1);
+const total = ref(0);
 const searchData = ref({
-  name: "",
-  team: "",
-  role: "",
-  limit: 25,
+  name: null,
+  team: null,
+  role: null,
 });
 
-async function search(page: number = 1) {
-  const ret = await ProgramService.searchProgram({ page: page });
+async function search(offset: number = 0) {
+  const ret = await ProgramService.get({offset: offset });
   programs.value = ret.programs;
   problems.value = ret.problems;
   teams.value = ret.teams;
-  currPage.value = ret.page;
-  maxPage.value = ret.max_page;
+  total.value = ret.total;
 }
 
 const newProgData = ref<{
@@ -52,7 +50,7 @@ async function uploadProgram() {
   ) {
     return;
   }
-  const newProgram = await ProgramService.uploadProgram({
+  const newProgram = await ProgramService.create({
     role: newProgData.value.role,
     problem: newProgData.value.problem,
     formData: {
@@ -74,7 +72,7 @@ onMounted(() => {
     <thead>
       <tr>
         <th scope="col">Problem</th>
-        <th scope="col" v-if="store.user.is_admin">Team</th>
+        <th scope="col" v-if="store.team == 'admin'">Team</th>
         <th scope="col">Role</th>
         <th scope="col">Uploaded</th>
         <th scope="col">Name</th>
@@ -84,7 +82,7 @@ onMounted(() => {
     <tbody>
       <tr v-for="(program, id) in programs" :key="id">
         <td>{{ problems[program.problem].name }}</td>
-        <td v-if="store.user.is_admin">{{ teams[program.team].name }}</td>
+        <td v-if="store.team == 'admin'">{{ teams[program.team].name }}</td>
         <td>{{ program.role }}</td>
         <td>{{ program.creation_time.toLocaleString() }}</td>
         <td>{{ program.name }}</td>
@@ -105,31 +103,7 @@ onMounted(() => {
     <button type="button" class="btn btn-primary btn-sm me-auto" @click="openModal">
       Upload new program
     </button>
-    <nav v-if="maxPage > 1" aria-label="Table pagination">
-      <ul class="pagination pagination-sm justify-content-end mb-0 ms-2">
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage <= 1 }" @click="(e) => search(1)"
-            ><i class="bi bi-chevron-double-left"></i
-          ></a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage <= 1 }" @click="(e) => search(currPage - 1)"
-            ><i class="bi bi-chevron-compact-left"></i
-          ></a>
-        </li>
-        <li class="page-item">currPage / maxPage</li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage >= maxPage }" @click="(e) => currPage + 1"
-            ><i class="bi bi-chevron-compact-right"></i
-          ></a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage >= maxPage }" @click="(e) => maxPage"
-            ><i class="bi bi-chevron-double-right"></i
-          ></a>
-        </li>
-      </ul>
-    </nav>
+    <Paginator :total="total" @update="search"/>
   </div>
 
   <div class="modal fade" id="uploadProgram" tabindex="-1" aria-labelledby="docLabel" aria-hidden="true">

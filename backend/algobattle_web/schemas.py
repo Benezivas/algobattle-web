@@ -58,9 +58,6 @@ class User(_User):
 
 class UserLogin(_User):
     teams: list[Team]
-    settings: UserSettings
-    tournament: Tournament | None
-    logged_in: Team | Literal["admin"] | None
 
 
 class Problem(Base):

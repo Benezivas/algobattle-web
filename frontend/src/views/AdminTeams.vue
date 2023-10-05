@@ -3,47 +3,43 @@ import HoverBadgeVue from "@/components/HoverBadge.vue";
 import { Modal } from "bootstrap";
 import { TournamentService, TeamService, UserService } from "@client";
 import type { Team, Tournament, User } from "@client";
-import type { ModelDict } from "@/main";
+import { store, type ModelDict } from "@/main";
 import { computed, onMounted, ref, toRaw } from "vue";
+import Paginator from "@/components/Paginator.vue";
 
 const teams = ref<ModelDict<Team>>({});
 const users = ref<ModelDict<User>>({});
 const tournaments = ref<ModelDict<Tournament>>({});
-const currPage = ref(1);
-const maxPage = ref(1);
 
 const searchData = ref({
   name: "",
   tournament: "",
-  limit: 25,
 });
 const isFiltered = computed(() => {
-  return searchData.value.name != "" || searchData.value.tournament != "" || searchData.value.limit != 25;
+  return searchData.value.name != "" || searchData.value.tournament != "";
 });
 let modal: Modal;
 onMounted(async () => {
-  tournaments.value = await TournamentService.allTournaments();
+  tournaments.value = await TournamentService.get({});
   modal = Modal.getOrCreateInstance("#teamModal");
-  search();
+  await search();
 });
+const total = ref(0);
 
-async function search(page: number = 1) {
-  const result = await TeamService.searchTeam({
+async function search(offset: number = 0) {
+  const result = await TeamService.get({
     name: searchData.value.name || undefined,
     tournament: searchData.value.tournament || undefined,
-    limit: searchData.value.limit,
-    page: page,
+    offset: offset,
   });
   teams.value = result.teams;
   users.value = result.users;
-  currPage.value = result.page;
-  maxPage.value = result.max_page;
+  total.value = result.total;
 }
 async function clearSearch() {
   searchData.value = {
     name: "",
     tournament: "",
-    limit: 25,
   };
   search();
 }
@@ -57,11 +53,11 @@ const userSearchData = ref({
 });
 const confirmDelete = ref(false);
 
-function emptyTeam(): Team {
+function emptyTeam(): Omit<Team, "tournament"> & {tournament: Tournament | null} {
   return {
     id: "",
     name: "",
-    tournament: "",
+    tournament: store.tournament ? {...store.tournament} : null,
     members: [],
   };
 }
@@ -100,23 +96,21 @@ async function sendData() {
       const oldMembers = teams.value[editData.value.id].members;
       const newMembers = editData.value.members.filter((id) => !oldMembers.includes(id));
       const deletedMembers = oldMembers.filter((id) => !editData.value.members.includes(id));
-      teams.value[editData.value.id] = await TeamService.editTeam({
+      teams.value[editData.value.id] = await TeamService.edit({
         id: editData.value.id,
+        name: editData.value.name,
+        tournament: editData.value.tournament?.id,
         requestBody: {
-          name: editData.value.name,
-          tournament: editData.value.tournament,
           members: Object.fromEntries(
             newMembers.map((id) => [id, "add"]).concat(deletedMembers.map((id) => [id, "remove"]))
           ),
         },
       });
     } else {
-      const newTeam = await TeamService.createTeam({
-        requestBody: {
-          name: editData.value.name,
-          tournament: editData.value.tournament,
-          members: editData.value.members,
-        },
+      const newTeam = await TeamService.create({
+        name: editData.value.name,
+        tournament: editData.value.tournament!.id,
+        requestBody: editData.value.members,
       });
       teams.value[newTeam.id] = newTeam;
     }
@@ -137,14 +131,12 @@ async function deleteTeam() {
   modal.hide();
 }
 async function checkName() {
-  const result = await TeamService.searchTeam({
+  const result = await TeamService.get({
     name: editData.value.name,
-    tournament: editData.value.tournament,
-    limit: 1,
-    exactName: true,
+    tournament: editData.value.tournament?.id,
   });
-  const teamIds = Object.keys(result.teams);
-  if (teamIds.length != 0 && teamIds[0] != editData.value.id) {
+  const teams = Object.values(result.teams).filter((team) => team.name === editData.value.name);
+  if (teams.length != 0 && teams[0].id != editData.value.id) {
     error.value = "name";
   } else {
     error.value = "";
@@ -165,7 +157,7 @@ async function checkName() {
     <tbody>
       <tr v-for="(team, id) in teams" :team="team" :key="id">
         <td>{{ team.name }}</td>
-        <td>{{ tournaments[team.tournament].name }}</td>
+        <td>{{ team.tournament.name }}</td>
         <td>{{ team.members.map((u) => users[u].name).join(", ") }}</td>
         <td class="text-end">
           <button
@@ -201,33 +193,7 @@ async function checkName() {
         <span class="visually-hidden">Applied filters</span>
       </span>
     </button>
-    <nav v-if="maxPage != 1" aria-label="Table pagination">
-      <ul class="pagination pagination-sm justify-content-end mb-0 ms-2">
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage <= 1 }" @click="(e) => search(1)"
-            ><i class="bi bi-chevron-double-left"></i
-          ></a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage <= 1 }" @click="(e) => search(currPage - 1)"
-            ><i class="bi bi-chevron-compact-left"></i
-          ></a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" href="#">{{ currPage }} / maxPage</a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage >= maxPage }" @click="(e) => search(currPage + 1)"
-            ><i class="bi bi-chevron-compact-right"></i
-          ></a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage >= maxPage }" @click="(e) => search(maxPage)"
-            ><i class="bi bi-chevron-double-right"></i
-          ></a>
-        </li>
-      </ul>
-    </nav>
+    <Paginator :total="total" @update="search"/>
   </div>
 
   <div class="d-flex justify-content-end">
@@ -247,18 +213,6 @@ async function checkName() {
           </div>
         </div>
         <div class="row">
-          <div class="col">
-            <label for="limitFilter" class="form-label mb-1">Limit</label>
-            <input
-              class="form-control "
-              id="limitFilter"
-              type="number"
-              min="1"
-              max="200"
-              step="1"
-              v-model="searchData.limit"
-            />
-          </div>
           <div class="col text-end align-self-end">
             <button v-if="isFiltered" class="btn btn-secondary me-2" @click="clearSearch">Clear</button>
             <button class="btn btn-primary" @click="(e) => search()">Apply</button>
@@ -307,7 +261,7 @@ async function checkName() {
             :required="editData.id != ''"
             @change="checkName"
           >
-            <option v-for="(tournament, id) in tournaments" :value="id" :selected="id == editData.tournament">
+            <option v-for="(tournament, id) in tournaments" :value="id" :selected="id == editData.tournament?.id">
               {{ tournament.name }}
             </option>
           </select>

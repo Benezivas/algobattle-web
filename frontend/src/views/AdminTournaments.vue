@@ -7,7 +7,7 @@ import type { Tournament } from "@client";
 const tournaments = ref<{ [key: string]: Tournament }>({});
 
 onMounted(async () => {
-  tournaments.value = await TournamentService.allTournaments();
+  tournaments.value = await TournamentService.get({});
 });
 
 const error = ref("");
@@ -37,14 +37,14 @@ function openModal(action: string, tournament: Tournament | null) {
 async function submitEdit() {
   try {
     if (data.value.action == "create") {
-      const newTournament = await TournamentService.createTournament({
-        requestBody: { name: data.value.name },
+      const newTournament = await TournamentService.create({
+        name: data.value.name,
       });
       tournaments.value[newTournament.id] = newTournament;
     } else {
-      const edited = await TournamentService.editTournament({
+      const edited = await TournamentService.edit({
         id: data.value.id,
-        requestBody: { name: data.value.name },
+        name: data.value.name,
       });
       tournaments.value[edited.id] = edited;
     }
@@ -58,7 +58,7 @@ async function deleteTournament() {
     data.value.confirmDelete = true;
     return;
   }
-  await TournamentService.deleteTournament({ id: data.value.id });
+  await TournamentService.delete({ id: data.value.id });
   delete tournaments.value[data.value.id];
   Modal.getOrCreateInstance("#tournamentModal").toggle();
 }

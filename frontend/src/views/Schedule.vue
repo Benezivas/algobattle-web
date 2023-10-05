@@ -7,17 +7,15 @@ import { onMounted, ref, toRaw } from "vue";
 
 const matches = ref<ModelDict<ScheduledMatch>>({});
 const problems = ref<ModelDict<Problem>>({});
-const tournaments = ref<ModelDict<Tournament>>({});
 
 let modal: Modal;
 onMounted(async () => {
-  const results = await MatchService.getScheduled({});
-  tournaments.value = await TournamentService.get();
+  const results = await MatchService.getScheduled();
   problems.value = results.problems;
   matches.value = results.matches;
   modal = Modal.getOrCreateInstance("#editModal");
-  if (store.user.is_admin) {
-    problems.value = await ProblemService.get({ tournament: store.user.current_tournament?.id });
+  if (store.team == "admin") {
+    problems.value = await ProblemService.get({});
   }
 });
 
@@ -63,7 +61,7 @@ async function deleteMatch() {
         <th scope="col">Time</th>
         <th scope="col">Problem</th>
         <th scope="col">Points</th>
-        <th v-if="store.user.is_admin" scope="col"></th>
+        <th v-if="store.team == 'admin'" scope="col"></th>
       </tr>
     </thead>
     <tbody>
@@ -74,7 +72,7 @@ async function deleteMatch() {
           <RouterLink :to="problems[match.problem].link">{{ problems[match.problem].name }}</RouterLink>
         </td>
         <td>{{ match.points }}</td>
-        <td v-if="store.user.is_admin" class="text-end">
+        <td v-if="store.team == 'admin'" class="text-end">
           <button type="button" class="btn btn-sm btn-warning" title="Edit" @click="(e) => openModal(match)">
             <i class="bi bi-pencil"></i>
           </button>

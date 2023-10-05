@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import HoverBadgeVue from "@/components/HoverBadge.vue";
+import Paginator from "@/components/Paginator.vue";
 import { TournamentService, TeamService, UserService, type Team, type User, type Tournament } from "@client";
 import { Modal } from "bootstrap";
 import type { ModelDict } from "@/main";
@@ -8,8 +9,7 @@ import { computed, onMounted, ref } from "vue";
 const teams = ref<ModelDict<Team>>({});
 const users = ref<ModelDict<User>>({});
 const tournaments = ref<ModelDict<Tournament>>({});
-const currPage = ref(1);
-const maxPage = ref(1);
+const total = ref(0);
 let modal: Modal;
 
 const filterData = ref({
@@ -31,21 +31,19 @@ const isFiltered = computed(() => {
   );
 });
 onMounted(async () => {
-  tournaments.value = await TournamentService.allTournaments();
+  tournaments.value = await TournamentService.get({});
   modal = Modal.getOrCreateInstance("#userModal");
   search();
 });
-async function search(page: number = 1) {
+async function search(offset: number = 0) {
   const result = await UserService.searchUsers({
     name: filterData.value.name || undefined,
     tournament: filterData.value.tournament || undefined,
-    limit: filterData.value.limit,
-    page: page,
+    offset: offset,
   });
   teams.value = result.teams;
   users.value = result.users;
-  currPage.value = result.page;
-  maxPage.value = result.max_page;
+  total.value = result.total;
 }
 async function clearSearch() {
   filterData.value = {
@@ -77,7 +75,7 @@ function emptyUser(): User {
   };
 }
 function teamName(team: Team) {
-  return `${team.name} (${tournaments.value[team.tournament].name})`;
+  return `${team.name} (${team.tournament.name})`;
 }
 
 function openModal(user: User | undefined) {
@@ -93,11 +91,9 @@ function openModal(user: User | undefined) {
   modal.show();
 }
 async function searchTeam() {
-  const result = await TeamService.searchTeam({
+  const result = await TeamService.get({
     name: teamSearchData.value.name || undefined,
     tournament: teamSearchData.value.tournament || undefined,
-    limit: editData.value.teams.length + 5,
-    page: 1,
   });
   teamSearchData.value.result = Object.values(result.teams)
     .filter((team) => !editData.value.teams.includes(team.id))
@@ -153,7 +149,6 @@ async function deleteUser() {
 async function checkEmail() {
   const result = await UserService.searchUsers({
     email: editData.value.email,
-    limit: 1,
     exactSearch: true,
   });
   const userIds = Object.keys(result.teams);
@@ -223,31 +218,7 @@ async function checkEmail() {
         <span class="visually-hidden">Applied filters</span>
       </span>
     </button>
-    <nav v-if="maxPage > 1" aria-label="Table pagination">
-      <ul class="pagination pagination-sm justify-content-end mb-0 ms-2">
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage <= 1 }" @click="(e) => search(1)"
-            ><i class="bi bi-chevron-double-left"></i
-          ></a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage <= 1 }" @click="(e) => search(currPage - 1)"
-            ><i class="bi bi-chevron-compact-left"></i
-          ></a>
-        </li>
-        <li class="page-item">currPage / maxPage</li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage >= maxPage }" @click="(e) => currPage + 1"
-            ><i class="bi bi-chevron-compact-right"></i
-          ></a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage >= maxPage }" @click="(e) => maxPage"
-            ><i class="bi bi-chevron-double-right"></i
-          ></a>
-        </li>
-      </ul>
-    </nav>
+    <Paginator :total="total" @update="search"/>
   </div>
 
   <div class="d-flex justify-content-end">

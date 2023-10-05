@@ -23,19 +23,19 @@ const programs = ref<{ [key: string]: Program[] }>({});
 let editModal: Modal;
 let detailModal: Modal;
 onMounted(async () => {
-  const res = await MatchService.results();
+  const res = await MatchService.getResult();
   problems.value = res.problems;
   results.value = res.results;
   teams.value = res.teams;
-  if (store.user.is_admin) {
-    const res = await TeamService.searchTeam({ tournament: store.user.current_tournament?.id });
+  if (store.team == "admin") {
+    const res = await TeamService.get({ tournament: store.tournament?.id });
     // TODO: get all teams not just first page
     teams.value = res.teams;
   }
   editModal = Modal.getOrCreateInstance("#editModal");
-  if (store.user.is_admin) {
+  if (store.team == "admin") {
     problems.value = await ProblemService.get({
-      tournament: store.user.current_tournament?.id,
+      tournament: store.tournament?.id,
     });
   }
   detailModal = Modal.getOrCreateInstance("#detailModal");
@@ -72,7 +72,7 @@ function openEdit(match: MatchResult | undefined) {
 
 async function sendData() {
   if (editData.value.id) {
-    const res = await MatchService.updateResult({
+    const res = await MatchService.editResult({
       result: editData.value.id,
       problem: editData.value.problem!,
       status: editData.value.status!,
@@ -88,7 +88,7 @@ async function sendData() {
     results.value[res.id] = res;
     editModal.hide();
   } else {
-    const res = await MatchService.addResult({
+    const res = await MatchService.createResult({
       problem: editData.value.problem!,
       status: editData.value.status!,
       time: editData.value.time!,
@@ -120,7 +120,7 @@ function getPrograms(team: string, role: Role) {
     return;
   }
   programs.value[editData.value.problem + team + role] = [];
-  ProgramService.searchProgram({
+  ProgramService.get({
     team: team,
     role: role,
     problem: editData.value.problem,
@@ -140,7 +140,11 @@ function getAllPrograms() {
 
 const detailView = ref<MatchResult>();
 const ownParticipant = computed(() => {
-  const list = detailView.value?.participants.filter((p) => p.team_id == store.user.selected_team?.id);
+  const team = store.team;
+  if (!team || team == "admin") {
+    return undefined;
+  }
+  const list = detailView.value?.participants.filter((p) => p.team_id == team.id);
   return list && list.length >= 1 ? list[0] : undefined;
 });
 
@@ -158,7 +162,7 @@ function openDetail(result: MatchResult) {
         <th scope="col">Problem</th>
         <th scope="col">Status</th>
         <th scope="col">Details</th>
-        <th v-if="store.user.is_admin" scope="col"></th>
+        <th v-if="store.team == 'admin'" scope="col"></th>
       </tr>
     </thead>
     <tbody>
@@ -173,7 +177,7 @@ function openDetail(result: MatchResult) {
             <i class="bi bi-eye-fill"></i>
           </button>
         </td>
-        <td v-if="store.user.is_admin" class="text-end">
+        <td v-if="store.team == 'admin'" class="text-end">
           <button type="button" class="btn btn-sm btn-warning" title="Edit" @click="(e) => openEdit(result)">
             <i class="bi bi-pencil"></i>
           </button>
@@ -371,7 +375,7 @@ function openDetail(result: MatchResult) {
               <tbody>
                 <tr
                   v-for="participant in detailView.participants"
-                  :class="{ 'table-primary': participant.team_id == store.user.selected_team?.id }"
+                  :class="{ 'table-primary': store.team != 'admin' && participant.team_id == store.team?.id }"
                 >
                   <td>{{ teams[participant.team_id].name }}</td>
                   <td>{{ participant.points }}</td>

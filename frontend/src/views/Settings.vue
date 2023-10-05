@@ -1,21 +1,25 @@
 <script setup lang="ts">
 import { store, type ModelDict } from "@/main";
-import { UserService, type Tournament, TournamentService } from "@client";
+import { type Tournament, TournamentService, SettingsService, type UserSettings } from "@client";
 import { onMounted, ref } from "vue";
 
 const userEdit = ref({
-  email: store.user?.email,
-  tournament: store.user?.settings.selected_tournament,
+  email: store.user!.email,
+  tournament: store.tournament,
 });
 const error = ref("");
-const tournaments = ref<ModelDict<Tournament>>({})
+const tournaments = ref<ModelDict<Tournament>>({});
+const settings = ref<UserSettings>();
 
 onMounted(async () => {
-  tournaments.value = await TournamentService.get({});
+  settings.value = await SettingsService.getUser();
+  if (store.user?.is_admin) {
+    tournaments.value = await TournamentService.get({});
+  }
 })
 
 async function saveEdit() {
-  const newUser = await UserService.settings({
+  const newUser = await SettingsService.editUser({
       email: userEdit.value.email,
       tournament: userEdit.value.tournament?.id,
   });

@@ -30,7 +30,7 @@ const problem_url = computed(() => {
     />
     <div class="card-body d-flex flex-column" style="height: 13.5rem">
       <h5 class="card-title">{{ problem.name }}</h5>
-      <p class="card-text overflow-hidden">{{ problem.short_description }}</p>
+      <p class="card-text overflow-hidden">{{ problem.description }}</p>
       <RouterLink :to="problem_url" class="btn btn-sm btn-primary mt-auto stretched-link"
         >View details</RouterLink
       >

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { RouterView, useRouter } from "vue-router";
 import PageNavbarIcon from "./components/HomeNavbarIcon.vue";
-import { store, type FixedLogin } from "./main";
-import { UserService, type Team_Output as Team } from "../typescript_client";
+import { store } from "./main";
+import { UserService, type Team, SettingsService } from "../typescript_client";
 import LoginPane from "./components/LoginPane.vue";
 import { useCookies } from "@vueuse/integrations/useCookies";
 import { computed, watch } from "vue";
@@ -36,7 +36,9 @@ watch(
       try {
         const response = await UserService.getLogin();
         if (response) {
-          store.user = response;
+          store.user = response.user;
+          store.team = response.team;
+          store.tournament = response.tournament;
           return;
         }
       } catch {}
@@ -55,7 +57,7 @@ async function selectTeam(team: Team | "admin") {
   if (team == "admin" && !store.user?.is_admin) {
     return;
   }
-  store.user = await UserService.settings({
+  store.user = await SettingsService.editUser({
     team: team == "admin" ? team : team.id,
   });
 }
@@ -63,10 +65,12 @@ async function selectTeam(team: Team | "admin") {
 const displayName = computed(() => {
   if (!store.user) {
     return "Log in";
-  } else if (store.user.logged_in == "admin") {
+  } else if (!store.team) {
+    return "No team"
+  } else if (store.team == "admin") {
     return "Admin";
-  } else if (store.user.logged_in) {
-    return store.user.logged_in.name;
+  } else {
+    return store.team.name;
   }
 });
 </script>
@@ -95,7 +99,7 @@ const displayName = computed(() => {
             <PageNavbarIcon link="/programs" icon="file-earmark-code">Programs</PageNavbarIcon>
             <PageNavbarIcon link="/schedule" icon="calendar-week">Schedule</PageNavbarIcon>
             <PageNavbarIcon link="/results" icon="bar-chart-line">Results</PageNavbarIcon>
-            <PageNavbarIcon v-if="store.user.logged_in == 'admin'" link="/admin" icon="people"
+            <PageNavbarIcon v-if="store.team == 'admin'" link="/admin" icon="people"
               >Admin panel</PageNavbarIcon
             >
           </template>
@@ -115,7 +119,7 @@ const displayName = computed(() => {
           >
             <i class="bi bi-person-circle me-2"></i> <strong>{{ displayName }}</strong>
           </a>
-          <ul v-if="store.user?.logged_in" class="dropdown-menu" id="loggedInDropdown">
+          <ul v-if="store.user" class="dropdown-menu" id="loggedInDropdown">
             <li><RouterLink class="dropdown-item" to="settings">Settings</RouterLink></li>
             <template v-if="store.user.teams.length >= (store.user.is_admin ? 1 : 2)">
               <li><hr class="dropdown-divider" /></li>
@@ -123,7 +127,7 @@ const displayName = computed(() => {
               <li
                 class="dropdown-item"
                 v-for="team in store.user.teams"
-                :class="{ active: store.user.logged_in != 'admin' && store.user.logged_in.id == team.id }"
+                :class="{ active: store.team != 'admin' && store.team?.id == team.id }"
                 @click="selectTeam(team)"
               >
                 {{ team.name }}
@@ -131,7 +135,7 @@ const displayName = computed(() => {
               <li
                 class="dropdown-item"
                 v-if="store.user.is_admin"
-                :class="{ active: store.user.logged_in == 'admin' }"
+                :class="{ active: store.team == 'admin' }"
                 @click="selectTeam('admin')"
               >
                 Admin

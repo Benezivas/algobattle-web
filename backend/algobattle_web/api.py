@@ -102,10 +102,9 @@ def get_file(db: Database, *, id: ID) -> FileResponse:
 
 
 class UserSearch(BaseSchema):
-    page: int
-    max_page: int
     users: dict[ID, schemas.User]
     teams: dict[ID, schemas.Team]
+    total: int
 
 
 @admin.get("/user", tags=["user"])
@@ -118,8 +117,7 @@ def search_users(
     is_admin: bool | None = None,
     tournament: ID | None = None,
     team: ID | None = None,
-    limit: int = 25,
-    page: int = 1,
+    offset: int = 0,
     exact_search: bool = False,
 ) -> UserSearch:
     filters: list[Any] = []
@@ -141,14 +139,13 @@ def search_users(
         filters.append(User.teams.any(Team.tournament_id == tournament))
     if team is not None:
         filters.append(User.teams.any(Team.id == team))
-    page = max(page - 1, 0)
     users = (
         db.scalars(
             select(User)
             .where(*filters)
             .order_by(User.is_admin.desc(), User.name.asc())
-            .limit(limit)
-            .offset(page * limit)
+            .limit(SQL_LIMIT)
+            .offset(offset)
         )
         .unique()
         .all()
@@ -156,10 +153,9 @@ def search_users(
     user_count = db.scalar(select(func.count()).select_from(User).where(*filters)) or 0
     teams = [team for user in users for team in user.teams]
     return UserSearch(
-        page=page + 1,
-        max_page=user_count // limit + 1,
         users=encode(users),
         teams=encode(teams),
+        total=user_count,
     )
 
 
@@ -271,7 +267,7 @@ def get_user_settings(*, db: Database, user: CurrUser) -> UserSettings:
     return user.settings
 
 
-@router.patch("/settings/user", tags=["settings"])
+@router.patch("/settings/user", tags=["settings"], name="editUser")
 def settings(
     *,
     db: Database,
@@ -298,7 +294,7 @@ def settings(
     db.commit()
 
 
-@router.patch("/settings/team", tags=["settings"], name="settings")
+@router.patch("/settings/team", tags=["settings"], name="getUser")
 def member_edit_team(*, db: Database, login: LoggedIn, name: str32) -> Team:
     team = login.team
     if not isinstance(team, Team):
@@ -623,6 +619,7 @@ def delete_report(db: Database, login: LoggedIn, team: ID, problem: ID) -> None:
 
 class Reports(BaseSchema):
     reports: dict[UUID, schemas.Report]
+    teams: dict[ID, schemas.Team]
     total: int
 
 
@@ -638,7 +635,7 @@ def get_reports(
 
     reports = db.scalars(select(Report).where(*filters).limit(SQL_LIMIT).offset(offset)).all()
     count = db.scalar(select(func.count()).select_from(Report).where(*filters)) or 0
-    return Reports(reports=encode(reports), total=count)
+    return Reports(reports=encode(reports), teams=encode(report.team for report in reports), total=count)
 
 
 # *******************************************************************************
@@ -649,6 +646,7 @@ def get_reports(
 class ProgramResults(BaseSchema):
     programs: dict[ID, schemas.Program]
     teams: dict[ID, schemas.Team]
+    problems: dict[ID, schemas.Problem]
     total: int
 
 
@@ -680,10 +678,10 @@ def search_program(
         .all()
     )
     total_count = db.scalar(select(func.count()).select_from(Program).where(*filters)) or 0
-    teams = [program.team for program in programs]
     return ProgramResults(
         programs=encode(programs),
-        teams=encode(teams),
+        teams=encode(program.team for program in programs),
+        problems=encode(program.problem for program in programs),
         total=total_count,
     )
 
@@ -708,7 +706,7 @@ def upload_program(
     return prog
 
 
-@router.post("/program", tags=["program"], name="delete")
+@router.delete("/program", tags=["program"], name="delete")
 def delete_program(*, db: Database, login: LoggedIn, id: ID) -> bool:
     program = Program.get_unwrap(db, id)
     program.assert_editable(login.team)
