@@ -19,11 +19,10 @@ onMounted(async () => {
 })
 
 async function saveEdit() {
-  const newUser = await SettingsService.editUser({
+  await SettingsService.editUser({
       email: userEdit.value.email,
       tournament: userEdit.value.tournament?.id,
   });
-  store.user = newUser;
   error.value = "success";
 }
 </script>

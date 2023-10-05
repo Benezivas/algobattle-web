@@ -275,7 +275,7 @@ def settings(
     email: str | None = None,
     team: ID | Literal["admin"] | None = None,
     tournament: ID | None = None,
-):
+) -> None:
     user = login.user
     if email is not None:
         user.email = email
