@@ -63,22 +63,30 @@ const past_problems = computed(() => {
       </div>
     </div>
   </template>
-  <h3 v-if="Object.keys(current_problems).length != 0">Current</h3>
-  <div class="d-flex flex-wrap mb-5">
-    <ProblemCard
+  <template v-if="store.tournament">
+    <h3 v-if="Object.keys(current_problems).length != 0">Current</h3>
+    <div class="d-flex flex-wrap mb-5">
+      <ProblemCard
       v-for="(problem, id) in current_problems"
       :problem="problem"
       :tournament="problem.tournament"
       :key="id"
-    />
-  </div>
-  <h3 v-if="Object.keys(past_problems).length != 0">Past</h3>
-  <div class="d-flex flex-wrap">
+      />
+    </div>
+    <h3 v-if="Object.keys(past_problems).length != 0">Past</h3>
+    <div class="d-flex flex-wrap">
     <ProblemCard
       v-for="(problem, id) in past_problems"
       :problem="problem"
       :tournament="problem.tournament"
       :key="id"
-    />
+      />
+    </div>
+    <div v-if="Object.keys(problems).length === 0" class="alert alert-info" role="alert">
+      There aren't any problems in {{ store.tournament ? "the " + store.tournament.name : "this" }} tournament yet.
+    </div>
+  </template>
+  <div v-else class="alert alert-danger" role="alert">
+    You need to select a team before you can view any problems.
   </div>
 </template>
