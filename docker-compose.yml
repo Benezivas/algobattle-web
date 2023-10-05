@@ -6,9 +6,9 @@ services:
       - MYSQL_ROOT_PASSWORD=${SQL_PASSWORD}
     healthcheck:
       test: "mysqladmin ping"
-      interval: 2s
-      timeout: 20s
-      retries: 10
+      interval: 5s
+      timeout: 10s
+      retries: 12
     volumes:
       - db-data:/var/lib/mysql
   backend:
@@ -18,9 +18,9 @@ services:
         condition: service_healthy
     healthcheck:
       test: "curl --fail localhost:8000/openapi.json || exit 1"
-      interval: 2s
-      timeout: 20s
-      retries: 10
+      interval: 5s
+      timeout: 10s
+      retries: 12
     environment:
       - TZ=Europe/Berlin
       - SQL_PASSWORD=${SQL_PASSWORD}
