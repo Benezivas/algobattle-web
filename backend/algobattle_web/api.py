@@ -39,6 +39,7 @@ from algobattle_web.util import (
     BaseSchema,
     send_email,
     ServerConfig,
+    HexColor,
 )
 from algobattle_web.dependencies import (
     CurrUser,
@@ -48,7 +49,6 @@ from algobattle_web.dependencies import (
     get_db,
     TeamIfAdmin,
 )
-from pydantic_extra_types.color import Color
 
 __all__ = ("router", "admin")
 
@@ -498,9 +498,10 @@ def create_problem(
     image: UploadFile | None = None,
     alt_text: str = Form(""),
     short_description: str = Form(""),
-    colour: Color = Form(Color("#ffffff")),
+    color: HexColor = Form(HexColor("#ffffff")),
     background_tasks: BackgroundTasks,
 ) -> str:
+    print(color)
     _tournament = unwrap(db.get(Tournament, tournament))
     _image = DbFile.maybe(image, alt_text=alt_text)
     if isinstance(problem, UUID):
@@ -521,7 +522,7 @@ def create_problem(
         end=end,
         image=_image,
         description=short_description,
-        colour=colour.as_hex(),
+        colour=color.as_hex(),
         page_data=page_data,
     )
     db.add(prob)
@@ -542,7 +543,7 @@ def edit_problem(
     end: datetime | None = None,
     description: str | None = None,
     alt_text: str | None = None,
-    colour: Color | None = None,
+    colour: HexColor | None = None,
     file: UploadFile | None = None,
     image: UploadFile | None | Literal["noedit"] = Form("noedit"),
     tasks: BackgroundTasks,

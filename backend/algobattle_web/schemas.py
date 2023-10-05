@@ -5,9 +5,8 @@ from urllib.parse import quote as urlencode
 from uuid import UUID
 
 from pydantic import computed_field
-from pydantic_extra_types.color import Color
 
-from algobattle_web.util import BaseSchema, MatchStatus, ObjID, ServerConfig
+from algobattle_web.util import BaseSchema, MatchStatus, ObjID, ServerConfig, HexColor
 from algobattle.util import Role
 
 
@@ -67,7 +66,7 @@ class Problem(Base):
     end: datetime | None = None
     description: str
     image: DbFile | None = None
-    colour: Color
+    colour: HexColor
     # property is defined on db model to make it have access to the tournament name
     link: str
 
