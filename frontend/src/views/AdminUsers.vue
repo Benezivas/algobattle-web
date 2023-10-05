@@ -4,7 +4,7 @@ import Paginator from "@/components/Paginator.vue";
 import { TournamentService, TeamService, UserService, type Team, type User, type Tournament } from "@client";
 import { Modal } from "bootstrap";
 import type { ModelDict } from "@/main";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, toRaw } from "vue";
 
 const teams = ref<ModelDict<Team>>({});
 const users = ref<ModelDict<User>>({});
@@ -76,7 +76,7 @@ function teamName(team: Team) {
 }
 
 function openModal(user: User | undefined) {
-  editData.value = user || emptyUser();
+  editData.value = user ? structuredClone(toRaw(user)) : emptyUser();
   confirmDelete.value = false;
   error.value = "";
   teamSearchData.value = {
@@ -100,15 +100,15 @@ async function sendData() {
   if (error.value) {
     return;
   }
-  try {
     if (editData.value.id) {
-      const oldTeams = teams.value[editData.value.id].members;
+      const oldTeams = users.value[editData.value.id].teams;
       const newTeams = editData.value.teams.filter((id) => !oldTeams.includes(id));
       const removedTeams = oldTeams.filter((id) => !editData.value.teams.includes(id));
-      users.value[editData.value.id] = await UserService.editUser({
-        id: editData.value.id,
-        requestBody: {
-          name: editData.value.name,
+      try {
+        users.value[editData.value.id] = await UserService.editUser({
+          id: editData.value.id,
+          requestBody: {
+            name: editData.value.name,
           email: editData.value.email,
           is_admin: editData.value.is_admin,
           teams: Object.fromEntries(
@@ -116,21 +116,25 @@ async function sendData() {
           ),
         },
       });
+    } catch {
+      error.value = "email";
+    }
     } else {
-      const newUser = await UserService.createUser({
-        requestBody: {
-          name: editData.value.name,
+      try {
+        const newUser = await UserService.createUser({
+          requestBody: {
+            name: editData.value.name,
           email: editData.value.email,
           is_admin: editData.value.is_admin,
           teams: editData.value.teams,
         },
       });
       users.value[newUser.id] = newUser;
+      } catch {
+        error.value = "email";
+      }
     }
     modal.hide();
-  } catch {
-    error.value = "email";
-  }
 }
 async function deleteUser() {
   if (!confirmDelete.value) {
@@ -150,6 +154,7 @@ async function checkEmail() {
   });
   const userIds = Object.keys(result.teams);
   if (userIds.length != 0 && userIds[0] != editData.value.id) {
+    console.log(editData.value);
     error.value = "email";
   } else {
     error.value = "";
