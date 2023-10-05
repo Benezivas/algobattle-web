@@ -704,6 +704,7 @@ def upload_program(
     problem_obj.assert_visible(login.team)
     if not isinstance(login.team, Team):
         raise HTTPException(400, "User has not selected a team")
+    problem_obj.assert_editable(login.team)
     prog = Program(name, login.team, role, DbFile.from_file(file), problem_obj)
     db.add(prog)
     db.commit()
