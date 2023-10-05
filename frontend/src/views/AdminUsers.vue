@@ -54,15 +54,16 @@ async function clearSearch() {
   search();
 }
 
+type UserTeams = Omit<User, "teams"> & {teams: Team[]};
 const error = ref("");
-const editData = ref<User>(emptyUser());
+const editData = ref<UserTeams>(emptyUser());
 const teamSearchData = ref({
   name: "",
   tournament: "",
   result: [] as Team[],
 });
 const confirmDelete = ref(false);
-function emptyUser(): User {
+function emptyUser(): UserTeams {
   return {
     id: "",
     name: "",
@@ -76,7 +77,11 @@ function teamName(team: Team) {
 }
 
 function openModal(user: User | undefined) {
-  editData.value = user ? structuredClone(toRaw(user)) : emptyUser();
+  if (user) {
+    editData.value = {...user, teams: user.teams.map((id) => teams.value[id])};
+  } else {
+    editData.value = emptyUser();
+  }
   confirmDelete.value = false;
   error.value = "";
   teamSearchData.value = {
@@ -93,7 +98,7 @@ async function searchTeam() {
     tournament: teamSearchData.value.tournament || undefined,
   });
   teamSearchData.value.result = Object.values(result.teams)
-    .filter((team) => !editData.value.teams.includes(team.id))
+    .filter((team) => !editData.value.teams.includes(team))
     .slice(0, 5);
 }
 async function sendData() {
@@ -102,8 +107,8 @@ async function sendData() {
   }
     if (editData.value.id) {
       const oldTeams = users.value[editData.value.id].teams;
-      const newTeams = editData.value.teams.filter((id) => !oldTeams.includes(id));
-      const removedTeams = oldTeams.filter((id) => !editData.value.teams.includes(id));
+      const newTeams = editData.value.teams.filter(team => !oldTeams.includes(team.id));
+      const removedTeams = oldTeams.filter(id => !editData.value.teams.map(t => t.id).includes(id));
       try {
         users.value[editData.value.id] = await UserService.editUser({
           id: editData.value.id,
@@ -126,7 +131,7 @@ async function sendData() {
             name: editData.value.name,
           email: editData.value.email,
           is_admin: editData.value.is_admin,
-          teams: editData.value.teams,
+          teams: editData.value.teams.map(t => t.id),
         },
       });
       users.value[newUser.id] = newUser;
@@ -329,10 +334,10 @@ async function checkEmail() {
           <span class="form-label mt-3 mb-0 fake-label">Teams</span>
           <div class="d-flex flex-row flex-wrap mb-1">
             <HoverBadgeVue
-              v-for="(id, i) in editData.teams"
+              v-for="(team, i) in editData.teams"
               type="remove"
               @click="() => editData.teams.splice(i, 1)"
-              >{{ teamName(teams[id]) }}</HoverBadgeVue
+              >{{ teamName(team) }}</HoverBadgeVue
             >
           </div>
           <div class="card mt-2">
@@ -371,10 +376,10 @@ async function checkEmail() {
               </div>
               <div class="d-flex flex-row flex-wrap">
                 <HoverBadgeVue
-                  v-for="user in teamSearchData.result"
+                  v-for="team in teamSearchData.result"
                   type="add"
-                  @click="() => editData.teams.push(user.id)"
-                  >{{ user.name }}</HoverBadgeVue
+                  @click="() => editData.teams.push(team)"
+                  >{{ team.name }}</HoverBadgeVue
                 >
               </div>
             </div>
