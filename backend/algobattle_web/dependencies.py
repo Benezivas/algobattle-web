@@ -33,15 +33,21 @@ CurrUser = Annotated[User | None, Depends(curr_user)]
 @dataclass
 class LoginInfo:
     user: User | None
-    team: Team | Literal["admin"] | None
-    tournament: Tournament | None
+
+    @property
+    def team(self) -> Team | Literal["admin"] | None:
+        return self.user.logged_in if self.user else None
+
+    @property
+    def tournament(self) -> Tournament | None:
+        return self.user.tournament if self.user else None
 
     @classmethod
     def dependency(cls, user: CurrUser) -> Self:
         if user is not None:
-            return cls(user, user.logged_in, user.tournament)
+            return cls(user)
         else:
-            return cls(None, None, None)
+            return cls(None)
 
 
 LoggedIn = Annotated[LoginInfo, Depends(LoginInfo.dependency)]

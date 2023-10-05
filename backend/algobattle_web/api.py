@@ -199,12 +199,15 @@ def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     for id, action in edit.teams.items():
         team = unwrap(db.get(Team, id))
         match action:
-            case EditAction.add:
-                if team not in user.teams:
-                    user.teams.append(team)
-            case EditAction.remove:
-                if team in user.teams:
-                    user.teams.remove(team)
+            case EditAction.add if team not in user.teams:
+                user.teams.append(team)
+            case EditAction.remove if team in user.teams:
+                if user.settings.selected_team == team:
+                    user.settings.selected_team = None
+                user.teams.remove(team)
+            case _:
+                pass
+
     try:
         db.commit()
     except IntegrityError as e:
@@ -228,11 +231,16 @@ class LoginInfo(BaseSchema):
 
 @router.get("/user/login", tags=["user"], name="getLogin", response_model=LoginInfo)
 def get_self(*, db: Database, login: LoggedIn) -> LoggedIn:
-    if login.user is not None and login.user.is_admin and login.user.settings.selected_tournament is None:
-        login.user.settings.selected_tournament = db.scalars(select(Tournament).order_by(Tournament.time.desc())).first()
-    if login.user and login.team is None and login.user.teams:
-        login.user.settings.selected_team = login.user.teams[0]
-    db.commit()
+    if login.user is not None:
+        save = False
+        if login.user.is_admin and login.user.settings.selected_tournament is None:
+            login.user.settings.selected_tournament = db.scalars(select(Tournament).order_by(Tournament.time.desc())).first()
+            save = True
+        if login.team is None and login.user.teams:
+            login.user.settings.selected_team = login.user.teams[0]
+            save = True
+        if save:
+            db.commit()
     return login
 
 
@@ -427,6 +435,8 @@ def edit_team(
             case EditAction.add if user not in team.members:
                 team.members.append(user)
             case EditAction.remove if user in team.members:
+                if user.settings.selected_team == team:
+                    user.settings.selected_team = None
                 team.members.remove(user)
             case _:
                 raise ValueError
