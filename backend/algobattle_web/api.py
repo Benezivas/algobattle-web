@@ -452,13 +452,13 @@ def get_problems(
     login: LoggedIn,
     ids: list[ID] | None = None,
     name: str | None = None,
-    tournament: ID | None = None,
+    tournament: ID | str | None = None,
 ) -> dict[ID, schemas.Problem]:
     filters = []
-    if tournament:
-        if login.team != "admin" and (not login.tournament or tournament != login.tournament):
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Only admins can select a different team")
+    if isinstance(tournament, UUID):
         filters.append(Problem.tournament_id == tournament)
+    elif isinstance(tournament, str):
+        filters.append(Problem.tournament.has(Tournament.name == tournament))
     else:
         filters.append(Problem.tournament == login.tournament)
     if ids:
