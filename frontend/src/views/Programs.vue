@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ProgramService, Role } from "@client";
+import { ProblemService, ProgramService, Role } from "@client";
 import { store, type ModelDict } from "@/main";
 import { Modal } from "bootstrap";
 import type { Problem, Program, Team } from "@client";
@@ -20,9 +20,13 @@ const searchData = ref({
 async function search(offset: number = 0) {
   const ret = await ProgramService.get({offset: offset });
   programs.value = ret.programs;
-  problems.value = ret.problems;
   teams.value = ret.teams;
   total.value = ret.total;
+  if (store.team === "admin") {
+    problems.value = ret.problems;
+  } else {
+    problems.value = await ProblemService.get({tournament: store.tournament?.id})
+  }
 }
 
 const newProgData = ref<{
