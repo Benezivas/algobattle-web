@@ -18,7 +18,6 @@ const filterData = ref({
   isAdmin: undefined as boolean | undefined,
   tournament: "",
   team: "",
-  limit: 25,
 });
 const isFiltered = computed(() => {
   return (
@@ -26,8 +25,7 @@ const isFiltered = computed(() => {
     filterData.value.email != "" ||
     filterData.value.isAdmin !== undefined ||
     filterData.value.tournament != "" ||
-    filterData.value.team != "" ||
-    filterData.value.limit != 25
+    filterData.value.team != ""
   );
 });
 onMounted(async () => {
@@ -52,7 +50,6 @@ async function clearSearch() {
     isAdmin: undefined as boolean | undefined,
     tournament: "",
     team: "",
-    limit: 25,
   };
   search();
 }
@@ -267,18 +264,6 @@ async function checkEmail() {
           </div>
         </div>
         <div class="row">
-          <div class="col">
-            <label for="limitFilter" class="form-label mb-1">Limit</label>
-            <input
-              class="form-control "
-              id="limitFilter"
-              type="number"
-              min="1"
-              max="200"
-              step="1"
-              v-model="filterData.limit"
-            />
-          </div>
           <div class="col text-end align-self-end">
             <a v-if="isFiltered" class="btn btn-secondary me-2" @click="clearSearch" role="button">Clear</a>
             <a class="btn btn-primary" @click="(e) => search()" role="button">Apply</a>
@@ -307,8 +292,8 @@ async function checkEmail() {
         </div>
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
-          <div class="input-group w-em" name="name">
-            <input class="form-control " type="text" v-model="editData.name" required />
+          <div class="input-group w-em mb-3">
+            <input class="form-control " type="text" v-model="editData.name" required id="name" autocomplete="off" />
             <input
               type="checkbox"
               class="btn-check"
@@ -328,13 +313,15 @@ async function checkEmail() {
           <input
             class="form-control"
             :class="{ 'is-invalid': error == 'email' }"
-            name="email"
+            id="email"
             type="email"
             v-model="editData.email"
+            autocomplete="off"
+            @change="checkEmail"
             required
           />
           <div class="invalid-feedback">Email already in use by another user</div>
-          <label for="teams" class="form-label mt-3 mb-0">Teams</label>
+          <span class="form-label mt-3 mb-0 fake-label">Teams</span>
           <div class="d-flex flex-row flex-wrap mb-1">
             <HoverBadgeVue
               v-for="(id, i) in editData.teams"
@@ -372,6 +359,7 @@ async function checkEmail() {
                     class="form-control"
                     id="searchName"
                     v-model="teamSearchData.name"
+                    autocomplete="off"
                     @input="searchTeam"
                   />
                 </div>
@@ -410,5 +398,8 @@ async function checkEmail() {
 <style>
 .teams-box {
   min-height: 1.5rem;
+}
+fake-label {
+  margin-bottom: 0.5rem;
 }
 </style>
