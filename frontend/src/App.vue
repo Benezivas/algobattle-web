@@ -57,9 +57,10 @@ async function selectTeam(team: Team | "admin") {
   if (team == "admin" && !store.user?.is_admin) {
     return;
   }
-  store.user = await SettingsService.editUser({
+  await SettingsService.editUser({
     team: team == "admin" ? team : team.id,
   });
+  router.go(0);
 }
 
 const displayName = computed(() => {
