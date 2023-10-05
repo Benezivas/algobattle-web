@@ -511,6 +511,8 @@ def create_problem(
     else:
         file = DbFile.from_file(problem)
         page_data = None
+    if db.scalars(select(Problem).where(Problem.name == name, Problem.tournament == tournament)).first():
+        raise ValueTaken("name", name)
 
     prob = Problem(
         file=file,
@@ -523,11 +525,8 @@ def create_problem(
         colour=colour.as_hex(),
         page_data=page_data,
     )
-    try:
-        db.add(prob)
-        db.commit()
-    except IntegrityError as e:
-        raise ValueTaken("name", name) from e
+    db.add(prob)
+    db.commit()
     if page_data is None:
         background_tasks.add_task(prob.compute_page_data)
     return f"/problems/{prob.tournament.name}/{prob.name}"
