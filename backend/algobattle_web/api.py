@@ -227,9 +227,12 @@ class LoginInfo(BaseSchema):
 
 
 @router.get("/user/login", tags=["user"], name="getLogin", response_model=LoginInfo)
-def get_self(*, login: LoggedIn) -> LoggedIn:
+def get_self(*, db: Database, login: LoggedIn) -> LoggedIn:
+    if login.user is not None and login.user.is_admin and login.user.settings.selected_tournament is None:
+        login.user.settings.selected_tournament = db.scalars(select(Tournament).order_by(Tournament.time.desc())).first()
     if login.user and login.team is None and login.user.teams:
         login.user.settings.selected_team = login.user.teams[0]
+    db.commit()
     return login
 
 
