@@ -86,7 +86,10 @@ const past_problems = computed(() => {
       There aren't any problems in {{ store.tournament ? "the " + store.tournament.name : "this" }} tournament yet.
     </div>
   </template>
+  <div v-else-if="!store.user" class="alert alert-danger" role="alert">
+    You need to log in before you can view the problems.
+  </div>
   <div v-else class="alert alert-danger" role="alert">
-    You need to select a team before you can view any problems.
+    You need to select a team before you can view the problems.
   </div>
 </template>
