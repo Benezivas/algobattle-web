@@ -4,7 +4,7 @@ import Paginator from "@/components/Paginator.vue";
 import { TournamentService, TeamService, UserService, type Team, type User, type Tournament } from "@client";
 import { Modal } from "bootstrap";
 import type { ModelDict } from "@/main";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, toRaw } from "vue";
 
 const teams = ref<ModelDict<Team>>({});
 const users = ref<ModelDict<User>>({});
@@ -54,15 +54,16 @@ async function clearSearch() {
   search();
 }
 
+type UserTeams = Omit<User, "teams"> & {teams: Team[]};
 const error = ref("");
-const editData = ref<User>(emptyUser());
+const editData = ref<UserTeams>(emptyUser());
 const teamSearchData = ref({
   name: "",
   tournament: "",
   result: [] as Team[],
 });
 const confirmDelete = ref(false);
-function emptyUser(): User {
+function emptyUser(): UserTeams {
   return {
     id: "",
     name: "",
@@ -76,7 +77,11 @@ function teamName(team: Team) {
 }
 
 function openModal(user: User | undefined) {
-  editData.value = user || emptyUser();
+  if (user) {
+    editData.value = {...user, teams: user.teams.map((id) => teams.value[id])};
+  } else {
+    editData.value = emptyUser();
+  }
   confirmDelete.value = false;
   error.value = "";
   teamSearchData.value = {
@@ -93,44 +98,48 @@ async function searchTeam() {
     tournament: teamSearchData.value.tournament || undefined,
   });
   teamSearchData.value.result = Object.values(result.teams)
-    .filter((team) => !editData.value.teams.includes(team.id))
+    .filter((team) => !editData.value.teams.includes(team))
     .slice(0, 5);
 }
 async function sendData() {
   if (error.value) {
     return;
   }
-  try {
     if (editData.value.id) {
-      const oldTeams = teams.value[editData.value.id].members;
-      const newTeams = editData.value.teams.filter((id) => !oldTeams.includes(id));
-      const removedTeams = oldTeams.filter((id) => !editData.value.teams.includes(id));
-      users.value[editData.value.id] = await UserService.editUser({
-        id: editData.value.id,
-        requestBody: {
-          name: editData.value.name,
+      const oldTeams = users.value[editData.value.id].teams;
+      const newTeams = editData.value.teams.filter(team => !oldTeams.includes(team.id));
+      const removedTeams = oldTeams.filter(id => !editData.value.teams.map(t => t.id).includes(id));
+      try {
+        users.value[editData.value.id] = await UserService.editUser({
+          id: editData.value.id,
+          requestBody: {
+            name: editData.value.name,
           email: editData.value.email,
           is_admin: editData.value.is_admin,
           teams: Object.fromEntries(
-            newTeams.map((id) => [id, "add"]).concat(removedTeams.map((id) => [id, "remove"]))
+            newTeams.map(team => [team.id, "add"]).concat(removedTeams.map(id => [id, "remove"]))
           ),
         },
       });
+    } catch {
+      error.value = "email";
+    }
     } else {
-      const newUser = await UserService.createUser({
-        requestBody: {
-          name: editData.value.name,
+      try {
+        const newUser = await UserService.createUser({
+          requestBody: {
+            name: editData.value.name,
           email: editData.value.email,
           is_admin: editData.value.is_admin,
-          teams: editData.value.teams,
+          teams: editData.value.teams.map(t => t.id),
         },
       });
       users.value[newUser.id] = newUser;
+      } catch {
+        error.value = "email";
+      }
     }
     modal.hide();
-  } catch {
-    error.value = "email";
-  }
 }
 async function deleteUser() {
   if (!confirmDelete.value) {
@@ -140,7 +149,7 @@ async function deleteUser() {
     confirmDelete.value = false;
   }
   await UserService.deleteUser({ id: editData.value.id });
-  delete teams.value[editData.value.id];
+  delete users.value[editData.value.id];
   modal.hide();
 }
 async function checkEmail() {
@@ -150,6 +159,7 @@ async function checkEmail() {
   });
   const userIds = Object.keys(result.teams);
   if (userIds.length != 0 && userIds[0] != editData.value.id) {
+    console.log(editData.value);
     error.value = "email";
   } else {
     error.value = "";
@@ -293,7 +303,7 @@ async function checkEmail() {
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
           <div class="input-group w-em mb-3">
-            <input class="form-control " type="text" v-model="editData.name" required id="name" autocomplete="off" />
+            <input class="form-control " type="text" v-model="editData.name" required maxlength="32" id="name" autocomplete="off" />
             <input
               type="checkbox"
               class="btn-check"
@@ -315,6 +325,7 @@ async function checkEmail() {
             :class="{ 'is-invalid': error == 'email' }"
             id="email"
             type="email"
+            maxlength="128"
             v-model="editData.email"
             autocomplete="off"
             @change="checkEmail"
@@ -324,10 +335,10 @@ async function checkEmail() {
           <span class="form-label mt-3 mb-0 fake-label">Teams</span>
           <div class="d-flex flex-row flex-wrap mb-1">
             <HoverBadgeVue
-              v-for="(id, i) in editData.teams"
+              v-for="(team, i) in editData.teams"
               type="remove"
               @click="() => editData.teams.splice(i, 1)"
-              >{{ teamName(teams[id]) }}</HoverBadgeVue
+              >{{ teamName(team) }}</HoverBadgeVue
             >
           </div>
           <div class="card mt-2">
@@ -366,10 +377,10 @@ async function checkEmail() {
               </div>
               <div class="d-flex flex-row flex-wrap">
                 <HoverBadgeVue
-                  v-for="user in teamSearchData.result"
+                  v-for="team in teamSearchData.result"
                   type="add"
-                  @click="() => editData.teams.push(user.id)"
-                  >{{ user.name }}</HoverBadgeVue
+                  @click="() => editData.teams.push(team)"
+                  >{{ team.name }}</HoverBadgeVue
                 >
               </div>
             </div>

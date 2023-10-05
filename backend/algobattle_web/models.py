@@ -235,7 +235,7 @@ class File(Base):
             media_type = guess_mimetype(filename)
         return cls(
             _file=file,
-            filename=filename,
+            filename=filename[:128],
             media_type=media_type,
             alt_text=alt_text,
             timestamp=datetime.now(),

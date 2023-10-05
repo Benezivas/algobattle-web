@@ -31,7 +31,7 @@ const now = new Date();
 onMounted(async () => {
   const problems = await ProblemService.get({
     name: route.params.problemName as string,
-    tournament: route.params.tournamentName as string,
+    tournamentName: route.params.tournamentName as string,
   });
   if (Object.values(problems).length === 1) {
     problem.value = Object.values(problems)[0];
@@ -157,8 +157,9 @@ async function deleteProblem() {
     confirmDeleteProblem.value = true;
     return;
   }
-  ProblemService.delete({ id: problem.value!.id });
-  router.push("problems");
+  await ProblemService.delete({ id: problem.value!.id });
+  Modal.getOrCreateInstance("#problemModal").hide();
+  router.push({name: "problems"});
 }
 </script>
 
@@ -211,16 +212,16 @@ async function deleteProblem() {
               {{ problem.description }}
             </li>
             <li v-if="problem.start" class="list-group-item bg-body-tertiary">
-              Start: {{ problem.start.toLocaleString() }}
+              Start: {{ new Date(problem.start).toLocaleString() }}
             </li>
             <li v-if="problem.end" class="list-group-item bg-body-tertiary">
-              End: {{ problem.end.toLocaleString() }}
+              End: {{ new Date(problem.end).toLocaleString() }}
             </li>
             <li class="list-group-item bg-body-tertiary">
               <a
                 role="button"
                 class="btn btn-primary btn-sm"
-                :href="`/api/problem/${problem.id}/download_all`"
+                :href="problem.file.location"
                 title="Download problem files"
                 >Download problem spec file <i class="bi bi-download ms-1"></i
               ></a>

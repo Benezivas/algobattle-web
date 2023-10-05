@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import ProblemCard from "@/components/ProblemCard.vue";
-import { store } from "../main";
+import { type ModelDict, store } from "../main";
 import { ProblemService } from "@client";
 import type { Problem } from "@client";
-import { computed, onMounted, ref, type Ref } from "vue";
+import { computed, onMounted, ref, watch, type Ref } from "vue";
 
-const problems: Ref<{ [key: string]: Problem }> = ref({});
+const problems = ref<ModelDict<Problem>>({});
 
-onMounted(async () => {
-  problems.value = await ProblemService.get({ tournament: store.tournament?.id });
-});
+watch(() => store.tournament, async (newTournament) => {
+  if (newTournament) {
+    problems.value = await ProblemService.get({ tournament: newTournament.id });
+  }
+}, {immediate: true})
 const now = new Date();
 
 const future_problems = computed(() => {
@@ -63,22 +65,33 @@ const past_problems = computed(() => {
       </div>
     </div>
   </template>
-  <h3 v-if="Object.keys(current_problems).length != 0">Current</h3>
-  <div class="d-flex flex-wrap mb-5">
-    <ProblemCard
+  <template v-if="store.tournament">
+    <h3 v-if="Object.keys(current_problems).length != 0">Current</h3>
+    <div class="d-flex flex-wrap mb-5">
+      <ProblemCard
       v-for="(problem, id) in current_problems"
       :problem="problem"
       :tournament="problem.tournament"
       :key="id"
-    />
-  </div>
-  <h3 v-if="Object.keys(past_problems).length != 0">Past</h3>
-  <div class="d-flex flex-wrap">
+      />
+    </div>
+    <h3 v-if="Object.keys(past_problems).length != 0">Past</h3>
+    <div class="d-flex flex-wrap">
     <ProblemCard
       v-for="(problem, id) in past_problems"
       :problem="problem"
       :tournament="problem.tournament"
       :key="id"
-    />
+      />
+    </div>
+    <div v-if="Object.keys(problems).length === 0" class="alert alert-info" role="alert">
+      There aren't any problems in {{ store.tournament ? "the " + store.tournament.name : "this" }} tournament yet.
+    </div>
+  </template>
+  <div v-else-if="!store.user" class="alert alert-danger" role="alert">
+    You need to log in before you can view the problems.
+  </div>
+  <div v-else class="alert alert-danger" role="alert">
+    You need to select a team before you can view the problems.
   </div>
 </template>

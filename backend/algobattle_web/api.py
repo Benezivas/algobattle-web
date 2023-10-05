@@ -39,6 +39,7 @@ from algobattle_web.util import (
     BaseSchema,
     send_email,
     ServerConfig,
+    HexColor,
 )
 from algobattle_web.dependencies import (
     CurrUser,
@@ -48,7 +49,6 @@ from algobattle_web.dependencies import (
     get_db,
     TeamIfAdmin,
 )
-from pydantic_extra_types.color import Color
 
 __all__ = ("router", "admin")
 
@@ -199,12 +199,15 @@ def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     for id, action in edit.teams.items():
         team = unwrap(db.get(Team, id))
         match action:
-            case EditAction.add:
-                if team not in user.teams:
-                    user.teams.append(team)
-            case EditAction.remove:
-                if team in user.teams:
-                    user.teams.remove(team)
+            case EditAction.add if team not in user.teams:
+                user.teams.append(team)
+            case EditAction.remove if team in user.teams:
+                if user.settings.selected_team == team:
+                    user.settings.selected_team = None
+                user.teams.remove(team)
+            case _:
+                pass
+
     try:
         db.commit()
     except IntegrityError as e:
@@ -227,9 +230,13 @@ class LoginInfo(BaseSchema):
 
 
 @router.get("/user/login", tags=["user"], name="getLogin", response_model=LoginInfo)
-def get_self(*, login: LoggedIn) -> LoggedIn:
-    if login.user and login.team is None and login.user.teams:
-        login.user.settings.selected_team = login.user.teams[0]
+def get_self(*, db: Database, login: LoggedIn) -> LoggedIn:
+    if login.user is not None:
+        if login.user.is_admin and login.user.settings.selected_tournament is None:
+            login.user.settings.selected_tournament = db.scalars(select(Tournament).order_by(Tournament.time.desc())).first()
+        if login.team is None and login.user.teams:
+            login.user.settings.selected_team = login.user.teams[0]
+        db.commit()
     return login
 
 
@@ -271,12 +278,13 @@ def get_user_settings(*, db: Database, user: CurrUser) -> UserSettings:
 def settings(
     *,
     db: Database,
-    login: LoggedIn,
+    user: CurrUser,
     email: str | None = None,
     team: ID | Literal["admin"] | None = None,
     tournament: ID | None = None,
 ) -> None:
-    user = login.user
+    if user is None:
+        raise HTTPException(404, "Not logged in")
     if email is not None:
         user.email = email
     if team == "admin":
@@ -423,6 +431,8 @@ def edit_team(
             case EditAction.add if user not in team.members:
                 team.members.append(user)
             case EditAction.remove if user in team.members:
+                if user.settings.selected_team == team:
+                    user.settings.selected_team = None
                 team.members.remove(user)
             case _:
                 raise ValueError
@@ -452,15 +462,14 @@ def get_problems(
     login: LoggedIn,
     ids: list[ID] | None = None,
     name: str | None = None,
-    tournament: ID | str | None = None,
+    tournament: ID | None = None,
+    tournament_name: str | None = None,
 ) -> dict[ID, schemas.Problem]:
     filters = []
-    if isinstance(tournament, UUID):
+    if tournament:
         filters.append(Problem.tournament_id == tournament)
-    elif isinstance(tournament, str):
-        filters.append(Problem.tournament.has(Tournament.name == tournament))
-    else:
-        filters.append(Problem.tournament == login.tournament)
+    if tournament_name:
+        filters.append(Problem.tournament.has(Tournament.name == tournament_name))
     if ids:
         filters.append(Problem.id.in_(ids))
     if name:
@@ -489,7 +498,7 @@ def create_problem(
     image: UploadFile | None = None,
     alt_text: str = Form(""),
     short_description: str = Form(""),
-    colour: Color = Form(Color("#ffffff")),
+    color: HexColor = Form(HexColor("#ffffff")),
     background_tasks: BackgroundTasks,
 ) -> str:
     _tournament = unwrap(db.get(Tournament, tournament))
@@ -501,6 +510,8 @@ def create_problem(
     else:
         file = DbFile.from_file(problem)
         page_data = None
+    if db.scalars(select(Problem).where(Problem.name == name, Problem.tournament_id == tournament)).first():
+        raise ValueTaken("name", name)
 
     prob = Problem(
         file=file,
@@ -510,14 +521,11 @@ def create_problem(
         end=end,
         image=_image,
         description=short_description,
-        colour=colour.as_hex(),
+        colour=color.as_hex(),
         page_data=page_data,
     )
-    try:
-        db.add(prob)
-        db.commit()
-    except IntegrityError as e:
-        raise ValueTaken("name", name) from e
+    db.add(prob)
+    db.commit()
     if page_data is None:
         background_tasks.add_task(prob.compute_page_data)
     return f"/problems/{prob.tournament.name}/{prob.name}"
@@ -534,7 +542,7 @@ def edit_problem(
     end: datetime | None = None,
     description: str | None = None,
     alt_text: str | None = None,
-    colour: Color | None = None,
+    colour: HexColor | None = None,
     file: UploadFile | None = None,
     image: UploadFile | None | Literal["noedit"] = Form("noedit"),
     tasks: BackgroundTasks,
@@ -696,6 +704,7 @@ def upload_program(
     problem_obj.assert_visible(login.team)
     if not isinstance(login.team, Team):
         raise HTTPException(400, "User has not selected a team")
+    problem_obj.assert_editable(login.team)
     prog = Program(name, login.team, role, DbFile.from_file(file), problem_obj)
     db.add(prog)
     db.commit()
