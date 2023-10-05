@@ -220,7 +220,7 @@ async function deleteProblem() {
               <a
                 role="button"
                 class="btn btn-primary btn-sm"
-                :href="`/api/problem/${problem.id}/download_all`"
+                :href="problem.file.location"
                 title="Download problem files"
                 >Download problem spec file <i class="bi bi-download ms-1"></i
               ></a>
