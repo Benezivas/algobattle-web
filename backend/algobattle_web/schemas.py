@@ -1,13 +1,22 @@
 """Module containing db model's schemas to avoid namespacing issues."""
 from abc import ABC
 from datetime import datetime
+from typing import Annotated
 from urllib.parse import quote as urlencode
 from uuid import UUID
 
-from pydantic import computed_field
+from pydantic import PlainSerializer, computed_field
 
 from algobattle_web.util import BaseSchema, MatchStatus, ObjID, ServerConfig, HexColor
 from algobattle.util import Role
+
+
+def naive_localize(date: datetime) -> str:
+    """Naively localizes a datetime."""
+    return date.astimezone().isoformat()
+
+
+LocalDatetime = Annotated[datetime, PlainSerializer(naive_localize)]
 
 
 class Base(BaseSchema, ABC):
@@ -21,7 +30,7 @@ class DbFile(Base):
 
     filename: str
     media_type: str
-    timestamp: datetime
+    timestamp: LocalDatetime
     alt_text: str
 
     @computed_field
@@ -62,8 +71,8 @@ class Problem(Base):
     name: str
     tournament: Tournament
     file: DbFile
-    start: datetime | None = None
-    end: datetime | None = None
+    start: LocalDatetime | None = None
+    end: LocalDatetime | None = None
     description: str
     image: DbFile | None = None
     colour: HexColor
@@ -82,14 +91,14 @@ class Program(Base):
     team: ObjID
     role: Role
     file: DbFile
-    creation_time: datetime
+    creation_time: LocalDatetime
     problem: ObjID
     user_editable: bool
 
 
 class ScheduledMatch(Base):
     name: str
-    time: datetime
+    time: LocalDatetime
     problem: ObjID
     points: float
 
@@ -103,7 +112,7 @@ class ResultParticipant(BaseSchema):
 
 class MatchResult(Base):
     status: MatchStatus
-    time: datetime
+    time: LocalDatetime
     problem: ObjID
     participants: list[ResultParticipant]
     logs: DbFile | None = None

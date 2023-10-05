@@ -501,7 +501,6 @@ def create_problem(
     color: HexColor = Form(HexColor("#ffffff")),
     background_tasks: BackgroundTasks,
 ) -> str:
-    print(color)
     _tournament = unwrap(db.get(Tournament, tournament))
     _image = DbFile.maybe(image, alt_text=alt_text)
     if isinstance(problem, UUID):
