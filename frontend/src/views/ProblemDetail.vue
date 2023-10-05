@@ -26,15 +26,6 @@ const teams = ref<ModelDict<Team>>({});
 
 const route = useRoute();
 const error = ref(null as null | string);
-const ownReport = computed(() => {
-  const team = store.team;
-  if (!team || team == "admin") {
-    return null;
-  } else {
-    const reportList = Object.values(reports.value).filter((report) => report.team == team.id);
-    return reportList.length != 0 ? reportList[0] : null;
-  }
-});
 const now = new Date();
 
 onMounted(async () => {
@@ -52,8 +43,8 @@ onMounted(async () => {
     tournaments.value = await TournamentService.get({});
   }
   const ret = await ReportService.get({ problem: problem.value.id });
-  reports.value = ret.reports;
-  teams.value = ret.teams;
+  reports.value = Object.fromEntries(Object.values(ret.reports).map(report => [report.team, report]));
+  teams.value = (await TeamService.get({tournament: problem.value.tournament.id})).teams;
 });
 
 const editReport = {
@@ -87,7 +78,7 @@ async function uploadReport() {
     team: editReport.team.id,
     formData: { file: editReport.newFile },
   });
-  reports.value[newReport.id] = newReport;
+  reports.value[newReport.team] = newReport;
   if (editReport.fileSelect.value) {
     editReport.fileSelect.value.value = "";
   }
@@ -106,7 +97,7 @@ async function removeReport() {
   if (editReport.fileSelect.value) {
     editReport.fileSelect.value.value = "";
   }
-  reports.value = Object.fromEntries(Object.entries(reports.value).filter(([id, report]) => report.team !== editReport.team!.id));
+  delete reports.value[editReport.team.id];
   Modal.getOrCreateInstance("#reportModal").hide();
 }
 function reportEditable() {
@@ -248,10 +239,10 @@ async function deleteProblem() {
       </template>
       <h4 id="report" class="mt-5">Report</h4>
       <a
-      v-if="ownReport"
+      v-if="store.team !== 'admin' && store.team?.id && store.team?.id in reports"
       role="button"
       class="btn btn-primary mb-3 me-3"
-      :href="ownReport.file.location"
+      :href="reports[store.team.id].file.location"
       title="Download report"
       >Download report<i class="bi bi-download ms-1"></i
       ></a>
@@ -272,17 +263,17 @@ async function deleteProblem() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(report, id) in reports">
-            <td>{{ teams[report.team]?.name }}</td>
+          <tr v-for="(team, id) in teams" :key="id">
+            <td>{{ team.name }}</td>
             <td>
-              <a class="btn btn-primary btn-sm" :href="report.file.location" title="Download file"
+              <a v-if="reports[id]" class="btn btn-primary btn-sm me-2" :href="reports[id].file.location" title="Download file"
                 >Download <i class="bi bi-download ms-1"></i
               ></a>
               <button
                 role="button"
-                class="btn btn-warning btn-sm ms-2"
+                class="btn btn-warning btn-sm"
                 title="Edit"
-                @click="(e) => openReportEdit(teams[report.team])"
+                @click="(e) => openReportEdit(team)"
               >
                 Edit <i class="bi bi-pencil ms-1"></i>
               </button>

@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, BackgroundTasks, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
