@@ -592,7 +592,7 @@ def add_report(
     problem_model = Problem.get_unwrap(db, problem)
     if problem_model.tournament != team.tournament:
         raise HTTPException(400, "Selected team and problem are not in the same tournament")
-    report = db.scalars(select(Report).where(Report.team == team, Report.problem == problem)).unique().first()
+    report = db.scalars(select(Report).where(Report.team == team, Report.problem_id == problem)).unique().first()
     if report:
         report.file = DbFile.from_file(file)
     else:
@@ -629,7 +629,7 @@ def get_reports(
     if team:
         filters.append(Report.team_id == team)
 
-    reports = db.scalars(select(Report).where(*filters).limit(SQL_LIMIT).offset(offset)).all()
+    reports = db.scalars(select(Report).where(*filters).limit(SQL_LIMIT).offset(offset)).unique().all()
     count = db.scalar(select(func.count()).select_from(Report).where(*filters)) or 0
     return Reports(reports=encode(reports), teams=encode(report.team for report in reports), total=count)
 

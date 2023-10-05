@@ -22,7 +22,6 @@ const tournaments: Ref<{
   [key: string]: Tournament;
 }> = ref({});
 const reports = ref<ModelDict<Report>>({});
-const description = ref<string | null>(null);
 const teams = ref<ModelDict<Team>>({});
 
 const route = useRoute();
@@ -58,7 +57,7 @@ onMounted(async () => {
 });
 
 const editReport = {
-  report: undefined as Report | undefined,
+  team: null as Team | null,
   newFile: null as File | null,
   fileSelect: ref<HTMLInputElement | null>(null),
   confirmDelete: ref(false),
@@ -69,8 +68,8 @@ function selectFile(event: InputFileEvent) {
     editReport.newFile = files[0];
   }
 }
-async function openReportEdit(report: Report) {
-  editReport.report = report;
+async function openReportEdit(team: Team) {
+  editReport.team = team;
   editReport.confirmDelete.value = false;
   editReport.newFile = null;
   if (editReport.fileSelect.value) {
@@ -79,13 +78,13 @@ async function openReportEdit(report: Report) {
   Modal.getOrCreateInstance("#reportModal").show();
 }
 async function uploadReport() {
-  if (!editReport.newFile || editReport.newFile.size == 0 || !problem.value || !editReport.report) {
+  if (!editReport.newFile || editReport.newFile.size == 0 || !problem.value || !editReport.team) {
     return;
   }
   var newReport = null;
   newReport = await ReportService.upload({
     problem: problem.value.id,
-    team: editReport.report.team,
+    team: editReport.team.id,
     formData: { file: editReport.newFile },
   });
   reports.value[newReport.id] = newReport;
@@ -95,23 +94,23 @@ async function uploadReport() {
   Modal.getOrCreateInstance("#reportModal").hide();
 }
 async function removeReport() {
-  if (!problem.value || !editReport.report) {
+  if (!problem.value || !editReport.team) {
     return;
   }
   if (!editReport.confirmDelete.value) {
     editReport.confirmDelete.value = true;
     return;
   }
-  ReportService.delete({problem: problem.value.id, team: editReport.report.team});
+  ReportService.delete({problem: problem.value.id, team: editReport.team.id});
   editReport.confirmDelete.value = false;
   if (editReport.fileSelect.value) {
     editReport.fileSelect.value.value = "";
   }
-  delete reports.value[editReport.report.id];
+  reports.value = Object.fromEntries(Object.entries(reports.value).filter(([id, report]) => report.team !== editReport.team!.id));
   Modal.getOrCreateInstance("#reportModal").hide();
 }
 function reportEditable() {
-  return (store.team == "admin" || !problem.value?.end || new Date(problem.value.end) >= now);
+  return (store.team != "admin" || !problem.value?.end || new Date(problem.value.end) >= now);
 }
 
 let editProblem = ref<ProblemEdit>();
@@ -179,10 +178,10 @@ async function deleteProblem() {
         {{ problem.name  }}
       </a>
       <ul class="nav nav-pills">
-        <li v-if="problem.description" class="nav-item">
+        <li v-if="pageData?.description" class="nav-item">
           <a class="nav-link" href="#description">Description</a>
         </li>
-        <li v-if="store.team == 'admin' || ownReport" class="nav-item">
+        <li class="nav-item">
           <a class="nav-link" href="#report">Report</a>
         </li>
         <li v-if="pageData?.instance_schema" class="nav-item">
@@ -247,43 +246,50 @@ async function deleteProblem() {
         <h4 id="description" class="mt-5">Description</h4>
         <div v-html="pageData.description"></div>
       </template>
-      <template v-if="ownReport || store.team == 'admin'">
-        <h4 id="report" class="mt-5">Report</h4>
-        <a
-          v-if="ownReport && store.team !== 'admin'"
-          role="button"
-          class="btn btn-primary btn-sm mb-3"
-          :href="ownReport.file.location"
-          title="Download report"
-          >Download report<i class="bi bi-download ms-1"></i
-        ></a>
-        <table v-else class="table">
-          <thead>
-            <tr>
-              <th>Team</th>
-              <th>File</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(report, id) in reports">
-              <td>{{ teams[report.team]?.name }}</td>
-              <td>
-                <a class="btn btn-primary btn-sm" :href="report.file.location" title="Download file"
-                  >Download <i class="bi bi-download ms-1"></i
-                ></a>
-                <button
-                  role="button"
-                  class="btn btn-warning btn-sm ms-2"
-                  title="Edit"
-                  @click="(e) => openReportEdit(report)"
-                >
-                  Edit <i class="bi bi-pencil ms-1"></i>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </template>
+      <h4 id="report" class="mt-5">Report</h4>
+      <a
+      v-if="ownReport"
+      role="button"
+      class="btn btn-primary mb-3 me-3"
+      :href="ownReport.file.location"
+      title="Download report"
+      >Download report<i class="bi bi-download ms-1"></i
+      ></a>
+      <button
+        v-if="reportEditable() && store.team !== 'admin' && store.team"
+        role="button"
+        class="btn btn-warning mb-3"
+        title="Edit report"
+        @click="(e) => openReportEdit(store.team as any)"
+      >
+        Edit report<i class="bi bi-pencil ms-1"></i>
+      </button>
+      <table v-if="store.team === 'admin'" class="table">
+        <thead>
+          <tr>
+            <th>Team</th>
+            <th>File</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(report, id) in reports">
+            <td>{{ teams[report.team]?.name }}</td>
+            <td>
+              <a class="btn btn-primary btn-sm" :href="report.file.location" title="Download file"
+                >Download <i class="bi bi-download ms-1"></i
+              ></a>
+              <button
+                role="button"
+                class="btn btn-warning btn-sm ms-2"
+                title="Edit"
+                @click="(e) => openReportEdit(teams[report.team])"
+              >
+                Edit <i class="bi bi-pencil ms-1"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
       <template v-if="pageData?.instance_schema">
         <h4 id="instance_schema" class="mt-5">Instance schema</h4>
         <pre><code>{{pageData.instance_schema}}</code></pre>
@@ -325,7 +331,7 @@ async function deleteProblem() {
           >
             Cancel
           </button>
-          <button v-if="editReport.report" type="button" class="btn btn-danger ms-2" @click="removeReport">
+          <button v-if="editReport.team" type="button" class="btn btn-danger ms-2" @click="removeReport">
             {{ editReport.confirmDelete.value ? "Confirm deletion" : "Delete report" }}
           </button>
           <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Discard</button>
