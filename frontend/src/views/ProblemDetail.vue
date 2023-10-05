@@ -157,8 +157,9 @@ async function deleteProblem() {
     confirmDeleteProblem.value = true;
     return;
   }
-  ProblemService.delete({ id: problem.value!.id });
-  router.push("problems");
+  await ProblemService.delete({ id: problem.value!.id });
+  Modal.getOrCreateInstance("#problemModal").hide();
+  router.push({name: "problems"});
 }
 </script>
 
