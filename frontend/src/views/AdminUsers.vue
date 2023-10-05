@@ -117,7 +117,7 @@ async function sendData() {
           email: editData.value.email,
           is_admin: editData.value.is_admin,
           teams: Object.fromEntries(
-            newTeams.map((id) => [id, "add"]).concat(removedTeams.map((id) => [id, "remove"]))
+            newTeams.map(team => [team.id, "add"]).concat(removedTeams.map(id => [id, "remove"]))
           ),
         },
       });
