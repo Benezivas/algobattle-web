@@ -131,6 +131,7 @@ function checkName() {
                 class="form-control "
                 id="prob_name"
                 v-model="data.name"
+                maxlength="64"
                 required
                 @input="checkName"
                 :class="{ 'is-invalid': error.type == 'name' }"
@@ -185,6 +186,7 @@ function checkName() {
                     name="short_description"
                     id="short_desc"
                     rows="5"
+                    maxlength="256"
                     v-model="data.description"
                   ></textarea>
                 </div>

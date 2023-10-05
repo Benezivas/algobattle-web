@@ -246,6 +246,7 @@ async function checkName() {
             class="form-control "
             type="text"
             v-model="editData.name"
+            maxlength="32"
             required
             :class="{ 'is-invalid': error == 'name' }"
             @change="checkName"

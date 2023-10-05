@@ -111,6 +111,7 @@ async function deleteTournament() {
             class="form-control "
             type="text"
             v-model="data.name"
+            maxlength="32"
             required
             :class="{ 'is-invalid': error == 'name' }"
           />

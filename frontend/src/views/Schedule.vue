@@ -107,7 +107,7 @@ async function deleteMatch() {
         </div>
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
-          <input id="name" class="form-control" type="text" v-model="editData.name" />
+          <input id="name" class="form-control" type="text" maxlength="32" v-model="editData.name" />
           <label for="time" class="form-label">Time</label>
           <input
             id="time"

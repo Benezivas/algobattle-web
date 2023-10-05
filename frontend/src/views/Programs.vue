@@ -146,6 +146,7 @@ onMounted(() => {
                 name="name"
                 id="prog_name"
                 v-model="newProgData.name"
+                maxlength="32"
               />
             </div>
           </div>

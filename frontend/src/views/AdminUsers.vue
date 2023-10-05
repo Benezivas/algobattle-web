@@ -303,7 +303,7 @@ async function checkEmail() {
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
           <div class="input-group w-em mb-3">
-            <input class="form-control " type="text" v-model="editData.name" required id="name" autocomplete="off" />
+            <input class="form-control " type="text" v-model="editData.name" required maxlength="32" id="name" autocomplete="off" />
             <input
               type="checkbox"
               class="btn-check"
@@ -325,6 +325,7 @@ async function checkEmail() {
             :class="{ 'is-invalid': error == 'email' }"
             id="email"
             type="email"
+            maxlength="128"
             v-model="editData.email"
             autocomplete="off"
             @change="checkEmail"
