@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import HoverBadgeVue from "@/components/HoverBadge.vue";
+import Paginator from "@/components/Paginator.vue";
 import { TournamentService, TeamService, UserService, type Team, type User, type Tournament } from "@client";
 import { Modal } from "bootstrap";
 import type { ModelDict } from "@/main";
@@ -8,8 +9,7 @@ import { computed, onMounted, ref } from "vue";
 const teams = ref<ModelDict<Team>>({});
 const users = ref<ModelDict<User>>({});
 const tournaments = ref<ModelDict<Tournament>>({});
-const currPage = ref(1);
-const maxPage = ref(1);
+const total = ref(0);
 let modal: Modal;
 
 const filterData = ref({
@@ -18,7 +18,6 @@ const filterData = ref({
   isAdmin: undefined as boolean | undefined,
   tournament: "",
   team: "",
-  limit: 25,
 });
 const isFiltered = computed(() => {
   return (
@@ -26,26 +25,23 @@ const isFiltered = computed(() => {
     filterData.value.email != "" ||
     filterData.value.isAdmin !== undefined ||
     filterData.value.tournament != "" ||
-    filterData.value.team != "" ||
-    filterData.value.limit != 25
+    filterData.value.team != ""
   );
 });
 onMounted(async () => {
-  tournaments.value = await TournamentService.allTournaments();
+  tournaments.value = await TournamentService.get({});
   modal = Modal.getOrCreateInstance("#userModal");
   search();
 });
-async function search(page: number = 1) {
+async function search(offset: number = 0) {
   const result = await UserService.searchUsers({
     name: filterData.value.name || undefined,
     tournament: filterData.value.tournament || undefined,
-    limit: filterData.value.limit,
-    page: page,
+    offset: offset,
   });
   teams.value = result.teams;
   users.value = result.users;
-  currPage.value = result.page;
-  maxPage.value = result.max_page;
+  total.value = result.total;
 }
 async function clearSearch() {
   filterData.value = {
@@ -54,7 +50,6 @@ async function clearSearch() {
     isAdmin: undefined as boolean | undefined,
     tournament: "",
     team: "",
-    limit: 25,
   };
   search();
 }
@@ -77,7 +72,7 @@ function emptyUser(): User {
   };
 }
 function teamName(team: Team) {
-  return `${team.name} (${tournaments.value[team.tournament].name})`;
+  return `${team.name} (${team.tournament.name})`;
 }
 
 function openModal(user: User | undefined) {
@@ -93,11 +88,9 @@ function openModal(user: User | undefined) {
   modal.show();
 }
 async function searchTeam() {
-  const result = await TeamService.searchTeam({
+  const result = await TeamService.get({
     name: teamSearchData.value.name || undefined,
     tournament: teamSearchData.value.tournament || undefined,
-    limit: editData.value.teams.length + 5,
-    page: 1,
   });
   teamSearchData.value.result = Object.values(result.teams)
     .filter((team) => !editData.value.teams.includes(team.id))
@@ -153,7 +146,6 @@ async function deleteUser() {
 async function checkEmail() {
   const result = await UserService.searchUsers({
     email: editData.value.email,
-    limit: 1,
     exactSearch: true,
   });
   const userIds = Object.keys(result.teams);
@@ -223,31 +215,7 @@ async function checkEmail() {
         <span class="visually-hidden">Applied filters</span>
       </span>
     </button>
-    <nav v-if="maxPage > 1" aria-label="Table pagination">
-      <ul class="pagination pagination-sm justify-content-end mb-0 ms-2">
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage <= 1 }" @click="(e) => search(1)"
-            ><i class="bi bi-chevron-double-left"></i
-          ></a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage <= 1 }" @click="(e) => search(currPage - 1)"
-            ><i class="bi bi-chevron-compact-left"></i
-          ></a>
-        </li>
-        <li class="page-item">currPage / maxPage</li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage >= maxPage }" @click="(e) => currPage + 1"
-            ><i class="bi bi-chevron-compact-right"></i
-          ></a>
-        </li>
-        <li class="page-item">
-          <a class="page-link" :class="{ disabled: currPage >= maxPage }" @click="(e) => maxPage"
-            ><i class="bi bi-chevron-double-right"></i
-          ></a>
-        </li>
-      </ul>
-    </nav>
+    <Paginator :total="total" @update="search"/>
   </div>
 
   <div class="d-flex justify-content-end">
@@ -296,18 +264,6 @@ async function checkEmail() {
           </div>
         </div>
         <div class="row">
-          <div class="col">
-            <label for="limitFilter" class="form-label mb-1">Limit</label>
-            <input
-              class="form-control "
-              id="limitFilter"
-              type="number"
-              min="1"
-              max="200"
-              step="1"
-              v-model="filterData.limit"
-            />
-          </div>
           <div class="col text-end align-self-end">
             <a v-if="isFiltered" class="btn btn-secondary me-2" @click="clearSearch" role="button">Clear</a>
             <a class="btn btn-primary" @click="(e) => search()" role="button">Apply</a>
@@ -336,8 +292,8 @@ async function checkEmail() {
         </div>
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
-          <div class="input-group w-em input-group-sm mb-3" name="name">
-            <input class="form-control " type="text" v-model="editData.name" required />
+          <div class="input-group w-em mb-3">
+            <input class="form-control " type="text" v-model="editData.name" required id="name" autocomplete="off" />
             <input
               type="checkbox"
               class="btn-check"
@@ -355,15 +311,17 @@ async function checkEmail() {
           </div>
           <label for="email" class="form-label">Email</label>
           <input
-            class="form-control  form-control-sm"
+            class="form-control"
             :class="{ 'is-invalid': error == 'email' }"
-            name="email"
+            id="email"
             type="email"
             v-model="editData.email"
+            autocomplete="off"
+            @change="checkEmail"
             required
           />
           <div class="invalid-feedback">Email already in use by another user</div>
-          <label for="teams" class="form-label mt-3 mb-0">Teams</label>
+          <span class="form-label mt-3 mb-0 fake-label">Teams</span>
           <div class="d-flex flex-row flex-wrap mb-1">
             <HoverBadgeVue
               v-for="(id, i) in editData.teams"
@@ -379,7 +337,7 @@ async function checkEmail() {
                 <div class="col">
                   <label for="searchTournament" class="form-label">Tournament</label>
                   <select
-                    class="form-select form-select-sm"
+                    class="form-select"
                     id="searchTournament"
                     v-model="teamSearchData.tournament"
                     @change="searchTeam"
@@ -398,9 +356,10 @@ async function checkEmail() {
                   <label for="searchName" class="form-label">Name</label>
                   <input
                     type="text"
-                    class="form-control form-control-sm"
+                    class="form-control"
                     id="searchName"
                     v-model="teamSearchData.name"
+                    autocomplete="off"
                     @input="searchTeam"
                   />
                 </div>
@@ -439,5 +398,8 @@ async function checkEmail() {
 <style>
 .teams-box {
   min-height: 1.5rem;
+}
+fake-label {
+  margin-bottom: 0.5rem;
 }
 </style>

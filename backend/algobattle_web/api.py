@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, status, HTTPException, UploadFile, Form, File, BackgroundTasks
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, BackgroundTasks
 from fastapi.routing import APIRoute
 from fastapi.dependencies.utils import get_typed_return_annotation
 from fastapi.datastructures import Default, DefaultPlaceholder
@@ -19,6 +19,7 @@ from algobattle_web.models import (
     File as DbFile,
     ProblemPageData,
     ResultParticipant,
+    UserSettings,
     encode,
     Session,
     ID,
@@ -40,20 +41,16 @@ from algobattle_web.util import (
     ServerConfig,
 )
 from algobattle_web.dependencies import (
-    CurrTournament,
     CurrUser,
     Database,
-    TeamIfAdmin,
-    curr_user,
+    LoggedIn,
     check_if_admin,
     get_db,
+    TeamIfAdmin,
 )
 from pydantic_extra_types.color import Color
 
 __all__ = ("router", "admin")
-
-T = TypeVar("T")
-InForm = Annotated[T, Form()]
 
 
 class EditAction(Enum):
@@ -61,6 +58,13 @@ class EditAction(Enum):
     remove = "remove"
 
 
+T = TypeVar("T")
+str32 = Annotated[str, Body(max_length=32)]
+str64 = Annotated[str, Body(max_length=64)]
+str128 = Annotated[str, Body(max_length=128)]
+str256 = Annotated[str, Body(max_length=256)]
+InForm = Annotated[T, Form()]
+InBody = Annotated[T, Body()]
 SQL_LIMIT = 50
 
 
@@ -97,16 +101,10 @@ def get_file(db: Database, *, id: ID) -> FileResponse:
 # *******************************************************************************
 
 
-@router.get("/user/self", tags=["user"], response_model=schemas.UserWithSettings)
-def get_self(*, user: CurrUser) -> User:
-    return user
-
-
 class UserSearch(BaseSchema):
-    page: int
-    max_page: int
     users: dict[ID, schemas.User]
     teams: dict[ID, schemas.Team]
+    total: int
 
 
 @admin.get("/user", tags=["user"])
@@ -119,8 +117,7 @@ def search_users(
     is_admin: bool | None = None,
     tournament: ID | None = None,
     team: ID | None = None,
-    limit: int = 25,
-    page: int = 1,
+    offset: int = 0,
     exact_search: bool = False,
 ) -> UserSearch:
     filters: list[Any] = []
@@ -142,14 +139,13 @@ def search_users(
         filters.append(User.teams.any(Team.tournament_id == tournament))
     if team is not None:
         filters.append(User.teams.any(Team.id == team))
-    page = max(page - 1, 0)
     users = (
         db.scalars(
             select(User)
             .where(*filters)
             .order_by(User.is_admin.desc(), User.name.asc())
-            .limit(limit)
-            .offset(page * limit)
+            .limit(SQL_LIMIT)
+            .offset(offset)
         )
         .unique()
         .all()
@@ -157,10 +153,9 @@ def search_users(
     user_count = db.scalar(select(func.count()).select_from(User).where(*filters)) or 0
     teams = [team for user in users for team in user.teams]
     return UserSearch(
-        page=page + 1,
-        max_page=user_count // limit + 1,
         users=encode(users),
         teams=encode(teams),
+        total=user_count,
     )
 
 
@@ -177,6 +172,11 @@ def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
     if db.scalars(select(User).filter(User.email == user.email)).unique().first() is not None:
         raise ValueTaken("email", user.email)
     new = User(email=user.email, name=user.name, is_admin=user.is_admin, teams=_teams)
+    if new.is_admin:
+        new.settings.selected_tournament = db.scalars(select(Tournament).order_by(Tournament.time.desc())).first()
+    elif new.teams:
+        new.settings.selected_team = new.teams[0]
+
     db.add(new)
     db.commit()
     return new
@@ -220,31 +220,24 @@ def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
     return True
 
 
-class EditSettings(BaseSchema):
-    email: str | None = None
-    team: ID | None = None
-    tournament: ID | None = None
+class LoginInfo(BaseSchema):
+    user: schemas.UserLogin | None
+    team: schemas.Team | Literal["admin"] | None
+    tournament: schemas.Tournament | None
 
 
-@router.patch("/user/settings", tags=["user"])
-def settings(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: EditSettings) -> User:
-    if edit.email is not None:
-        user.email = edit.email
-    if edit.team is not None:
-        if not any(edit.team == team.id for team in user.teams):
-            raise HTTPException(400, "User is not in the selected team")
-        user.selected_team_id = edit.team
-    if edit.tournament is not None:
-        if not user.is_admin:
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Only admin users can select tournaments")
-        user.selected_tournament = unwrap(db.get(Tournament, edit.tournament))
-    db.commit()
-    return user
+@router.get("/user/login", tags=["user"], name="getLogin", response_model=LoginInfo)
+def get_self(*, login: LoggedIn) -> LoggedIn:
+    if login.user and login.team is None and login.user.teams:
+        login.user.settings.selected_team = login.user.teams[0]
+    return login
 
 
 @router.post("/user/login", tags=["user"])
 def login(*, db: Database, email: str = Body(), target_url: str = Body(), tasks: BackgroundTasks) -> None:
-    user = unwrap(User.get(db, email))
+    user = User.get(db, email)
+    if user is None:
+        return
     token = user.login_token()
     url = str(ServerConfig.obj.frontend_base_url) + target_url + f"?login_token={token}"
     tasks.add_task(send_email, email, url)
@@ -263,67 +256,97 @@ def get_token(*, db: Database, login_token: str) -> TokenData:
 
 
 # *******************************************************************************
+# * Settings
+# *******************************************************************************
+
+
+@router.get("/settings/user", tags=["settings"], name="getUser")
+def get_user_settings(*, db: Database, user: CurrUser) -> UserSettings:
+    if user is None:
+        raise HTTPException(404, "Not logged in")
+    return user.settings
+
+
+@router.patch("/settings/user", tags=["settings"], name="editUser")
+def settings(
+    *,
+    db: Database,
+    login: LoggedIn,
+    email: str | None = None,
+    team: ID | Literal["admin"] | None = None,
+    tournament: ID | None = None,
+) -> None:
+    user = login.user
+    if email is not None:
+        user.email = email
+    if team == "admin":
+        if not user.is_admin:
+            raise HTTPException(400, "User is not an admin")
+        user.settings.selected_team = None
+    elif team is not None:
+        if not any(team == t.id for t in user.teams):
+            raise HTTPException(400, "User is not in the selected team")
+        user.settings.selected_team_id = team
+    if tournament is not None:
+        if not user.is_admin:
+            raise HTTPException(400, "User is not an admin")
+        user.settings.selected_tournament_id = tournament
+    db.commit()
+
+
+@router.patch("/settings/team", tags=["settings"], name="getUser")
+def member_edit_team(*, db: Database, login: LoggedIn, name: str32) -> Team:
+    team = login.team
+    if not isinstance(team, Team):
+        raise HTTPException(404, "User has not selected a team")
+    team.name = name
+    db.commit()
+    return team
+
+
+# *******************************************************************************
 # * Tournament
 # *******************************************************************************
 
 
-@router.post("/tournament/all", tags=["tournament"])
-def all_tournaments(*, db: Database, user: CurrUser) -> dict[ID, schemas.Tournament]:
-    if user.is_admin:
-        tournaments = db.scalars(select(Tournament)).unique().all()
-    else:
-        team = user.selected_team
-        if team is not None:
-            tournaments = [team.tournament]
-        else:
-            tournaments = []
+@router.get("/tournament", tags=["tournament"], name="get")
+def all_tournaments(
+    *, db: Database, login: LoggedIn, name: str | None = None, id: ID | None = None
+) -> dict[ID, schemas.Tournament]:
+    filters = []
+    if name:
+        filters.append(Tournament.name == name)
+    if id:
+        filters.append(Tournament.id == id)
+    tournaments = db.scalars(select(Tournament).where(*filters, Tournament.visible_sql(login.team))).all()
     return encode(tournaments)
 
 
-@router.post("/tournament", tags=["tournament"])
-def get_tournaments(*, db: Database, user: CurrUser, ids: list[ID]) -> dict[ID, schemas.Tournament]:
-    tournaments = (
-        db.scalars(select(Tournament).where(Tournament.id.in_(ids), Tournament.visible_sql(user))).unique().all()
-    )
-    return encode(tournaments)
-
-
-class CreateTournament(BaseSchema):
-    name: str = Field(min_length=1)
-
-
-@admin.post("/tournament/create", tags=["tournament"])
-def create_tournament(*, db: Session = Depends(get_db), tournament: CreateTournament) -> Tournament:
-    if db.scalars(select(Tournament).filter(Tournament.name == tournament.name)).unique().first() is not None:
-        raise ValueTaken("name", tournament.name)
-    _tournament = Tournament(tournament.name)
-    db.add(_tournament)
+@admin.post("/tournament", tags=["tournament"], name="create")
+def create_tournament(*, db: Database, name: str32) -> Tournament:
+    if db.scalars(select(Tournament).filter(Tournament.name == name)).first() is not None:
+        raise ValueTaken("name", name)
+    tournament = Tournament(name=name)
+    db.add(tournament)
     db.commit()
-    return _tournament
-
-
-class EditTournament(BaseSchema):
-    name: str | None = None
-
-
-@admin.post("/tournament/{id}/edit", tags=["tournament"])
-def edit_tournament(*, db: Session = Depends(get_db), id: ID, data: EditTournament) -> Tournament:
-    tournament = unwrap(Tournament.get(db, id))
-    if data.name is not None:
-        tournament.name = data.name
-    try:
-        db.commit()
-    except IntegrityError as e:
-        raise ValueTaken("name", tournament.name) from e
     return tournament
 
 
-@admin.post("/tournament/{id}/delete", tags=["tournament"])
-def delete_tournament(*, db: Session = Depends(get_db), id: ID) -> bool:
+@admin.patch("/tournament", tags=["tournament"], name="edit")
+def edit_tournament(*, db: Database, id: ID, name: str32) -> Tournament:
+    tournament = unwrap(Tournament.get(db, id))
+    if db.scalars(select(Tournament).where(Tournament.name == name, Tournament.id != id)).first() is None:
+        raise ValueTaken("name", tournament.name)
+    tournament.name = name
+    db.commit()
+    return tournament
+
+
+@admin.delete("/tournament", tags=["tournament"], name="delete")
+def delete_tournament(*, db: Database, id: ID) -> None:
     tournament = unwrap(Tournament.get(db, id))
     db.delete(tournament)
     db.commit()
-    return True
 
 
 # *******************************************************************************
@@ -331,45 +354,35 @@ def delete_tournament(*, db: Session = Depends(get_db), id: ID) -> bool:
 # *******************************************************************************
 
 
-@router.post("/team", tags=["team"])
-def get_teams(*, db: Database, user: CurrUser, ids: list[ID]) -> dict[ID, schemas.Team]:
-    teams = db.scalars(select(Team).where(Team.id.in_(ids), Team.visible_sql(user))).unique().all()
-    return encode(teams)
-
-
 class TeamSearch(BaseSchema):
-    page: int
-    max_page: int
+    total: int
     teams: dict[ID, schemas.Team]
     users: dict[ID, schemas.User]
 
 
-@admin.get("/team/search", tags=["team"])
-def search_team(
+@admin.get("/team", tags=["team"], name="get")
+def get_teams(
     *,
     db: Database,
+    ids: list[ID] = [],
     name: str | None = None,
     tournament: ID | None = None,
-    limit: int = 25,
-    page: int = 1,
-    exact_name: bool = False,
+    offset: int = 0,
 ) -> TeamSearch:
-    filters: list[Any] = []
+    filters = []
+    if ids:
+        filters.append(Team.id.in_(ids))
     if name is not None:
-        if exact_name:
-            filters.append(Team.name == name)
-        else:
-            filters.append(Team.name.contains(name, autoescape=True))
+        filters.append(Team.name.contains(name, autoescape=True))
     if tournament is not None:
         filters.append(Team.tournament_id == tournament)
-    page = max(page - 1, 0)
     teams = (
         db.scalars(
             select(Team)
             .where(*filters)
             .order_by(Team.tournament_id.asc(), Team.name.asc())
-            .limit(limit)
-            .offset(page * limit)
+            .limit(SQL_LIMIT)
+            .offset(offset)
         )
         .unique()
         .all()
@@ -377,53 +390,41 @@ def search_team(
     team_count = db.scalar(select(func.count()).select_from(Team).where(*filters)) or 0
     users = [user for team in teams for user in team.members]
     return TeamSearch(
-        page=page + 1,
-        max_page=team_count // limit + 1,
+        total=team_count,
         teams=encode(teams),
         users=encode(users),
     )
 
 
-class CreateTeam(BaseSchema):
-    name: str = Field(min_length=1)
-    tournament: ID
-    members: set[ID]
+@admin.post("/team", tags=["team"], name="create")
+def create_team(*, db: Database, name: str32, tournament: InBody[ID], members: InBody[set[ID]]) -> Team:
+    tournament_ = unwrap(Tournament.get(db, tournament))
+    if name in (t.name for t in tournament_.teams):
+        raise ValueTaken("name", name)
+    members_ = [unwrap(db.get(User, id)) for id in members]
+    team_ = Team(name, tournament_, members_)
+    db.add(team_)
+    db.commit()
+    return team_
 
 
-@admin.post("/team/create", tags=["team"])
-def create_team(*, db: Session = Depends(get_db), team: CreateTeam) -> Team:
-    tournament = unwrap(Tournament.get(db, team.tournament))
-    members = [unwrap(db.get(User, id)) for id in team.members]
-    _team = Team(team.name, tournament, members)
-    try:
-        db.add(_team)
-        db.commit()
-    except IntegrityError as e:
-        raise ValueTaken("name", team.name) from e
-    return _team
-
-
-class EditTeam(BaseSchema):
-    name: str | None = Field(None, min_length=1)
-    tournament: ID | None = None
-    members: dict[ID, EditAction] = {}
-
-
-@admin.post("/team/{id}/edit", tags=["team"])
-def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
+@admin.patch("/team", tags=["team"], name="edit")
+def edit_team(
+    *, db: Database, id: ID, name: str32 | None = None, tournament: InBody[ID | None] = None, members: dict[ID, EditAction] = {}
+) -> Team:
     team = unwrap(Team.get(db, id))
-    if edit.name is not None:
-        team.name = edit.name
-    if edit.tournament is not None:
-        team.tournament_id = edit.tournament
-    for id, action in edit.members.items():
+    if name is not None:
+        team.name = name
+    if tournament is not None:
+        team.tournament_id = tournament
+    for id, action in members.items():
         user = unwrap(db.get(User, id))
-        match action, user in team.members:
-            case [EditAction.add, False]:
+        match action:
+            case EditAction.add if user not in team.members:
                 team.members.append(user)
-            case [EditAction.remove, True]:
+            case EditAction.remove if user in team.members:
                 team.members.remove(user)
-            case [_, _]:
+            case _:
                 raise ValueError
     try:
         db.commit()
@@ -432,26 +433,11 @@ def edit_team(*, db: Session = Depends(get_db), id: ID, edit: EditTeam) -> Team:
     return team
 
 
-@admin.post("/team/{id}/delete", tags=["team"])
-def delete_team(*, db: Session = Depends(get_db), id: ID) -> bool:
+@admin.delete("/team", tags=["team"])
+def delete_team(*, db: Database, id: ID):
     team = unwrap(Team.get(db, id))
     db.delete(team)
     db.commit()
-    return True
-
-
-class MemberEditTeam(BaseSchema):
-    name: str | None = None
-
-
-@router.post("/team/self/edit", tags=["team"])
-def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr_user), edit: MemberEditTeam) -> Team:
-    team = unwrap(user.selected_team)
-    team.assert_editable(user)
-    if edit.name is not None:
-        team.name = edit.name
-    db.commit()
-    return team
 
 
 # *******************************************************************************
@@ -461,24 +447,31 @@ def member_edit_team(*, db: Session = Depends(get_db), user: User = Depends(curr
 
 @router.get("/problem", tags=["problem"], name="get")
 def get_problems(
-    *, db: Database, user: CurrUser, ids: list[ID] | None = None, tournament: ID | str | None = None, name: str | None = None
+    *,
+    db: Database,
+    login: LoggedIn,
+    ids: list[ID] | None = None,
+    name: str | None = None,
+    tournament: ID | str | None = None,
 ) -> dict[ID, schemas.Problem]:
     filters = []
-    if ids:
-        filters.append(Problem.id.in_(ids))
     if isinstance(tournament, UUID):
         filters.append(Problem.tournament_id == tournament)
     elif isinstance(tournament, str):
         filters.append(Problem.tournament.has(Tournament.name == tournament))
+    else:
+        filters.append(Problem.tournament == login.tournament)
+    if ids:
+        filters.append(Problem.id.in_(ids))
     if name:
         filters.append(Problem.name == name)
-    problems = db.scalars(select(Problem).where(*filters, Problem.visible_sql(user))).unique().all()
+    problems = db.scalars(select(Problem).where(*filters, Problem.visible_sql(login.team))).unique().all()
     return encode(problems)
 
 
 @router.get("/problem/pagedata", tags=["problem"], name="pageData")
-def get_problem_page_data(*, db: Database, user: CurrUser, id: ID) -> ProblemPageData | None:
-    prob = db.scalars(select(Problem).where(Problem.id == id, Problem.visible_sql(user))).first()
+def get_problem_page_data(*, db: Database, login: LoggedIn, id: ID) -> ProblemPageData | None:
+    prob = db.scalars(select(Problem).where(Problem.id == id, Problem.visible_sql(login.team))).first()
     if prob is None:
         raise ValueError
     return prob.page_data
@@ -518,7 +511,7 @@ def create_problem(
         image=_image,
         description=short_description,
         colour=colour.as_hex(),
-        page_data=page_data
+        page_data=page_data,
     )
     try:
         db.add(prob)
@@ -588,7 +581,7 @@ def delete_problem(*, db: Database, id: ID) -> bool:
 # *******************************************************************************
 
 
-@router.put("/report", tags=["report"])
+@router.put("/report", tags=["report"], name="upload")
 def add_report(
     *,
     db: Database,
@@ -599,7 +592,7 @@ def add_report(
     problem_model = Problem.get_unwrap(db, problem)
     if problem_model.tournament != team.tournament:
         raise HTTPException(400, "Selected team and problem are not in the same tournament")
-    report = db.scalars(select(Report).where(Report.team == team, Report.problem == problem)).unique().first()
+    report = db.scalars(select(Report).where(Report.team == team, Report.problem_id == problem)).unique().first()
     if report:
         report.file = DbFile.from_file(file)
     else:
@@ -609,9 +602,11 @@ def add_report(
     return report
 
 
-@router.delete("/report", tags=["report"])
-def delete_report(db: Database, team: TeamIfAdmin, problem: ID) -> None:
-    report = db.scalar(select(Report).where(Report.team == team, Report.problem_id == problem))
+@router.delete("/report", tags=["report"], name="delete")
+def delete_report(db: Database, login: LoggedIn, team: ID, problem: ID) -> None:
+    if isinstance(login.team, Team) and team != login.team.id:
+        raise HTTPException(403)
+    report = db.scalar(select(Report).where(Report.team_id == team, Report.problem_id == problem))
     if report is None:
         raise HTTPException(404, "No such report exists")
     db.delete(report)
@@ -620,22 +615,23 @@ def delete_report(db: Database, team: TeamIfAdmin, problem: ID) -> None:
 
 class Reports(BaseSchema):
     reports: dict[UUID, schemas.Report]
+    teams: dict[ID, schemas.Team]
     total: int
 
 
-@router.get("/report", tags=["report"])
+@router.get("/report", tags=["report"], name="get")
 def get_reports(
-    db: Database, user: CurrUser, problem: UUID | None = None, team: UUID | None = None, offset: int = 0
+    db: Database, login: LoggedIn, problem: UUID | None = None, team: UUID | None = None, offset: int = 0
 ) -> Reports:
-    filters = [Report.visible_sql(user)]
+    filters = [Report.visible_sql(login.team)]
     if problem:
         filters.append(Report.problem_id == problem)
     if team:
         filters.append(Report.team_id == team)
 
-    reports = db.scalars(select(Report).where(*filters).limit(SQL_LIMIT).offset(offset)).all()
+    reports = db.scalars(select(Report).where(*filters).limit(SQL_LIMIT).offset(offset)).unique().all()
     count = db.scalar(select(func.count()).select_from(Report).where(*filters)) or 0
-    return Reports(reports=encode(reports), total=count)
+    return Reports(reports=encode(reports), teams=encode(report.team for report in reports), total=count)
 
 
 # *******************************************************************************
@@ -647,36 +643,21 @@ class ProgramResults(BaseSchema):
     programs: dict[ID, schemas.Program]
     teams: dict[ID, schemas.Team]
     problems: dict[ID, schemas.Problem]
-    page: int
-    max_page: int
+    total: int
 
 
-@router.get("/program/search", tags=["program"])
+@router.get("/program", tags=["program"], name="get")
 def search_program(
     *,
     db: Database,
-    user: User = Depends(curr_user),
+    login: LoggedIn,
     name: str | None = None,
     team: ID | None = None,
     role: Role | None = None,
     problem: ID | None = None,
-    limit: int = 25,
-    page: int = 1,
+    offset: int = 0,
 ) -> ProgramResults:
-    if user.is_admin:
-        problems = Problem.get_all(db)
-    else:
-        assert user.selected_team is not None
-        problems = (
-            db.scalars(
-                select(Problem).where(
-                    Problem.visible_sql(user), Problem.tournament_id == user.selected_team.tournament_id
-                )
-            )
-            .unique()
-            .all()
-        )
-    filters = [Program.visible_sql(user)]
+    filters = [Program.visible_sql(login.team)]
     if name is not None:
         filters.append(Program.name.contains(name, autoescape=True))
     if team is not None:
@@ -685,48 +666,46 @@ def search_program(
         filters.append(Program.role == role)
     if problem is not None:
         filters.append(Program.problem_id == problem)
-    page = max(page - 1, 0)
     programs = (
         db.scalars(
-            select(Program).where(*filters).order_by(Program.creation_time.desc()).limit(limit).offset(page * limit)
+            select(Program).where(*filters).order_by(Program.creation_time.desc()).limit(SQL_LIMIT).offset(offset)
         )
         .unique()
         .all()
     )
     total_count = db.scalar(select(func.count()).select_from(Program).where(*filters)) or 0
-    teams = [program.team for program in programs]
     return ProgramResults(
         programs=encode(programs),
-        teams=encode(teams),
-        problems=encode(problems),
-        page=page + 1,
-        max_page=total_count // limit + 1,
+        teams=encode(program.team for program in programs),
+        problems=encode(program.problem for program in programs),
+        total=total_count,
     )
 
 
-@router.post("/program/upload", tags=["program"])
+@router.post("/program", tags=["program"], name="create")
 def upload_program(
     *,
-    db: Session = Depends(get_db),
-    user: User = Depends(curr_user),
+    db: Database,
+    login: LoggedIn,
     name: str = "",
     role: Role,
     problem: ID,
-    file: UploadFile = File(),
+    file: UploadFile,
 ) -> Program:
-    team = unwrap(user.selected_team)
     problem_obj = unwrap(db.get(Problem, problem))
-    problem_obj.assert_visible(user)
-    prog = Program(name, team, role, DbFile.from_file(file), problem_obj)
+    problem_obj.assert_visible(login.team)
+    if not isinstance(login.team, Team):
+        raise HTTPException(400, "User has not selected a team")
+    prog = Program(name, login.team, role, DbFile.from_file(file), problem_obj)
     db.add(prog)
     db.commit()
     return prog
 
 
-@router.post("/program/{id}/delete", tags=["program"])
-def delete_program(*, db: Session = Depends(get_db), user: CurrUser, id: ID) -> bool:
-    program = unwrap(db.get(Program, id))
-    program.assert_editable(user)
+@router.delete("/program", tags=["program"], name="delete")
+def delete_program(*, db: Database, login: LoggedIn, id: ID) -> bool:
+    program = Program.get_unwrap(db, id)
+    program.assert_editable(login.team)
     db.delete(program)
     db.commit()
     return True
@@ -742,22 +721,13 @@ class ScheduleInfo(BaseSchema):
     problems: dict[ID, schemas.Problem]
 
 
-@router.get("/match/schedule/get", tags=["match"])
-def scheduled_matches(
-    *,
-    db: Session = Depends(get_db),
-    user: User = Depends(curr_user),
-    tournament: str | None = None,
-) -> ScheduleInfo:
-    if tournament is None:
-        tournament_ = unwrap(user.selected_team).tournament
-    else:
-        tournament_ = unwrap(db.get(Tournament, tournament))
+@router.get("/match/schedule", tags=["match"], name="getScheduled")
+def scheduled_matches(*, db: Database, login: LoggedIn) -> ScheduleInfo:
     matches = (
         db.scalars(
-            select(ScheduledMatch)
-            .join(ScheduledMatch.problem)
-            .where(Problem.tournament_id == tournament_.id, Problem.visible_sql(user))
+            select(ScheduledMatch).where(
+                ScheduledMatch.problem.has((Problem.tournament == login.tournament) & Problem.visible_sql(login.team))
+            )
         )
         .unique()
         .all()
@@ -765,14 +735,14 @@ def scheduled_matches(
     return ScheduleInfo(matches=encode(matches), problems=encode(match.problem for match in matches))
 
 
-@admin.post("/match/schedule/create", tags=["match"])
+@admin.post("/match/schedule", tags=["match"], name="createSchedule")
 def create_schedule(
     *,
-    db: Session = Depends(get_db),
-    name: str = "",
+    db: Database,
+    name: str32 = "",
     time: datetime,
     problem: ID,
-    points: int,
+    points: int = 100,
 ) -> ScheduledMatch:
     problem_ = unwrap(db.get(Problem, problem))
     schedule = ScheduledMatch(time=time, problem=problem_, name=name, points=points)
@@ -781,15 +751,15 @@ def create_schedule(
     return schedule
 
 
-@admin.post("/match/schedule/{id}/edit", tags=["match"])
+@admin.patch("/match/schedule", tags=["match"], name="editSchedule")
 def edit_schedule(
     *,
-    db: Session = Depends(get_db),
+    db: Database,
     id: ID,
     name: str | None = None,
     time: datetime | None = None,
     problem: ID | None = None,
-    points: float | None = None,
+    points: int | None = None,
 ) -> ScheduledMatch:
     match = unwrap(db.get(ScheduledMatch, id))
     if name is not None:
@@ -804,8 +774,8 @@ def edit_schedule(
     return match
 
 
-@admin.post("/match/schedule/{id}/delete", tags=["match"])
-def delete_schedule(*, db: Session = Depends(get_db), id: ID) -> bool:
+@admin.delete("/match/schedule", tags=["match"], name="deleteSchedule")
+def delete_schedule(*, db: Database, id: ID) -> bool:
     match = unwrap(db.get(ScheduledMatch, id))
     db.delete(match)
     db.commit()
@@ -818,9 +788,9 @@ class MatchResultData(BaseSchema):
     teams: dict[ID, schemas.Team]
 
 
-@router.get("/match/result", tags=["match"])
-def results(*, db: Database, tournament: CurrTournament) -> MatchResultData:
-    results = db.scalars(select(MatchResult).join(Problem).where(Problem.tournament_id == tournament.id)).unique().all()
+@router.get("/match/result", tags=["match"], name="getResult")
+def results(*, db: Database, login: LoggedIn) -> MatchResultData:
+    results = db.scalars(select(MatchResult).where(MatchResult.problem.has(Problem.visible_sql(login.team)))).all()
     return MatchResultData(
         results=encode(results),
         problems=encode(result.problem for result in results),
@@ -828,14 +798,15 @@ def results(*, db: Database, tournament: CurrTournament) -> MatchResultData:
     )
 
 
-@admin.delete("/match/result", tags=["match"])
+@admin.delete("/match/result", tags=["match"], name="deleteResults")
 def delete_results(*, db: Database, ids: list[ID]) -> None:
-    for id in ids:
-        db.delete(unwrap(db.get(MatchResult, id)))
+    results = db.scalars(select(MatchResult).where(MatchResult.id.in_(ids))).all()
+    for res in results:
+        db.delete(res)
     db.commit()
 
 
-@admin.post("/match/result", tags=["match"], response_model=schemas.MatchResult)
+@admin.post("/match/result", tags=["match"], name="createResult", response_model=schemas.MatchResult)
 def add_result(
     *,
     db: Database,
@@ -870,7 +841,7 @@ def add_result(
     return db_res
 
 
-@admin.put("/match/result", tags=["match"], response_model=schemas.MatchResult)
+@admin.put("/match/result", tags=["match"], name="editResult", response_model=schemas.MatchResult)
 def update_result(
     db: Database,
     result: UUID,

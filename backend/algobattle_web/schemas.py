@@ -30,28 +30,33 @@ class DbFile(Base):
     def location(self) -> str:
         return f"{ServerConfig.obj.backend_base_url}/api/files/{urlencode(str(self.id))}"
 
-
-class User(Base):
-    name: str
-    email: str
-    is_admin: bool
-    teams: list[ObjID]
-
-
 class Tournament(Base):
     name: str
 
 
 class Team(Base):
     name: str
-    tournament: ObjID
+    tournament: Tournament
     members: list[ObjID]
 
 
-class UserWithSettings(User):
+class UserSettings(Base):
     selected_team: Team | None
     selected_tournament: Tournament | None
-    current_tournament: Tournament | None
+
+
+class _User(Base):
+    name: str
+    email: str
+    is_admin: bool
+
+
+class User(_User):
+    teams: list[ObjID]
+
+
+class UserLogin(_User):
+    teams: list[Team]
 
 
 class Problem(Base):

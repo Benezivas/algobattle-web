@@ -2,37 +2,77 @@
 import { RouterView, useRouter } from "vue-router";
 import PageNavbarIcon from "./components/HomeNavbarIcon.vue";
 import { store } from "./main";
-import { UserService } from "../typescript_client";
-import LoginView from "./views/LoginView.vue";
-import { useCookies } from "vue3-cookies";
-import { onMounted } from "vue";
-import type { UserWithSettings } from "../typescript_client";
+import { UserService, type Team, SettingsService } from "../typescript_client";
+import LoginPane from "./components/LoginPane.vue";
+import { useCookies } from "@vueuse/integrations/useCookies";
+import { computed, watch } from "vue";
+import { Dropdown } from "bootstrap";
 
 const router = useRouter();
-const { cookies } = useCookies();
+const cookies = useCookies();
 
-onMounted(async () => {
-  try {
-    store.user = await UserService.getSelf();
-  } catch {}
-
-  const route = router.currentRoute.value;
-  let login_token = route.query.login_token;
-  if (login_token instanceof Array) {
-    login_token = login_token[0];
+const queryToken = computed(() => {
+  let token = router.currentRoute.value.query.login_token;
+  if (token instanceof Array) {
+    token = token[0];
   }
-  if (login_token) {
-    const data = await UserService.getToken({ loginToken: login_token });
-    cookies.set("algobattle_user_token", data.token, data.expires);
-    store.user = await UserService.getSelf();
-    router.replace({ path: route.path });
+  return token;
+});
+watch(queryToken, async (newToken) => {
+  if (newToken) {
+    const data = await UserService.getToken({ loginToken: newToken });
+    cookies.set("algobattle_user_token", data.token, { expires: new Date(data.expires) });
+    router.replace({ path: router.currentRoute.value.path });
   }
 });
 
+const userToken = computed(() => {
+  return cookies.get("algobattle_user_token");
+});
+watch(
+  userToken,
+  async (userToken) => {
+    if (userToken) {
+      try {
+        const response = await UserService.getLogin();
+        if (response) {
+          store.user = response.user;
+          store.team = response.team;
+          store.tournament = response.tournament;
+          return;
+        }
+      } catch {}
+    }
+    store.user = null;
+  },
+  { immediate: true }
+);
+
 async function logout() {
+  Dropdown.getOrCreateInstance("#loggedInDropdown").hide();
   cookies.remove("algobattle_user_token");
-  store.user = {} as UserWithSettings;
 }
+
+async function selectTeam(team: Team | "admin") {
+  if (team == "admin" && !store.user?.is_admin) {
+    return;
+  }
+  store.user = await SettingsService.editUser({
+    team: team == "admin" ? team : team.id,
+  });
+}
+
+const displayName = computed(() => {
+  if (!store.user) {
+    return "Log in";
+  } else if (!store.team) {
+    return "No team"
+  } else if (store.team == "admin") {
+    return "Admin";
+  } else {
+    return store.team.name;
+  }
+});
 </script>
 
 <template>
@@ -53,41 +93,66 @@ async function logout() {
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul v-if="store.user.id" class="navbar-nav me-auto mb-2 mb-lg-0 nav nav-pills">
-          <PageNavbarIcon link="/problems" icon="boxes">Problems</PageNavbarIcon>
-          <PageNavbarIcon link="/programs" icon="file-earmark-code">Programs</PageNavbarIcon>
-          <PageNavbarIcon link="/schedule" icon="calendar-week">Schedule</PageNavbarIcon>
-          <PageNavbarIcon link="/results" icon="bar-chart-line">Results</PageNavbarIcon>
-          <PageNavbarIcon v-if="store.user.is_admin" link="/admin" icon="people">Admin panel</PageNavbarIcon>
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 nav nav-pills">
+          <template v-if="store.user">
+            <PageNavbarIcon link="/problems" icon="boxes">Problems</PageNavbarIcon>
+            <PageNavbarIcon link="/programs" icon="file-earmark-code">Programs</PageNavbarIcon>
+            <PageNavbarIcon link="/schedule" icon="calendar-week">Schedule</PageNavbarIcon>
+            <PageNavbarIcon link="/results" icon="bar-chart-line">Results</PageNavbarIcon>
+            <PageNavbarIcon v-if="store.team == 'admin'" link="/admin" icon="people"
+              >Admin panel</PageNavbarIcon
+            >
+          </template>
           <li class="nav-item mx-2">
             <a href="/docs/tutorial" class="nav-link align-middle"><i class="me-1 bi bi-book" />User Guide</a>
           </li>
         </ul>
 
-        <div v-if="store.user.id" class="nav-item dropdown">
+        <div class="nav-item dropdown">
           <a
             class="nav-link dropdown-toggle text-white"
             href="#"
             role="button"
             data-bs-toggle="dropdown"
+            data-bs-auto-close="outside"
             aria-expanded="false"
           >
-            <i class="bi bi-person-circle me-2"></i> <strong>{{ store.user.name }}</strong>
+            <i class="bi bi-person-circle me-2"></i> <strong>{{ displayName }}</strong>
           </a>
-          <ul class="dropdown-menu">
+          <ul v-if="store.user" class="dropdown-menu" id="loggedInDropdown">
             <li><RouterLink class="dropdown-item" to="settings">Settings</RouterLink></li>
+            <template v-if="store.user.teams.length >= (store.user.is_admin ? 1 : 2)">
+              <li><hr class="dropdown-divider" /></li>
+              <li class="dropdown-header">View as</li>
+              <li
+                class="dropdown-item"
+                v-for="team in store.user.teams"
+                :class="{ active: store.team != 'admin' && store.team?.id == team.id }"
+                @click="selectTeam(team)"
+              >
+                {{ team.name }}
+              </li>
+              <li
+                class="dropdown-item"
+                v-if="store.user.is_admin"
+                :class="{ active: store.team == 'admin' }"
+                @click="selectTeam('admin')"
+              >
+                Admin
+              </li>
+            </template>
             <li><hr class="dropdown-divider" /></li>
             <li>
               <button class="dropdown-item" @click="logout">Log out</button>
             </li>
           </ul>
+          <LoginPane v-else />
         </div>
       </div>
     </div>
   </nav>
 
   <div class="container-xxl p-5">
-    <RouterView v-if="store.user.id" />
-    <LoginView v-else />
+    <RouterView />
   </div>
 </template>

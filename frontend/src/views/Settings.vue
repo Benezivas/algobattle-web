@@ -1,54 +1,45 @@
 <script setup lang="ts">
-import { type ModelDict, store } from "@/main";
-import { TeamService, TournamentService, UserService } from "@client";
-import type { Team, Tournament } from "@client";
+import { store, type ModelDict } from "@/main";
+import { type Tournament, TournamentService, SettingsService, type UserSettings } from "@client";
 import { onMounted, ref } from "vue";
 
 const userEdit = ref({
-  email: store.user.email,
-  selectedTeam: store.user.selected_team?.id,
-  selectedTournament: store.user.selected_tournament?.id,
+  email: store.user!.email,
+  tournament: store.tournament,
 });
-const teams = ref<ModelDict<Team>>({});
-const tournaments = ref<{ [key: string]: Tournament }>({});
 const error = ref("");
+const tournaments = ref<ModelDict<Tournament>>({});
+const settings = ref<UserSettings>();
 
 onMounted(async () => {
-  teams.value = await TeamService.getTeams({ requestBody: store.user.teams });
-  if (store.user.is_admin) {
-    tournaments.value = await TournamentService.allTournaments();
+  settings.value = await SettingsService.getUser();
+  if (store.user?.is_admin) {
+    tournaments.value = await TournamentService.get({});
   }
-});
+})
 
 async function saveEdit() {
-  const newUser = await UserService.settings({
-    requestBody: {
+  await SettingsService.editUser({
       email: userEdit.value.email,
-      team: userEdit.value.selectedTeam,
-      tournament: userEdit.value.selectedTournament,
-    },
+      tournament: userEdit.value.tournament?.id,
   });
-  Object.assign(store.user, newUser);
   error.value = "success";
 }
 </script>
 
 <template>
-  <div class="alert alert-success" role="alert" v-if="error == 'success'">Changes have been saved.</div>
-  <h3>User settings</h3>
-  <label class="form-label" for="emailInput">Email address</label>
-  <input type="email" class="form-control  mb-2" id="emailInput" v-model="userEdit.email" />
-  <label for="selectedTeam" class="form-label">Selected team</label>
-  <select class="form-select" name="selectedTeam" v-model="userEdit.selectedTeam">
-    <option v-for="(team, id) in teams" :value="id">
-      {{ team.name + ` (${tournaments[team.tournament]?.name})` }}
-    </option>
-  </select>
-  <template v-if="store.user.is_admin">
-    <label for="currTournament" class="form-label">Current Tournament</label>
-    <select class="form-select" name="currTournament" v-model="userEdit.selectedTournament">
-      <option v-for="(tournament, id) in tournaments" :value="id">{{ tournament.name }}</option>
-    </select>
+  <template v-if="store.user">
+    <div class="alert alert-success" role="alert" v-if="error == 'success'">Changes have been saved.</div>
+    <h3>User settings</h3>
+    <label class="form-label" for="emailInput">Email address</label>
+    <input type="email" class="form-control  mb-2" id="emailInput" v-model="userEdit.email" />
+    <template v-if="store.user.is_admin">
+      <label for="tournament_select" class="form-label">Select tournament</label>
+      <select id="tournament_select" class="form-select" v-model="userEdit.tournament">
+        <option v-for="(tournament, id) in tournaments" :value="tournament" :key="id">{{ tournament.name }}</option>
+      </select>
+    </template>
+    <button type="submit" class="btn btn-primary mt-4" @click="saveEdit">Save changes</button>
   </template>
-  <button type="submit" class="btn btn-primary mt-4" @click="saveEdit">Save changes</button>
+    <div v-else class="alert alert-danger" role="alert">You are not logged in so you cannot edit any settings.</div>
 </template>

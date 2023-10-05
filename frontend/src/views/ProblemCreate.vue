@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import FileInput from "../components/FileInput.vue";
-import { TournamentService, ProblemService } from "@client";
+import { ProblemService } from "@client";
 import router from "@/router";
 import type { Tournament, Problem } from "@client";
 import { computed, onMounted, ref } from "vue";
+import { store } from "@/main";
 
 const page = ref(0);
 const error = ref<{
@@ -11,13 +12,11 @@ const error = ref<{
   detail?: string,
 }>({});
 const problems = ref<{ [key: string]: Problem }>({});
-const tournaments = ref<{ [key: string]: Tournament }>({});
 const data = ref({
   file: undefined as File | undefined,
   copyFrom: undefined as string | undefined,
 
   name: "",
-  tournament: "",
   start: undefined as string | undefined,
   end: undefined as string | undefined,
   image: undefined as File | undefined,
@@ -32,25 +31,23 @@ const imageUrl = computed(() => {
 });
 
 onMounted(async () => {
-  problems.value = await ProblemService.get({});
-  tournaments.value = await TournamentService.allTournaments();
+  problems.value = await ProblemService.get({tournament: store.tournament?.id});
 });
 
 async function createProblem() {
+  if (!store.tournament) {
+    return
+  }
   try {
     const {file, copyFrom, ...payload} = data.value;
-    const location = await ProblemService.create({ formData: {...payload, problem: file || copyFrom!} });
+    const location = await ProblemService.create({ formData: {...payload, problem: file || copyFrom!, tournament: store.tournament.id} });
     router.push(location);
   } catch {
     error.value.type = "server";
   }
 }
 function checkName() {
-  if (
-    Object.values(problems.value).filter(
-      (prob) => prob.name == data.value.name && prob.tournament.id == data.value.tournament
-    ).length != 0
-  ) {
+  if (Object.values(problems.value).filter((prob) => prob.name == data.value.name).length != 0) {
     error.value.type = "name";
   } else {
     error.value = {};
@@ -127,20 +124,6 @@ function checkName() {
             class="card-body"
             @submit.prevent="(e) => page++"
           >
-            <div class="mb-3">
-              <label for="tournament_sel" class="form-label">Tournament</label>
-              <select
-                class="form-select"
-                id="tournament_sel"
-                name="tournament"
-                required
-                v-model="data.tournament"
-                @change="checkName"
-              >
-                <option v-for="(tournament, id) in tournaments" :value="id">{{ tournament.name }}</option>
-              </select>
-              <div class="invalid-feedback"></div>
-            </div>
             <div class="mb-3">
               <label for="prob_name" class="form-label">Name</label>
               <input

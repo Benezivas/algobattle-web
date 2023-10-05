@@ -1,6 +1,7 @@
 "Database models"
+from abc import abstractmethod
 from datetime import timedelta, datetime
-from typing import IO, Callable, ClassVar, Iterable, Any
+from typing import IO, Callable, ClassVar, Iterable, Any, TypeAlias
 from typing import Any, BinaryIO, Iterable, Literal, Self, cast, overload, Annotated, Sequence
 from typing_extensions import TypedDict
 from uuid import UUID, uuid4
@@ -10,15 +11,15 @@ from zipfile import ZipFile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import JSON, MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
+from sqlalchemy import JSON, ColumnElement, MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
 from sqlalchemy.event import listens_for
-from sqlalchemy.sql import true as sql_true, or_, and_
-from sqlalchemy.sql._typing import _ColumnExpressionArgument
+from sqlalchemy.sql import true as sql_true, false as sql_false
 from sqlalchemy.orm import relationship, Mapped, mapped_column, Session, DeclarativeBase, registry, MappedAsDataclass
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.base import _NoArg
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
+from pydantic import Field
 
 from algobattle.util import TempDir, Role as ProgramRole
 from algobattle.match import AlgobattleConfig
@@ -37,11 +38,78 @@ from algobattle_web.util import (
 
 
 ID = Annotated[UUID, mapped_column(default=uuid4)]
-str32 = Annotated[str, mapped_column(String(32))]
-str64 = Annotated[str, mapped_column(String(64))]
-str128 = Annotated[str, mapped_column(String(128))]
-str256 = Annotated[str, mapped_column(String(256))]
+str32 = Annotated[str, mapped_column(String(32)), Field(max_length=32)]
+str64 = Annotated[str, mapped_column(String(64)), Field(max_length=64)]
+str128 = Annotated[str, mapped_column(String(128)), Field(max_length=128)]
+str256 = Annotated[str, mapped_column(String(256)), Field(max_length=256)]
 strText = Annotated[str, mapped_column(Text)]
+LoggedIn: TypeAlias = "Team | Literal['admin'] | None"
+
+
+# cant make it an ABC because of metaclass issues
+class PermissionCheck:
+
+    @abstractmethod
+    def _visible(self, team: "Team") -> bool:
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def _visible_sql(cls, team: "Team") -> ColumnElement[bool]:
+        raise NotImplementedError
+
+    def _editable(self, team: "Team") -> bool:
+        return self._visible(team)
+
+    @classmethod
+    def _editable_sql(cls, team: "Team") -> ColumnElement[bool]:
+        return cls._visible_sql(team)
+
+    def visible(self, team: LoggedIn) -> bool:
+        match team:
+            case "admin":
+                return True
+            case Team():
+                return self._visible(team)
+            case None:
+                return False
+
+    @classmethod
+    def visible_sql(cls, team: LoggedIn) -> ColumnElement[bool]:
+        match team:
+            case "admin":
+                return sql_true()
+            case Team():
+                return cls._visible_sql(team)
+            case None:
+                return sql_false()
+
+    def assert_visible(self, team: LoggedIn) -> None:
+        if not self.visible(team):
+            raise PermissionExcpetion
+
+    def editable(self, team: LoggedIn) -> bool:
+        match team:
+            case "admin":
+                return True
+            case Team():
+                return self._visible(team) and self._editable(team)
+            case None:
+                return False
+
+    @classmethod
+    def editable_sql(cls, team: LoggedIn) -> ColumnElement[bool]:
+        match team:
+            case "admin":
+                return sql_true()
+            case Team():
+                return cls._visible_sql(team) & cls._editable_sql(team)
+            case None:
+                return sql_false()
+
+    def assert_editable(self, team: LoggedIn) -> None:
+        if not self.editable(team):
+            raise PermissionExcpetion
 
 
 class ProblemPageData(TypedDict, total=True):
@@ -98,34 +166,6 @@ class RawBase(MappedAsDataclass, DeclarativeBase):
     def get_all(cls, db: Session) -> Sequence[Self]:
         """Get all database entries of this type."""
         return db.scalars(select(cls)).unique().all()
-
-    def visible(self, user: "User") -> bool:
-        """Checks wether this model is visible to a given user."""
-        return True
-
-    @classmethod
-    def visible_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
-        """Emits a sql filter expression that checks whether the model is visible to a given user."""
-        return sql_true
-
-    def assert_visible(self, user: "User") -> None:
-        """Asserts that this model is visible to a given user."""
-        if not self.visible(user):
-            raise PermissionExcpetion
-
-    def editable(self, user: "User") -> bool:
-        """Checks wether this model is editable by a given user."""
-        return self.visible(user)
-
-    @classmethod
-    def editable_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
-        """Emits a sql filter expression that checks whether the model is editable by a given user."""
-        return cls.visible_sql(user)
-
-    def assert_editable(self, user: "User") -> None:
-        """Asserts that this model is editable by a given user."""
-        if not self.editable(user):
-            raise PermissionExcpetion
 
 
 class Base(RawBase, unsafe_hash=True):
@@ -292,38 +332,50 @@ team_members = Table(
 )
 
 
+class UserSettings(Base, unsafe_hash=True):
+    """Settings for each user."""
+
+    selected_team: Mapped["Team | None"] = relationship(lazy="joined", default=None)
+    selected_tournament: "Mapped[Tournament | None]" = relationship(lazy="joined", default=None)
+
+    selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), init=False)
+    selected_tournament_id: Mapped[UUID | None] = mapped_column(ForeignKey("tournaments.id"), init=False)
+
+
 class User(Base, unsafe_hash=True):
     """A user object."""
 
     email: Mapped[str128] = mapped_column(unique=True)
     name: Mapped[str32]
     is_admin: Mapped[bool] = mapped_column(default=False)
-    selected_team: Mapped["Team | None"] = relationship(lazy="joined", default=None)
-    selected_tournament: "Mapped[Tournament | None]" = relationship(default=None)
+    settings: Mapped[UserSettings] = relationship(default_factory=UserSettings)
 
     teams: Mapped[list["Team"]] = relationship(
         secondary=team_members, back_populates="members", lazy="joined", default_factory=list
     )
     token_id: Mapped[ID] = mapped_column(init=False)
-    selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), init=False)
-    selected_tournament_id: Mapped[UUID | None] = mapped_column(ForeignKey("tournaments.id"), init=False)
+    settings_id: Mapped[UUID] = mapped_column(ForeignKey("usersettingss.id"), init=False)
 
     Schema = schemas.User
 
-    def visible(self, user: Self) -> bool:
-        return user.is_admin or user == self
-
-    def editable(self, user: Self) -> bool:
-        return user.is_admin
-
     @property
-    def current_tournament(self) -> "Tournament | None":
-        if self.selected_team is not None:
-            return self.selected_team.tournament
+    def logged_in(self) -> "Team | Literal['admin'] | None":
+        if self.settings.selected_team is not None:
+            return self.settings.selected_team
         elif self.is_admin:
-            return self.selected_tournament
+            return "admin"
         else:
             return None
+
+    @property
+    def tournament(self) -> "Tournament | None":
+        match self.logged_in:
+            case Team(tournament=t):
+                return t
+            case "admin":
+                return self.settings.selected_tournament
+            case None:
+                return None
 
     @classmethod
     def get(cls, db: Session, identifier: ID | str) -> Self | None:
@@ -378,10 +430,11 @@ class User(Base, unsafe_hash=True):
         raise ValueError
 
 
-class Tournament(Base, unsafe_hash=True):
+class Tournament(Base, PermissionCheck, unsafe_hash=True):
     name: Mapped[str32] = mapped_column(unique=True)
+    time: Mapped[datetime] = mapped_column(default_factory=datetime.now, init=False)
 
-    teams: Mapped[list["Team"]] = relationship(back_populates="tournament", init=False)
+    teams: "Mapped[list[Team]]" = relationship(back_populates="tournament", init=False)
 
     Schema = schemas.Tournament
 
@@ -392,6 +445,13 @@ class Tournament(Base, unsafe_hash=True):
             return db.get(cls, identifier)
         else:
             return db.scalars(select(cls).filter(cls.name == identifier)).first()
+
+    def _visible(self, team: "Team") -> bool:
+        return team.tournament_id == self.id
+
+    @classmethod
+    def _visible_sql(cls, team: "Team") -> ColumnElement[bool]:
+        return Tournament.id == team.tournament_id
 
 
 class Team(Base, unsafe_hash=True):
@@ -432,7 +492,8 @@ class Team(Base, unsafe_hash=True):
             return db.query(cls).filter(cls.name == identifier, cls.tournament_id == tournament.id).first()
 
 
-class Problem(Base, unsafe_hash=True):
+
+class Problem(Base, PermissionCheck, unsafe_hash=True):
     file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
     image_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
@@ -458,18 +519,19 @@ class Problem(Base, unsafe_hash=True):
     def link(self) -> str:
         return f"{ServerConfig.obj.frontend_base_url}/problems/{self.tournament.name}/{self.name}"
 
-    def visible(self, user: User) -> bool:
-        if user.is_admin or self.start is None:
-            return True
-        else:
-            return self.start <= datetime.now()
+    def _visible(self, team: Team) -> bool:
+        return team.tournament == self.tournament and (self.start is None or self.start <= datetime.now())
 
     @classmethod
-    def visible_sql(cls, user: User) -> _ColumnExpressionArgument[bool]:
-        if user.is_admin:
-            return sql_true
-        else:
-            return or_(cls.start.is_(None), cls.start < datetime.now())
+    def _visible_sql(cls, team: Team) -> ColumnElement[bool]:
+        return (Problem.tournament_id == team.tournament_id) & (Problem.start.is_not(None) | (Problem.start <= datetime.now()))
+
+    def _editable(self, team: Team) -> bool:
+        return (self.end is None or self.end >= datetime.now())
+
+    @classmethod
+    def _editable_sql(cls, team: Team) -> ColumnElement[bool]:
+        return Problem.end.is_(None) | Problem.end >= datetime.now()
 
     def compute_page_data(self) -> None:
         """Prepares the problem for further use, installing dependencies and computing the page data table."""
@@ -499,7 +561,7 @@ class Problem(Base, unsafe_hash=True):
             db.commit()
 
 
-class Report(Base, unsafe_hash=True):
+class Report(Base, PermissionCheck, unsafe_hash=True):
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
@@ -510,30 +572,22 @@ class Report(Base, unsafe_hash=True):
     __table_args__ = (UniqueConstraint("team_id", "problem_id"),)
     Schema = schemas.Report
 
-    def visible(self, user: "User") -> bool:
-        return user.is_admin or self.team in user.teams
-
-    def editable(self, user: "User") -> bool:
-        return self.visible(user) and (
-            user.is_admin or (self.problem.end is None or self.problem.end >= datetime.now())
-        )
+    def _visible(self, team: Team) -> bool:
+        return self.team == team and self.problem.visible(team)
 
     @classmethod
-    def visible_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
-        if user.is_admin:
-            return sql_true
-        else:
-            return cls.team.in_(user.teams)
+    def _visible_sql(cls, team: Team) -> ColumnElement[bool]:
+        return (Report.team_id == team.id) & Report.problem.has(Problem.visible_sql(team))
+
+    def _editable(self, team: Team) -> bool:
+        return self.problem._editable(team)
 
     @classmethod
-    def editable_sql(cls, user: "User") -> _ColumnExpressionArgument[bool]:
-        if user.is_admin:
-            return super().editable_sql(user)
-        else:
-            return and_(super().editable_sql(user), or_(cls.problem.end == None, cls.problem.end >= datetime.now()))
+    def _editable_sql(cls, team: Team) -> ColumnElement[bool]:
+        return Report.problem.has(Problem._editable_sql(team))
 
 
-class Program(Base, unsafe_hash=True):
+class Program(Base, PermissionCheck, unsafe_hash=True):
     name: Mapped[str32]
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
@@ -547,12 +601,19 @@ class Program(Base, unsafe_hash=True):
 
     Schema = schemas.Program
 
+    def _visible(self, team: Team) -> bool:
+        return self.team == team
+
     @classmethod
-    def visible_sql(cls, user: User) -> _ColumnExpressionArgument[bool]:
-        if user.is_admin:
-            return sql_true
-        else:
-            return cls.team_id == user.selected_team_id
+    def _visible_sql(cls, team: Team) -> ColumnElement[bool]:
+        return Program.team_id == team.id
+
+    def _editable(self, team: Team) -> bool:
+        return self.user_editable and self.problem._editable(team)
+
+    @classmethod
+    def _editable_sql(cls, team: Team) -> ColumnElement[bool]:
+        return Program.user_editable & Program.problem.has(Problem._editable_sql(team))
 
 
 class ScheduledMatch(Base, unsafe_hash=True):
@@ -583,7 +644,7 @@ class ResultParticipant(RawBase):
         return hash(self.team_id)
 
 
-class MatchResult(Base, unsafe_hash=True):
+class MatchResult(Base, PermissionCheck, unsafe_hash=True):
     status: Mapped[MatchStatus]
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
@@ -596,5 +657,9 @@ class MatchResult(Base, unsafe_hash=True):
 
     Schema = schemas.MatchResult
 
-    def visible(self, user: User) -> bool:
-        return user.is_admin or len(set(user.teams).intersection(p.team for p in self.participants)) != 0
+    def _visible(self, team: Team) -> bool:
+        return any(team == p.team for p in self.participants)
+
+    @classmethod
+    def _visible_sql(cls, team: Team) -> ColumnElement[bool]:
+        return MatchResult.participants.any(ResultParticipant.team_id == team.id)
