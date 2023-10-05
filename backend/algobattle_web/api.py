@@ -469,7 +469,7 @@ def get_problems(
     if tournament:
         filters.append(Problem.tournament_id == tournament)
     if tournament_name:
-        filters.append(Problem.tournament.has(Tournament.name == tournament))
+        filters.append(Problem.tournament.has(Tournament.name == tournament_name))
     if ids:
         filters.append(Problem.id.in_(ids))
     if name:
