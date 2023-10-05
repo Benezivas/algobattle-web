@@ -35,7 +35,7 @@ async function sendData() {
       return;
     }
     newMatch = await MatchService.createSchedule({
-      name: editData.value.name,
+      requestBody: editData.value.name,
       time: editData.value.time,
       problem: editData.value.problem,
       points: editData.value.points,
