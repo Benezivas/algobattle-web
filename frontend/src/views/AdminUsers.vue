@@ -140,7 +140,7 @@ async function deleteUser() {
     confirmDelete.value = false;
   }
   await UserService.deleteUser({ id: editData.value.id });
-  delete teams.value[editData.value.id];
+  delete users.value[editData.value.id];
   modal.hide();
 }
 async function checkEmail() {
