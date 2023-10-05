@@ -155,39 +155,50 @@ function openDetail(result: MatchResult) {
 </script>
 
 <template>
-  <table class="table">
-    <thead>
-      <tr>
-        <th scope="col">Time</th>
-        <th scope="col">Problem</th>
-        <th scope="col">Status</th>
-        <th scope="col">Details</th>
-        <th v-if="store.team == 'admin'" scope="col"></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="(result, id) in results" :result="result" :key="id">
-        <td>{{ formatDateTime(result.time) }}</td>
-        <td>
-          <RouterLink :to="problems[result.problem].link">{{ problems[result.problem].name }}</RouterLink>
-        </td>
-        <td>{{ result.status }}</td>
-        <td>
-          <button type="button" class="btn btn-outline-primary btn-sm" @click="openDetail(result)">
-            <i class="bi bi-eye-fill"></i>
-          </button>
-        </td>
-        <td v-if="store.team == 'admin'" class="text-end">
-          <button type="button" class="btn btn-sm btn-warning" title="Edit" @click="(e) => openEdit(result)">
-            <i class="bi bi-pencil"></i>
-          </button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <button type="button" class="btn btn-primary btn-sm me-auto" @click="(e) => openEdit(undefined)">
-    Add new result
-  </button>
+  <template v-if="store.tournament">
+    <table v-if="Object.keys(results).length !== 0" class="table">
+      <thead>
+        <tr>
+          <th scope="col">Time</th>
+          <th scope="col">Problem</th>
+          <th scope="col">Status</th>
+          <th scope="col">Details</th>
+          <th v-if="store.team == 'admin'" scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(result, id) in results" :result="result" :key="id">
+          <td>{{ formatDateTime(result.time) }}</td>
+          <td>
+            <RouterLink :to="problems[result.problem].link">{{ problems[result.problem].name }}</RouterLink>
+          </td>
+          <td>{{ result.status }}</td>
+          <td>
+            <button type="button" class="btn btn-outline-primary btn-sm" @click="openDetail(result)">
+              <i class="bi bi-eye-fill"></i>
+            </button>
+          </td>
+          <td v-if="store.team == 'admin'" class="text-end">
+            <button type="button" class="btn btn-sm btn-warning" title="Edit" @click="(e) => openEdit(result)">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div v-else class="alert alert-info" role="alert">
+      There aren't any results in the {{ store.tournament.name }} tournament yet.
+    </div>
+    <button v-if="store.team == 'admin'" type="button" class="btn btn-primary btn-sm me-auto" @click="(e) => openEdit(undefined)">
+      Add new result
+    </button>
+  </template>
+  <div v-else-if="!store.user" class="alert alert-danger" role="alert">
+    You need to log in before you can view the results.
+  </div>
+  <div v-else class="alert alert-danger" role="alert">
+    You need to select a team before you can view the results.
+  </div>
 
   <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">

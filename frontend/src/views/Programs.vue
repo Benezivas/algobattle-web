@@ -68,42 +68,53 @@ onMounted(() => {
 </script>
 
 <template>
-  <table class="table table-hover mb-2" id="programs">
-    <thead>
-      <tr>
-        <th scope="col">Problem</th>
-        <th scope="col" v-if="store.team == 'admin'">Team</th>
-        <th scope="col">Role</th>
-        <th scope="col">Uploaded</th>
-        <th scope="col">Name</th>
-        <th scope="col">File</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="(program, id) in programs" :key="id">
-        <td>{{ problems[program.problem].name }}</td>
-        <td v-if="store.team == 'admin'">{{ teams[program.team].name }}</td>
-        <td>{{ program.role }}</td>
-        <td>{{ program.creation_time.toLocaleString() }}</td>
-        <td>{{ program.name }}</td>
-        <td>
-          <a
-            role="button"
-            class="btn btn-primary btn-sm"
-            :href="program.file.location"
-            title="Download program file"
-            >Download <i class="bi bi-download ms-1"></i
-          ></a>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <template v-if="store.tournament">
+    <table v-if="Object.keys(programs).length !== 0" class="table table-hover mb-2" id="programs">
+      <thead>
+        <tr>
+          <th scope="col">Problem</th>
+          <th scope="col" v-if="store.team == 'admin'">Team</th>
+          <th scope="col">Role</th>
+          <th scope="col">Uploaded</th>
+          <th scope="col">Name</th>
+          <th scope="col">File</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(program, id) in programs" :key="id">
+          <td>{{ problems[program.problem].name }}</td>
+          <td v-if="store.team == 'admin'">{{ teams[program.team].name }}</td>
+          <td>{{ program.role }}</td>
+          <td>{{ program.creation_time.toLocaleString() }}</td>
+          <td>{{ program.name }}</td>
+          <td>
+            <a
+              role="button"
+              class="btn btn-primary btn-sm"
+              :href="program.file.location"
+              title="Download program file"
+              >Download <i class="bi bi-download ms-1"></i
+            ></a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div v-else class="alert alert-info" role="alert">
+      There aren't any programs uploaded already.
+    </div>
 
-  <div class="d-flex mb-3 pe-2">
-    <button type="button" class="btn btn-primary btn-sm me-auto" @click="openModal">
-      Upload new program
-    </button>
-    <Paginator :total="total" @update="search"/>
+    <div class="d-flex mb-3 pe-2">
+      <button type="button" class="btn btn-primary btn-sm me-auto" @click="openModal">
+        Upload new program
+      </button>
+      <Paginator :total="total" @update="search"/>
+    </div>
+  </template>
+  <div v-else-if="!store.user" class="alert alert-danger" role="alert">
+    You need to log in before you can view the programs.
+  </div>
+  <div v-else class="alert alert-danger" role="alert">
+    You need to select a team before you can view your teams programs.
   </div>
 
   <div class="modal fade" id="uploadProgram" tabindex="-1" aria-labelledby="docLabel" aria-hidden="true">

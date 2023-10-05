@@ -54,35 +54,46 @@ async function deleteMatch() {
 </script>
 
 <template>
-  <table class="table">
-    <thead>
-      <tr>
-        <th scope="col">Name</th>
-        <th scope="col">Time</th>
-        <th scope="col">Problem</th>
-        <th scope="col">Points</th>
-        <th v-if="store.team == 'admin'" scope="col"></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="(match, id) in matches" :match="match" :key="id">
-        <td>{{ match.name }}</td>
-        <td>{{ match.time.toLocaleString() }}</td>
-        <td>
-          <RouterLink :to="problems[match.problem].link">{{ problems[match.problem].name }}</RouterLink>
-        </td>
-        <td>{{ match.points }}</td>
-        <td v-if="store.team == 'admin'" class="text-end">
-          <button type="button" class="btn btn-sm btn-warning" title="Edit" @click="(e) => openModal(match)">
-            <i class="bi bi-pencil"></i>
-          </button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-  <button type="button" class="btn btn-primary btn-sm me-auto" @click="(e) => openModal(undefined)">
-    Schedule new match
-  </button>
+  <template v-if="store.tournament">
+    <table v-if="Object.keys(matches).length !== 0" class="table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Time</th>
+          <th scope="col">Problem</th>
+          <th scope="col">Points</th>
+          <th v-if="store.team == 'admin'" scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(match, id) in matches" :match="match" :key="id">
+          <td>{{ match.name }}</td>
+          <td>{{ match.time.toLocaleString() }}</td>
+          <td>
+            <RouterLink :to="problems[match.problem].link">{{ problems[match.problem].name }}</RouterLink>
+          </td>
+          <td>{{ match.points }}</td>
+          <td v-if="store.team == 'admin'" class="text-end">
+            <button type="button" class="btn btn-sm btn-warning" title="Edit" @click="(e) => openModal(match)">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div v-else class="alert alert-info" role="alert">
+      There aren't any matches scheduled in the {{ store.tournament.name }} tournament yet.
+    </div>
+    <button v-if="store.team == 'admin'" type="button" class="btn btn-primary btn-sm me-auto" @click="(e) => openModal(undefined)">
+      Schedule new match
+    </button>
+  </template>
+  <div v-else-if="!store.user" class="alert alert-danger" role="alert">
+    You need to log in before you can view the scheduled matches.
+  </div>
+  <div v-else class="alert alert-danger" role="alert">
+    You need to select a team before you can view the scheduled matches.
+  </div>
 
   <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
