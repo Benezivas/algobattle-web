@@ -51,6 +51,7 @@ watch(
 async function logout() {
   Dropdown.getOrCreateInstance("#loggedInDropdown").hide();
   cookies.remove("algobattle_user_token");
+  router.go(0);
 }
 
 async function selectTeam(team: Team | "admin") {
