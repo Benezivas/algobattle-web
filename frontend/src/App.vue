@@ -67,7 +67,7 @@ const displayName = computed(() => {
   if (!store.user) {
     return "Log in";
   } else if (!store.team) {
-    return "No team"
+    return "No team";
   } else if (store.team == "admin") {
     return "Admin";
   } else {
@@ -125,21 +125,23 @@ const displayName = computed(() => {
             <template v-if="store.user.teams.length >= (store.user.is_admin ? 1 : 2)">
               <li><hr class="dropdown-divider" /></li>
               <li class="dropdown-header">View as</li>
-              <li
-                class="dropdown-item"
-                v-for="team in store.user.teams"
-                :class="{ active: store.team != 'admin' && store.team?.id == team.id }"
-                @click="selectTeam(team)"
-              >
-                {{ team.name }}
+              <li v-for="team in store.user.teams">
+                <button
+                  class="dropdown-item"
+                  :class="{ active: store.team != 'admin' && store.team?.id == team.id }"
+                  @click="selectTeam(team)"
+                >
+                  {{ team.name }}
+                </button>
               </li>
-              <li
+              <li v-if="store.user.is_admin">
+                <button
                 class="dropdown-item"
-                v-if="store.user.is_admin"
                 :class="{ active: store.team == 'admin' }"
                 @click="selectTeam('admin')"
-              >
-                Admin
+                >
+                  Admin
+                </button>
               </li>
             </template>
             <li><hr class="dropdown-divider" /></li>
