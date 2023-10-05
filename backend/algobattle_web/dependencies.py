@@ -32,16 +32,16 @@ CurrUser = Annotated[User | None, Depends(curr_user)]
 
 @dataclass
 class LoginInfo:
-    user: User
+    user: User | None
     team: Team | Literal["admin"] | None
     tournament: Tournament | None
 
     @classmethod
     def dependency(cls, user: CurrUser) -> Self:
-        if user is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-        else:
+        if user is not None:
             return cls(user, user.logged_in, user.tournament)
+        else:
+            return cls(None, None, None)
 
 
 LoggedIn = Annotated[LoginInfo, Depends(LoginInfo.dependency)]

@@ -271,12 +271,13 @@ def get_user_settings(*, db: Database, user: CurrUser) -> UserSettings:
 def settings(
     *,
     db: Database,
-    login: LoggedIn,
+    user: CurrUser,
     email: str | None = None,
     team: ID | Literal["admin"] | None = None,
     tournament: ID | None = None,
 ) -> None:
-    user = login.user
+    if user is None:
+        raise HTTPException(404, "Not logged in")
     if email is not None:
         user.email = email
     if team == "admin":
