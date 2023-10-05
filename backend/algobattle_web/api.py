@@ -173,7 +173,7 @@ def create_user(*, db: Session = Depends(get_db), user: CreateUser) -> User:
         raise ValueTaken("email", user.email)
     new = User(email=user.email, name=user.name, is_admin=user.is_admin, teams=_teams)
     if new.is_admin:
-        new.settings.selected_tournament = db.scalars(select(Tournament).order_by(Tournament.order.desc())).first()
+        new.settings.selected_tournament = db.scalars(select(Tournament).order_by(Tournament.time.desc())).first()
     elif new.teams:
         new.settings.selected_team = new.teams[0]
 
