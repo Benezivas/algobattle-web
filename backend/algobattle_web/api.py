@@ -511,7 +511,7 @@ def create_problem(
     else:
         file = DbFile.from_file(problem)
         page_data = None
-    if db.scalars(select(Problem).where(Problem.name == name, Problem.tournament == tournament)).first():
+    if db.scalars(select(Problem).where(Problem.name == name, Problem.tournament_id == tournament)).first():
         raise ValueTaken("name", name)
 
     prob = Problem(
