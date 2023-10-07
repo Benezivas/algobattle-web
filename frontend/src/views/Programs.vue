@@ -55,6 +55,7 @@ async function uploadProgram() {
     return;
   }
   const newProgram = await ProgramService.create({
+    name: newProgData.value.name,
     role: newProgData.value.role,
     problem: newProgData.value.problem,
     formData: {
