@@ -37,7 +37,7 @@ from algobattle_web.util import (
 )
 
 
-ID = Annotated[UUID, mapped_column(default=uuid4)]
+ID = UUID
 str32 = Annotated[str, mapped_column(String(32)), Field(max_length=32)]
 str64 = Annotated[str, mapped_column(String(64)), Field(max_length=64)]
 str128 = Annotated[str, mapped_column(String(128)), Field(max_length=128)]
