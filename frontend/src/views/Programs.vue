@@ -19,14 +19,14 @@ const searchData = ref({
 
 async function search(offset: number = 0) {
   const ret = await ProgramService.get({offset: offset });
-  programs.value = ret.programs;
-  teams.value = ret.teams;
-  total.value = ret.total;
   if (store.team === "admin") {
     problems.value = ret.problems;
   } else {
     problems.value = await ProblemService.get({tournament: store.tournament?.id})
   }
+  programs.value = ret.programs;
+  teams.value = ret.teams;
+  total.value = ret.total;
 }
 
 const newProgData = ref<{
