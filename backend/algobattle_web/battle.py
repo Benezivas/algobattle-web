@@ -18,7 +18,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         config = AlgobattleConfig.from_file(folder / "algobattle.toml")
         config.teams = {}
         config.project = ProjectConfig(name_images=False, cleanup_images=True)
-        config.problems[config.match.problem].location = scheduled_match.problem.file.path
+        config.problem.location = scheduled_match.problem.file.path
 
         paricipants: dict[ID, ResultParticipant] = {}
         for team in scheduled_match.problem.tournament.teams:

@@ -540,11 +540,9 @@ class Problem(Base, PermissionCheck, unsafe_hash=True):
             with ZipFile(problem.file.path, "r") as spec:
                 spec.extractall(folder)
             config = AlgobattleConfig.from_file(folder)
-            prob_name = config.match.problem
-            packages = config.problems[prob_name].dependencies
 
             try:
-                install_packages(packages)
+                install_packages(config.problem.dependencies)
             except RuntimeError:
                 pass
             try:
@@ -555,8 +553,8 @@ class Problem(Base, PermissionCheck, unsafe_hash=True):
 
             problem.page_data = ProblemPageData(
                 description=desc,
-                instance_schema=config.problem.instance_cls.io_schema(),
-                solution_schema=config.problem.solution_cls.io_schema(),
+                instance_schema=config.loaded_problem.instance_cls.io_schema(),
+                solution_schema=config.loaded_problem.solution_cls.io_schema(),
             )
             db.commit()
 
