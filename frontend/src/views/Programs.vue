@@ -6,6 +6,7 @@ import type { Problem, Program, Team } from "@client";
 import { onMounted, ref } from "vue";
 import FileInput from "@/components/FileInput.vue";
 import Paginator from "@/components/Paginator.vue";
+import DeleteButton from "@/components/DeleteButton.vue";
 
 const programs = ref<ModelDict<Program>>({});
 const problems = ref<ModelDict<Problem>>({});
@@ -66,6 +67,11 @@ async function uploadProgram() {
   modal.hide();
 }
 
+async function deleteProgram(program: Program) {
+  await ProgramService.delete({id: program.id});
+  delete programs.value[program.id];
+}
+
 onMounted(() => {
   search();
   modal = Modal.getOrCreateInstance("#uploadProgram");
@@ -83,6 +89,7 @@ onMounted(() => {
           <th scope="col">Uploaded</th>
           <th scope="col">Name</th>
           <th scope="col">File</th>
+          <th scope="col"></th>
         </tr>
       </thead>
       <tbody>
@@ -100,6 +107,9 @@ onMounted(() => {
               title="Download program file"
               >Download <i class="bi bi-download ms-1"></i
             ></a>
+          </td>
+          <td class="text-end">
+            <DeleteButton v-if="store.team === 'admin' || program.user_editable" position="after" @delete="deleteProgram(program)"/>
           </td>
         </tr>
       </tbody>
