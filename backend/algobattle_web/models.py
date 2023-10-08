@@ -354,7 +354,7 @@ class User(Base, unsafe_hash=True):
     teams: Mapped[list["Team"]] = relationship(
         secondary=team_members, back_populates="members", lazy="joined", default_factory=list
     )
-    token_id: Mapped[ID] = mapped_column(init=False)
+    token_id: Mapped[ID] = mapped_column(default_factory=uuid4, init=False)
     settings_id: Mapped[UUID] = mapped_column(ForeignKey("usersettingss.id"), init=False)
 
     Schema = schemas.User
