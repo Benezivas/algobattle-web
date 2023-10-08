@@ -14,7 +14,7 @@ from alembic.config import Config
 from alembic.command import upgrade, stamp
 from alembic.migration import MigrationContext
 
-from algobattle_web.models import Base, User
+from algobattle_web.models import Base, ServerSettings, User
 from algobattle_web.api import router as api, SchemaRoute
 from algobattle_web.util import PermissionExcpetion, ValueTaken, ServerConfig, SessionLocal
 
@@ -48,12 +48,17 @@ async def lifespan(app: FastAPI):
             else:
                 upgrade(alembic_cfg, "head")
 
-    # create the default admin user
     with SessionLocal() as db:
-        if User.get(db, ServerConfig.obj.admin_email) is None:
-            admin = User(email=ServerConfig.obj.admin_email, name="Admin", is_admin=True)
-            db.add(admin)
+        try:
+            ServerSettings.get(db)
+        except RuntimeError:
+            db.add(ServerSettings())
+        root = User.get(db, "")
+        if root is None:
+            root = User(email="", name="Root", is_admin=True)
+            db.add(root)
             db.commit()
+        print(f"Root user login link:\n{ServerConfig.obj.frontend_base_url}?login_token={root.login_token()}")
     yield
 
 

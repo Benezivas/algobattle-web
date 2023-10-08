@@ -8,7 +8,7 @@ from smtplib import SMTP
 from subprocess import run
 import sys
 import tomllib
-from typing import Annotated, ClassVar, Generic, Self, TypeVar
+from typing import Annotated, Any, ClassVar, Generic, Self, TypeVar
 from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 from os import environ
@@ -25,6 +25,8 @@ from pydantic import (
     BaseModel,
 )
 from fastapi import HTTPException
+from sqlalchemy import JSON, TypeDecorator
+from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.orm import sessionmaker
 
 
@@ -58,12 +60,12 @@ def model_to_id(obj: object) -> UUID:
 ObjID = Annotated[UUID, BeforeValidator(model_to_id)]
 
 
-class _EmailConfig(BaseSchema):
-    address: str
-    server: str
-    port: int
-    username: str
-    password: str
+class EmailConfig(BaseSchema):
+    address: str = ""
+    server: str = ""
+    port: int = 587
+    username: str = ""
+    password: str = ""
 
 
 class ServerConfig(BaseSchema):
@@ -74,7 +76,7 @@ class ServerConfig(BaseSchema):
     storage_path: Path = Path("/algobattle/dbfiles")
     match_execution_interval: timedelta = timedelta(minutes=1)
     base_url: AnyUrl
-    server_email: _EmailConfig
+    server_email: EmailConfig
 
     obj: ClassVar[Self]
 
@@ -224,3 +226,21 @@ def render_text(text: str, mime_type: str = "text/plain") -> str | None:
                 return None
     except Exception:
         return None
+
+
+M = TypeVar("M", bound=BaseSchema)
+class SqlableModel(TypeDecorator, Generic[M]):
+    """Stores pydantic objects as JSON in a sql table."""
+
+    impl = JSON
+    cache_ok = True
+
+    def __init__(self, source: type[M]):
+        self.source = source
+        super().__init__()
+
+    def process_bind_param(self, value: M | None, dialect: Dialect) -> dict[str, Any] | None:
+        return value.model_dump() if value else None
+
+    def process_result_value(self, value: dict[str, Any] | None, dialect: Dialect) -> M | None:
+        return self.source.model_validate(value) if value else None

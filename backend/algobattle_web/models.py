@@ -1,6 +1,8 @@
 "Database models"
 from abc import abstractmethod
 from datetime import timedelta, datetime
+from os import environ
+from secrets import token_bytes
 from typing import IO, Callable, ClassVar, Iterable, Any, TypeAlias
 from typing import Any, BinaryIO, Iterable, Literal, Self, cast, overload, Annotated, Sequence
 from typing_extensions import TypedDict
@@ -11,7 +13,7 @@ from zipfile import ZipFile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import JSON, ColumnElement, MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
+from sqlalchemy import JSON, ColumnElement, LargeBinary, MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
 from sqlalchemy.event import listens_for
 from sqlalchemy.sql import true as sql_true, false as sql_false
 from sqlalchemy.orm import relationship, Mapped, mapped_column, Session, DeclarativeBase, registry, MappedAsDataclass
@@ -26,8 +28,10 @@ from algobattle.match import AlgobattleConfig
 from algobattle_web import schemas
 from algobattle_web.util import (
     BaseSchema,
+    EmailConfig,
     MatchStatus,
     PermissionExcpetion,
+    SqlableModel,
     guess_mimetype,
     ServerConfig,
     SessionLocal,
@@ -180,6 +184,23 @@ class Base(RawBase, unsafe_hash=True):
     def get_unwrap(cls, db: Session, id: ID) -> Self:
         """Get the specified entry and raise an error if it does not exist."""
         return unwrap(db.get(cls, id))
+
+
+class ServerSettings(Base, kw_only=True):
+    """Singleton table for server wide settings."""
+
+    secret_key: Mapped[bytes] = mapped_column(LargeBinary(64), default_factory=lambda: token_bytes(64))
+    email_config: Mapped[EmailConfig] = mapped_column(SqlableModel(EmailConfig), default_factory=EmailConfig)
+
+    user_change_email: Mapped[bool] = mapped_column(default=True)
+    team_change_name: Mapped[bool] = mapped_column(default=True)
+
+    @classmethod
+    def get(cls, db: Session) -> Self:
+        obj = db.scalar(select(ServerSettings))
+        if not obj:
+            raise RuntimeError
+        return obj
 
 
 class File(Base):
@@ -455,6 +476,12 @@ class Tournament(Base, PermissionCheck, unsafe_hash=True):
         return Tournament.id == team.tournament_id
 
 
+class TeamSettings(Base, unsafe_hash=True):
+    """Settings for each team."""
+
+    pass
+
+
 class Team(Base, unsafe_hash=True):
     name: Mapped[str32]
     tournament: Mapped[Tournament] = relationship(back_populates="teams", uselist=False, lazy="joined")
@@ -462,6 +489,8 @@ class Team(Base, unsafe_hash=True):
     members: Mapped[list[User]] = relationship(
         secondary=team_members, back_populates="teams", lazy="joined", default_factory=list
     )
+    settings: Mapped[TeamSettings] = relationship(default_factory=TeamSettings)
+    settings_id: Mapped[UUID] = mapped_column(ForeignKey("teamsettingss.id"), init=False)
 
     __table_args__ = (UniqueConstraint("name", "tournament_id"),)
 
