@@ -1,33 +1,63 @@
 """Util functions."""
 from dataclasses import dataclass
-from datetime import timedelta
-from email.message import EmailMessage
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
-from smtplib import SMTP
 from subprocess import run
 import sys
-import tomllib
-from typing import Annotated, Any, ClassVar, Generic, Self, TypeVar
+from typing import Annotated, Any, Generic, Self, TypeVar
 from uuid import UUID
 from mimetypes import guess_type as mimetypes_guess_type
 from os import environ
 from markdown import markdown
 
 from pydantic import (
-    Base64Bytes,
     BeforeValidator,
     ConfigDict,
-    Field,
-    ValidationError,
-    field_validator,
-    AnyUrl,
     BaseModel,
 )
 from fastapi import HTTPException
 from sqlalchemy import JSON, TypeDecorator
 from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.orm import sessionmaker
+
+
+@dataclass
+class EnvConfig:
+    db_url: str
+    frontend_base_url: str
+    backend_base_url: str
+    db_files: Path
+
+    @classmethod
+    @lru_cache(maxsize=1)
+    def get(cls) -> Self:
+        if environ.get("DEV"):
+            return cls(
+                db_url="sqlite:///database.db",
+                frontend_base_url="http://localhost:5173",
+                backend_base_url="http://127.0.0.1:8000",
+                db_files=Path("db_files"),
+            )
+        else:
+            try:
+                db_password = environ["ALGOBATTLE_DB_PW"]
+            except:
+                raise SystemExit(
+                    "You need to specify the database password in the `ALGOBATTLE_DB_PW` environment variable"
+                )
+            try:
+                web_url = environ["ALGOBATTLE_BASE_URL"]
+            except KeyError:
+                raise SystemExit(
+                    "You need to specify the base url of your server in the `ALGOBATTLE_BASE_URL` environment variable"
+                )
+            return cls(
+                db_url=f"mysql+mysqldb://root:{db_password}@database:3306/algobattle",
+                frontend_base_url=web_url,
+                backend_base_url=web_url,
+                db_files=Path("/algobattle/dbfiles"),
+            )
 
 
 SessionLocal = sessionmaker()
@@ -66,70 +96,6 @@ class EmailConfig(BaseSchema):
     port: int = 587
     username: str = ""
     password: str = ""
-
-
-class ServerConfig(BaseSchema):
-    algorithm: str = "HS256"
-    secret_key: Base64Bytes = Field(min_length=32)
-    database_url: str = "mysql+mysqldb://root:{SQL_PASSWORD}@database:3306/algobattle"
-    admin_email: str
-    storage_path: Path = Path("/algobattle/dbfiles")
-    match_execution_interval: timedelta = timedelta(minutes=1)
-    base_url: AnyUrl
-    server_email: EmailConfig
-
-    obj: ClassVar[Self]
-
-    model_config = ConfigDict(validate_default=True)
-
-    @field_validator("database_url")
-    @classmethod
-    def parse_db_url(cls, val: str) -> str:
-        return val.format(SQL_PASSWORD=environ.get("SQL_PASSWORD", ""))
-
-    @property
-    def frontend_base_url(self) -> str:
-        if environ.get("DEV"):
-            return "http://localhost:5173"
-        else:
-            return str(self.base_url)[:-1]
-
-    @property
-    def backend_base_url(self) -> str:
-        if environ.get("DEV"):
-            return "http://127.0.0.1:8000"
-        else:
-            return str(self.base_url)[:-1]
-
-    @classmethod
-    def load(cls) -> None:
-        if hasattr(cls, "obj"):
-            return
-        try:
-            config_path = Path(__file__).parent / "config.toml" if environ.get("DEV") else "/algobattle/config.toml"
-            with open(config_path, "rb") as f:
-                toml_dict = tomllib.load(f)
-            cls.obj = cls.model_validate(toml_dict)
-        except (KeyError, OSError, ValidationError) as e:
-            raise SystemExit("Badly formatted or missing config file!\n\n" + str(e))
-
-
-def send_email(email: str, content: str) -> None:
-    if environ.get("DEV"):
-        print(f"sending email to {email}: {content}")
-        return
-    msg = EmailMessage()
-    msg["Subject"] = "Algobattle login"
-    msg["From"] = ServerConfig.obj.server_email.address
-    msg["To"] = email
-    msg.set_content(content)
-
-    server = SMTP(ServerConfig.obj.server_email.server, ServerConfig.obj.server_email.port)
-    server.ehlo()
-    server.starttls()
-    server.login(ServerConfig.obj.server_email.username, ServerConfig.obj.server_email.password)
-    server.sendmail(ServerConfig.obj.server_email.username, email, msg.as_string())
-    server.close()
 
 
 T = TypeVar("T")
@@ -229,6 +195,8 @@ def render_text(text: str, mime_type: str = "text/plain") -> str | None:
 
 
 M = TypeVar("M", bound=BaseSchema)
+
+
 class SqlableModel(TypeDecorator, Generic[M]):
     """Stores pydantic objects as JSON in a sql table."""
 

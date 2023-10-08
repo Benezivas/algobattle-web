@@ -1,6 +1,9 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
+from email.message import EmailMessage
 from enum import Enum
+from os import environ
+from smtplib import SMTP
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
 
@@ -19,6 +22,7 @@ from algobattle_web.models import (
     File as DbFile,
     ProblemPageData,
     ResultParticipant,
+    ServerSettings,
     UserSettings,
     encode,
     Session,
@@ -33,12 +37,12 @@ from algobattle_web.models import (
     User,
 )
 from algobattle_web.util import (
+    EnvConfig,
     MatchStatus,
+    SessionLocal,
     ValueTaken,
     unwrap,
     BaseSchema,
-    send_email,
-    ServerConfig,
 )
 from algobattle_web.dependencies import (
     CurrUser,
@@ -93,7 +97,6 @@ admin = APIRouter(prefix="/admin", dependencies=[Depends(check_if_admin)], route
 def get_file(db: Database, *, id: ID) -> FileResponse:
     file = unwrap(db.get(DbFile, id))
     return file.response("inline" if file.media_type == "application/pdf" else "attachment")
-
 
 # *******************************************************************************
 # * User
@@ -242,11 +245,33 @@ def get_self(*, db: Database, login: LoggedIn) -> LoggedIn:
 @router.post("/user/login", tags=["user"])
 def login(*, db: Database, email: str = Body(), target_url: str = Body(), tasks: BackgroundTasks) -> None:
     user = User.get(db, email)
-    if user is None:
-        return
-    token = user.login_token()
-    url = str(ServerConfig.obj.frontend_base_url) + target_url + f"?login_token={token}"
-    tasks.add_task(send_email, email, url)
+    if user is not None:
+        tasks.add_task(send_login_email, user.id, target_url)
+
+
+def send_login_email(user_id: UUID, target_url: str) -> None:
+    with SessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user:
+            return
+        token = user.login_token(db)
+        url = str(EnvConfig.get().frontend_base_url) + target_url + f"?login_token={token}"
+        if environ.get("DEV"):
+            print(f"sending email to {user.email}: {url}")
+            return
+        config = ServerSettings.get(db).email_config
+        msg = EmailMessage()
+        msg["Subject"] = "Algobattle login"
+        msg["From"] = config.address
+        msg["To"] = user.email
+        msg.set_content(url)
+
+        server = SMTP(config.server, config.port)
+        server.ehlo()
+        server.starttls()
+        server.login(config.username, config.password)
+        server.sendmail(config.username, user.email, msg.as_string())
+        server.close()
 
 
 class TokenData(BaseSchema):
@@ -257,8 +282,7 @@ class TokenData(BaseSchema):
 @router.post("/user/token", tags=["user"])
 def get_token(*, db: Database, login_token: str) -> TokenData:
     user = User.decode_login_token(db, login_token)
-    user.cookie()
-    return TokenData(token=user.cookie(), expires=datetime.now() + timedelta(weeks=4))
+    return TokenData(token=user.cookie(db), expires=datetime.now() + timedelta(weeks=4))
 
 
 # *******************************************************************************

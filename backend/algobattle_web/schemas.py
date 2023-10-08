@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import PlainSerializer, computed_field
 
-from algobattle_web.util import BaseSchema, MatchStatus, ObjID, ServerConfig
+from algobattle_web.util import BaseSchema, EnvConfig, MatchStatus, ObjID
 from algobattle.util import Role
 
 
@@ -36,7 +36,7 @@ class DbFile(Base):
     @computed_field
     @property
     def location(self) -> str:
-        return f"{ServerConfig.obj.backend_base_url}/api/files/{urlencode(str(self.id))}"
+        return f"{EnvConfig.backend_base_url}/api/files/{urlencode(str(self.id))}"
 
 class Tournament(Base):
     name: str

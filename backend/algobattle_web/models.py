@@ -1,7 +1,6 @@
 "Database models"
 from abc import abstractmethod
 from datetime import timedelta, datetime
-from os import environ
 from secrets import token_bytes
 from typing import IO, Callable, ClassVar, Iterable, Any, TypeAlias
 from typing import Any, BinaryIO, Iterable, Literal, Self, cast, overload, Annotated, Sequence
@@ -29,11 +28,11 @@ from algobattle_web import schemas
 from algobattle_web.util import (
     BaseSchema,
     EmailConfig,
+    EnvConfig,
     MatchStatus,
     PermissionExcpetion,
     SqlableModel,
     guess_mimetype,
-    ServerConfig,
     SessionLocal,
     install_packages,
     render_text,
@@ -277,7 +276,7 @@ class File(Base):
         name = str(self.id)
         if self.extension is not None:
             name += f".{self.extension}"
-        return ServerConfig.obj.storage_path / name
+        return EnvConfig.db_files / name
 
     @property
     def extension(self) -> str | None:
@@ -407,21 +406,21 @@ class User(Base, unsafe_hash=True):
         else:
             return db.scalars(select(cls).filter(cls.email == identifier)).first()
 
-    def cookie(self) -> str:
+    def cookie(self, db: Session) -> str:
         payload = {
             "type": "user",
             "user_id": self.id.hex,
             "token_id": self.token_id.hex,
             "exp": datetime.now() + timedelta(weeks=4),
         }
-        return jwt.encode(payload, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
+        return jwt.encode(payload, ServerSettings.get(db).secret_key, "HS256")
 
     @classmethod
     def decode_token(cls, db: Session, token: str | None) -> Self | None:
         if token is None:
             return
         try:
-            payload = jwt.decode(token, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
+            payload = jwt.decode(token, ServerSettings.get(db).secret_key, "HS256")
             if payload["type"] == "user":
                 user_id = UUID(cast(str, payload["user_id"]))
                 token_id = UUID(cast(str, payload["token_id"]))
@@ -431,18 +430,18 @@ class User(Base, unsafe_hash=True):
         except (JWTError, ExpiredSignatureError, NameError):
             return
 
-    def login_token(self, lifetime: timedelta = timedelta(hours=1)) -> str:
+    def login_token(self, db: Session, lifetime: timedelta = timedelta(hours=1)) -> str:
         payload = {
             "type": "login",
             "email": self.email,
             "exp": datetime.now() + lifetime,
         }
-        return jwt.encode(payload, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
+        return jwt.encode(payload, ServerSettings.get(db).secret_key, "HS256")
 
     @classmethod
     def decode_login_token(cls, db: Session, token: str) -> Self:
         try:
-            payload = jwt.decode(token, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
+            payload = jwt.decode(token, ServerSettings.get(db).secret_key, "HS256")
             if payload["type"] == "login":
                 user = User.get(db, cast(str, payload["email"]))
                 if user is not None:

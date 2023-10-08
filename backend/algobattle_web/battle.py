@@ -7,7 +7,7 @@ from sqlalchemy import select, create_engine
 from algobattle.match import Match, AlgobattleConfig, TeamInfo, ProjectConfig
 from algobattle.util import Role, TempDir, ExceptionInfo
 from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, ID
-from algobattle_web.util import MatchStatus, install_packages, ServerConfig, SessionLocal
+from algobattle_web.util import EnvConfig, MatchStatus, install_packages, SessionLocal
 
 
 def run_match(db: Session, scheduled_match: ScheduledMatch):
@@ -72,8 +72,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
 
 
 def main():
-    ServerConfig.load()
-    engine = create_engine(ServerConfig.obj.database_url)
+    engine = create_engine(EnvConfig.get().db_url)
     SessionLocal.configure(bind=engine)
     last_check = datetime.now()
     while True:

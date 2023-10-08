@@ -16,16 +16,12 @@ from alembic.migration import MigrationContext
 
 from algobattle_web.models import Base, ServerSettings, User
 from algobattle_web.api import router as api, SchemaRoute
-from algobattle_web.util import PermissionExcpetion, ValueTaken, ServerConfig, SessionLocal
-
-
-# needs to be top level because of CORSMiddleware
-ServerConfig.load()
+from algobattle_web.util import EnvConfig, PermissionExcpetion, ValueTaken, SessionLocal
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    engine = create_engine(ServerConfig.obj.database_url)
+    engine = create_engine(EnvConfig.get().db_url)
     SessionLocal.configure(bind=engine)
 
     # this creates the database itself, alembic/sqlalchemy code below creates the tables in it
@@ -58,7 +54,7 @@ async def lifespan(app: FastAPI):
             root = User(email="", name="Root", is_admin=True)
             db.add(root)
             db.commit()
-        print(f"Root user login link:\n{ServerConfig.obj.frontend_base_url}?login_token={root.login_token()}")
+        print(f"Root user login link:\n{EnvConfig.get().frontend_base_url}?login_token={root.login_token(db)}")
     yield
 
 
@@ -122,7 +118,7 @@ for route in app.routes:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=(ServerConfig.obj.frontend_base_url,),
+    allow_origins=(EnvConfig.get().frontend_base_url,),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
