@@ -38,6 +38,7 @@ from algobattle_web.models import (
     User,
 )
 from algobattle_web.util import (
+    EmailConfig,
     EnvConfig,
     MatchStatus,
     SessionLocal,
@@ -99,6 +100,7 @@ def get_file(db: Database, *, id: ID) -> FileResponse:
     file = unwrap(db.get(DbFile, id))
     return file.response("inline" if file.media_type == "application/pdf" else "attachment")
 
+
 # *******************************************************************************
 # * User
 # *******************************************************************************
@@ -144,11 +146,7 @@ def search_users(
         filters.append(User.teams.any(Team.id == team))
     users = (
         db.scalars(
-            select(User)
-            .where(*filters)
-            .order_by(User.is_admin.desc(), User.name.asc())
-            .limit(SQL_LIMIT)
-            .offset(offset)
+            select(User).where(*filters).order_by(User.is_admin.desc(), User.name.asc()).limit(SQL_LIMIT).offset(offset)
         )
         .unique()
         .all()
@@ -236,7 +234,9 @@ class LoginInfo(BaseSchema):
 def get_self(*, db: Database, login: LoggedIn) -> LoggedIn:
     if login.user is not None:
         if login.user.is_admin and login.user.settings.selected_tournament is None:
-            login.user.settings.selected_tournament = db.scalars(select(Tournament).order_by(Tournament.time.desc())).first()
+            login.user.settings.selected_tournament = db.scalars(
+                select(Tournament).order_by(Tournament.time.desc())
+            ).first()
         if login.team is None and login.user.teams:
             login.user.settings.selected_team = login.user.teams[0]
         db.commit()
@@ -299,7 +299,7 @@ def get_user_settings(*, db: Database, user: CurrUser) -> UserSettings:
 
 
 @router.patch("/settings/user", tags=["settings"], name="editUser")
-def settings(
+def edit_user_settings(
     *,
     db: Database,
     user: CurrUser,
@@ -329,7 +329,7 @@ def settings(
 
 
 @router.get("/settings/team", tags=["settings"], name="getTeam")
-def member_get_team(*, db: Database, login: LoggedIn) -> TeamSettings:
+def get_team_settings(*, db: Database, login: LoggedIn) -> TeamSettings:
     team = login.team
     if not isinstance(team, Team):
         raise HTTPException(404, "User has not selected a team")
@@ -337,7 +337,7 @@ def member_get_team(*, db: Database, login: LoggedIn) -> TeamSettings:
 
 
 @router.patch("/settings/team", tags=["settings"], name="editTeam")
-def member_edit_team(*, db: Database, login: LoggedIn, name: InBody[str32 | None] = None) -> Team:
+def edit_team_settings(*, db: Database, login: LoggedIn, name: InBody[str32 | None] = None) -> None:
     team = login.team
     if not isinstance(team, Team):
         raise HTTPException(404, "User has not selected a team")
@@ -346,7 +346,32 @@ def member_edit_team(*, db: Database, login: LoggedIn, name: InBody[str32 | None
             raise HTTPException(400, "Teams cannot change their own name")
         team.name = name
     db.commit()
-    return team
+
+
+@router.get("/settings/server", tags=["settings"], name="getServer")
+def get_server_settings(*, db: Database, login: LoggedIn) -> schemas.ServerSettings | schemas.AdminServerSettings:
+    if login.team == "admin":
+        return schemas.AdminServerSettings.model_validate(ServerSettings.get(db))
+    else:
+        return schemas.ServerSettings.model_validate(ServerSettings.get(db))
+
+
+@admin.patch("/settings/server", tags=["settings"], name="editServer")
+def edit_server_settings(
+    *,
+    db: Database,
+    user_change_email: InBody[bool | None] = None,
+    team_change_name: InBody[bool | None],
+    email_config: InBody[EmailConfig | None] = None,
+) -> None:
+    settings = ServerSettings.get(db)
+    if user_change_email is not None:
+        settings.user_change_email = user_change_email
+    if team_change_name is not None:
+        settings.team_change_name = team_change_name
+    if email_config is not None:
+        settings.email_config = email_config
+    db.commit()
 
 
 # *******************************************************************************
@@ -455,7 +480,12 @@ def create_team(*, db: Database, name: str32, tournament: InBody[ID], members: I
 
 @admin.patch("/team", tags=["team"], name="edit")
 def edit_team(
-    *, db: Database, id: ID, name: str32 | None = None, tournament: InBody[ID | None] = None, members: dict[ID, EditAction] = {}
+    *,
+    db: Database,
+    id: ID,
+    name: str32 | None = None,
+    tournament: InBody[ID | None] = None,
+    members: dict[ID, EditAction] = {},
 ) -> Team:
     team = unwrap(Team.get(db, id))
     if name is not None:

@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import PlainSerializer, computed_field
 
-from algobattle_web.util import BaseSchema, EnvConfig, MatchStatus, ObjID
+from algobattle_web.util import BaseSchema, EmailConfig, EnvConfig, MatchStatus, ObjID
 from algobattle.util import Role
 
 
@@ -50,6 +50,15 @@ class Team(Base):
 
 class TeamSettings(Base):
     pass
+
+
+class ServerSettings(Base):
+    user_change_email: bool
+    team_change_name: bool
+
+
+class AdminServerSettings(ServerSettings):
+    email_config: EmailConfig
 
 
 class UserSettings(Base):
