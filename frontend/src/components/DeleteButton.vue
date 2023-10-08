@@ -27,7 +27,7 @@ function del() {
   >
     Cancel
   </button>
-  <button type="button" class="btn btn-danger" @click="del">
+  <button type="button" class="btn btn-danger btn-sm" @click="del">
     {{ confirming ? "Confirm deletion" : "Delete" }}
   </button>
   <button
