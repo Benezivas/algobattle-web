@@ -98,6 +98,7 @@ function checkName() {
               class="w-em mb-2"
               id="prob_file"
               v-model="data.file"
+              accept=".algo"
               @change="(e: any) => data.copyFrom = undefined"
             />
             <label for="prob_select" class="form-label">Or copy an already existing one</label>
@@ -167,7 +168,7 @@ function checkName() {
                 </div>
                 <div class="mb-3">
                   <label for="image_file" class="form-label">Thumbnail image</label>
-                  <FileInput class="w-em" id="image_file" v-model="data.image" />
+                  <FileInput class="w-em" id="image_file" v-model="data.image" accept="image/*"/>
                 </div>
                 <div class="mb-3">
                   <label for="short_desc" class="form-label">Thumbnail alt text</label>

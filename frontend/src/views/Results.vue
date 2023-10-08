@@ -230,7 +230,7 @@ function openDetail(result: MatchResult) {
             </option>
           </select>
           <label for="logs" class="form-label">Log file</label>
-          <FileInput id="logs" v-model="editData.newLogs" />
+          <FileInput id="logs" v-model="editData.newLogs" accept=".json, application/json"/>
           <table class="table">
             <thead>
               <tr>

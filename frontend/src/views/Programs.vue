@@ -178,6 +178,7 @@ onMounted(() => {
               <FileInput
                 id="file_select"
                 v-model="newProgData.file"
+                accept=".prog"
                 required
               />
             </div>
