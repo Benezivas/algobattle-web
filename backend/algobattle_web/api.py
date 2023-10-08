@@ -39,7 +39,6 @@ from algobattle_web.util import (
     BaseSchema,
     send_email,
     ServerConfig,
-    HexColor,
 )
 from algobattle_web.dependencies import (
     CurrUser,
@@ -498,7 +497,7 @@ def create_problem(
     image: UploadFile | None = None,
     alt_text: str = Form(""),
     short_description: str = Form(""),
-    color: HexColor = Form(HexColor("#ffffff")),
+    color: str = Form("#ffffff"),
     background_tasks: BackgroundTasks,
 ) -> str:
     _tournament = unwrap(db.get(Tournament, tournament))
@@ -521,7 +520,7 @@ def create_problem(
         end=end,
         image=_image,
         description=short_description,
-        colour=color.as_hex(),
+        colour=color,
         page_data=page_data,
     )
     db.add(prob)
@@ -538,11 +537,11 @@ def edit_problem(
     id: ID,
     name: str | None = None,
     tournament: ID | None = None,
-    start: datetime | None = None,
-    end: datetime | None = None,
+    start: datetime | None | Literal["noedit"] = "noedit",
+    end: datetime | None | Literal["noedit"] = "noedit",
     description: str | None = None,
     alt_text: str | None = None,
-    colour: HexColor | None = None,
+    colour: str | None = None,
     file: UploadFile | None = None,
     image: UploadFile | None | Literal["noedit"] = Form("noedit"),
     tasks: BackgroundTasks,
@@ -561,7 +560,7 @@ def edit_problem(
     if alt_text is not None and problem.image is not None:
         problem.image.alt_text = alt_text
     if colour:
-        problem.colour = colour.as_hex()
+        problem.colour = colour
     if file:
         problem.file = DbFile.from_file(file)
         tasks.add_task(problem.compute_page_data)

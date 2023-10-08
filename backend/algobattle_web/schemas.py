@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import PlainSerializer, computed_field
 
-from algobattle_web.util import BaseSchema, MatchStatus, ObjID, ServerConfig, HexColor
+from algobattle_web.util import BaseSchema, MatchStatus, ObjID, ServerConfig
 from algobattle.util import Role
 
 
@@ -75,7 +75,7 @@ class Problem(Base):
     end: LocalDatetime | None = None
     description: str
     image: DbFile | None = None
-    colour: HexColor
+    colour: str
     # property is defined on db model to make it have access to the tournament name
     link: str
 

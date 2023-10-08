@@ -225,8 +225,3 @@ def render_text(text: str, mime_type: str = "text/plain") -> str | None:
                 return None
     except Exception:
         return None
-
-
-class HexColor(Color):
-    def __str__(self) -> str:
-        return self.as_hex()
