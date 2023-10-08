@@ -176,7 +176,10 @@ async function deleteProblem() {
         <li class="nav-item">
           <a class="nav-link" href="#config">Config</a>
         </li>
-        <li class="nav-item">
+        <li v-if="store.team === 'admin'" class="nav-item">
+          <a class="nav-link" href="#reports">Reports</a>
+        </li>
+        <li v-else-if="store.team" class="nav-item">
           <a class="nav-link" href="#report">Report</a>
         </li>
         <li v-if="pageData?.instance_schema" class="nav-item">
@@ -245,25 +248,29 @@ async function deleteProblem() {
         <h4 id="config" class="mt-5">Config</h4>
         <pre><code>{{pageData.config}}</code></pre>
       </template>
-      <h4 id="report" class="mt-5">Report</h4>
-      <a
-      v-if="store.team !== 'admin' && store.team?.id && store.team?.id in reports"
-      role="button"
-      class="btn btn-primary mb-3 me-3"
-      :href="reports[store.team.id].file.location"
-      title="Download report"
+      <template v-if="store.team !== 'admin'">
+        <h4 id="report" class="mt-5">Report</h4>
+        <a
+        v-if="store.team?.id && store.team?.id in reports"
+        role="button"
+        class="btn btn-primary mb-3 me-3"
+        :href="reports[store.team.id].file.location"
+        title="Download report"
       >Download report<i class="bi bi-download ms-1"></i
       ></a>
       <button
-        v-if="reportEditable() && store.team !== 'admin' && store.team"
+        v-if="reportEditable() && store.team"
         role="button"
         class="btn btn-warning mb-3"
         title="Edit report"
         @click="(e) => openReportEdit(store.team as any)"
-      >
+        >
         Edit report<i class="bi bi-pencil ms-1"></i>
       </button>
-      <table v-if="store.team === 'admin'" class="table">
+    </template>
+    <template v-else>
+        <h4 id="reports" class="mt-5">Reports</h4>
+      <table class="table">
         <thead>
           <tr>
             <th>Team</th>
@@ -289,6 +296,7 @@ async function deleteProblem() {
           </tr>
         </tbody>
       </table>
+    </template>
       <template v-if="pageData?.instance_schema">
         <h4 id="instance_schema" class="mt-5">Instance schema</h4>
         <pre><code>{{pageData.instance_schema}}</code></pre>
