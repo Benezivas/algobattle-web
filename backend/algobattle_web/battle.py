@@ -5,9 +5,9 @@ from anyio import run
 from sqlalchemy import select, create_engine
 
 from algobattle.match import Match, AlgobattleConfig, TeamInfo, ProjectConfig
-from algobattle.util import Role, TempDir
-from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, ID
-from algobattle_web.util import MatchStatus, install_packages, unwrap, ServerConfig, SessionLocal
+from algobattle.util import Role, TempDir, ExceptionInfo
+from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, ID, Team
+from algobattle_web.util import MatchStatus, install_packages, ServerConfig, SessionLocal
 
 
 def run_match(db: Session, scheduled_match: ScheduledMatch):
@@ -18,36 +18,42 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         config = AlgobattleConfig.from_file(folder / "algobattle.toml")
         config.teams = {}
         config.project = ProjectConfig(name_images=False, cleanup_images=True)
-        config.problem.location = scheduled_match.problem.file.path
         install_packages(config.problem.dependencies)
 
         paricipants: dict[ID, ResultParticipant] = {}
+        excluded_teams = set[Team]()
         for team in scheduled_match.problem.tournament.teams:
-            gen = unwrap(
+            gen = (
                 db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.generator))
                 .unique()
                 .first()
             )
-            sol = unwrap(
+            sol = (
                 db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.solver))
                 .unique()
                 .first()
             )
 
-            config.teams[team.name] = TeamInfo(generator=gen.file.path, solver=sol.file.path)
+            if gen and sol:
+                config.teams[team.name] = TeamInfo(generator=gen.file.path, solver=sol.file.path)
+            else:
+                excluded_teams.add(team)
             paricipants[team.id] = ResultParticipant(team, gen, sol, 0)
         db_result = MatchResult(MatchStatus.running, datetime.now(), scheduled_match.problem, set(paricipants.values()))
         db.add(db_result)
         db.commit()
 
-        result = run(Match.run, config)
+        result = Match()
+        run(result.run, config)
+        result.excluded_teams |= {
+            team.name: ExceptionInfo(type="RuntimeError", message="missing program") for team in excluded_teams
+        }
         points = result.calculate_points(scheduled_match.points)
 
         for team in db_result.participants:
             team.points = points[team.team.name]
         db_result.status = MatchStatus.complete
-        with open(folder / "result.json", "x") as f:
-            f.write(result.model_dump_json())
+        folder.joinpath("result.json").write_text(result.model_dump_json())
         db_result.logs = File.from_file(folder / "result.json", action="move")
         db.commit()
 
@@ -67,13 +73,9 @@ def run_scheduled_matches():
         if len(scheduled_matches) > 1:
             print("matches are scheduled too close together, aborting their execution!")
             return
-        try:
-            run_match(db, scheduled_matches[0])
-        except BaseException as e:
-            print(f"Exception occured when executing match:\n{e}")
-        finally:
-            db.delete(scheduled_matches[0])
-            db.commit()
+        run_match(db, scheduled_matches[0])
+        db.delete(scheduled_matches[0])
+        db.commit()
 
 
 def main():
@@ -88,3 +90,7 @@ def main():
         )
         sleep(next_exec.seconds)
         run_scheduled_matches()
+
+
+if __name__ == "__main__":
+    main()
