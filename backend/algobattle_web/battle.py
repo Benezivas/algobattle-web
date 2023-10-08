@@ -24,12 +24,24 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         excluded_teams = set[str]()
         for team in scheduled_match.problem.tournament.teams:
             gen = (
-                db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.generator))
+                db.scalars(
+                    select(Program).where(
+                        Program.team_id == team.id,
+                        Program.problem_id == scheduled_match.problem_id,
+                        Program.role == Role.generator,
+                    ).order_by(Program.creation_time.desc()).limit(1)
+                )
                 .unique()
                 .first()
             )
             sol = (
-                db.scalars(select(Program).where(Program.team_id == team.id, Program.role == Role.solver))
+                db.scalars(
+                    select(Program).where(
+                        Program.team_id == team.id,
+                        Program.problem_id == scheduled_match.problem_id,
+                        Program.role == Role.solver,
+                    ).order_by(Program.creation_time.desc()).limit(1)
+                )
                 .unique()
                 .first()
             )
