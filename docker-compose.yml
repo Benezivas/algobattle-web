@@ -26,7 +26,6 @@ services:
       - ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW}
       - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
     volumes:
-      - ./config.toml:/algobattle/config.toml
       - db-files:/algobattle/dbfiles
   runner:
     build: backend
@@ -41,7 +40,6 @@ services:
       - ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW}
       - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
     volumes:
-      - ./config.toml:/algobattle/config.toml
       - db-files:/algobattle/dbfiles
       - /var/run/docker.sock,target=/var/run/docker.sock
       - ./io:/algobattle/io
