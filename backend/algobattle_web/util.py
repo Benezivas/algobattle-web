@@ -24,7 +24,6 @@ from pydantic import (
     AnyUrl,
     BaseModel,
 )
-from pydantic_extra_types.color import Color
 from fastapi import HTTPException
 from sqlalchemy.orm import sessionmaker
 
