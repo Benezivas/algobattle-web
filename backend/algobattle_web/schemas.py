@@ -48,6 +48,10 @@ class Team(Base):
     members: list[ObjID]
 
 
+class TeamSettings(Base):
+    pass
+
+
 class UserSettings(Base):
     selected_team: Team | None
     selected_tournament: Tournament | None

@@ -478,7 +478,7 @@ class Tournament(Base, PermissionCheck, unsafe_hash=True):
 class TeamSettings(Base, unsafe_hash=True):
     """Settings for each team."""
 
-    pass
+    schema = schemas.TeamSettings
 
 
 class Team(Base, unsafe_hash=True):
