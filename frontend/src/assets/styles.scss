@@ -36,3 +36,7 @@
 :is(.form-select, .form-control):not(:is(td, .input-group) :is(.form-select, .form-control)) {
     margin-bottom: 1rem;
 }
+
+html {
+  scroll-padding-top: 64px;
+}
