@@ -174,6 +174,9 @@ async function deleteProblem() {
           <a class="nav-link" href="#description">Description</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" href="#config">Config</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="#report">Report</a>
         </li>
         <li v-if="pageData?.instance_schema" class="nav-item">
@@ -237,6 +240,10 @@ async function deleteProblem() {
       <template v-if="pageData?.description">
         <h4 id="description" class="mt-5">Description</h4>
         <div v-html="pageData.description"></div>
+      </template>
+      <template v-if="pageData">
+        <h4 id="config" class="mt-5">Config</h4>
+        <pre><code>{{pageData.config}}</code></pre>
       </template>
       <h4 id="report" class="mt-5">Report</h4>
       <a

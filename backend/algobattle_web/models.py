@@ -116,6 +116,7 @@ class ProblemPageData(TypedDict, total=True):
     """Data needed to render a problem page."""
 
     description: str | None
+    config: str
     instance_schema: str | None
     solution_schema: str | None
 
@@ -553,6 +554,7 @@ class Problem(Base, PermissionCheck, unsafe_hash=True):
 
             problem.page_data = ProblemPageData(
                 description=desc,
+                config=folder.joinpath("algobattle.toml").read_text(),
                 instance_schema=config.loaded_problem.instance_cls.io_schema(),
                 solution_schema=config.loaded_problem.solution_cls.io_schema(),
             )
