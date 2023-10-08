@@ -3,10 +3,23 @@ import { store, type ModelDict } from "@/main";
 import { MatchService, TournamentService, ProblemService } from "@client";
 import { Modal } from "bootstrap";
 import type { ScheduledMatch, Problem, Tournament } from "@client";
-import { onMounted, ref, toRaw } from "vue";
+import { computed, onMounted, ref, toRaw } from "vue";
 
 const matches = ref<ModelDict<ScheduledMatch>>({});
 const problems = ref<ModelDict<Problem>>({});
+const sortedMatches = computed(() => {
+  const sorted = Object.values(matches.value);
+  sorted.sort((a, b) => {
+    if (a.time < b.time) {
+      return -1;
+    } else if (a.time > b.time) {
+      return 1;
+    } else {
+      return 0;
+    }
+  });
+  return sorted
+});
 
 let modal: Modal;
 onMounted(async () => {
@@ -55,7 +68,7 @@ async function deleteMatch() {
 
 <template>
   <template v-if="store.tournament">
-    <table v-if="Object.keys(matches).length !== 0" class="table">
+    <table v-if="sortedMatches.length !== 0" class="table">
       <thead>
         <tr>
           <th scope="col">Name</th>
@@ -66,7 +79,7 @@ async function deleteMatch() {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(match, id) in matches" :match="match" :key="id">
+        <tr v-for="match in sortedMatches" :match="match" :key="match.id">
           <td>{{ match.name }}</td>
           <td>{{ new Date(match.time).toLocaleString() }}</td>
           <td>

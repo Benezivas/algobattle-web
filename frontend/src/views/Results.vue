@@ -19,6 +19,19 @@ const problems = ref<ModelDict<Problem>>({});
 const results = ref<ModelDict<MatchResult>>({});
 const teams = ref<ModelDict<Team>>({});
 const programs = ref<{ [key: string]: Program[] }>({});
+const sortedResults = computed(() => {
+  const sorted = Object.values(results.value);
+  sorted.sort((a, b) => {
+    if (a.time < b.time) {
+      return 1;
+    } else if (a.time > b.time) {
+      return -1;
+    } else {
+      return 0;
+    }
+  });
+  return sorted
+});
 
 let editModal: Modal;
 let detailModal: Modal;
@@ -156,7 +169,7 @@ function openDetail(result: MatchResult) {
 
 <template>
   <template v-if="store.tournament">
-    <table v-if="Object.keys(results).length !== 0" class="table">
+    <table v-if="sortedResults.length !== 0" class="table">
       <thead>
         <tr>
           <th scope="col">Time</th>
@@ -167,7 +180,7 @@ function openDetail(result: MatchResult) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(result, id) in results" :result="result" :key="id">
+        <tr v-for="result in sortedResults" :result="result" :key="result.id">
           <td>{{ formatDateTime(result.time) }}</td>
           <td>
             <RouterLink :to="problems[result.problem].link">{{ problems[result.problem].name }}</RouterLink>
