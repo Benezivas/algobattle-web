@@ -36,7 +36,7 @@ class DbFile(Base):
     @computed_field
     @property
     def location(self) -> str:
-        return f"{EnvConfig.backend_base_url}/api/files/{urlencode(str(self.id))}"
+        return f"{EnvConfig.get().backend_base_url}/api/files/{urlencode(str(self.id))}"
 
 class Tournament(Base):
     name: str
