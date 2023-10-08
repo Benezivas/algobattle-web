@@ -392,6 +392,7 @@ async function deleteProblem() {
                 id="prob_name"
                 v-model="editProblem.name"
                 required
+                autocomplete="off"
                 @input="checkName"
                 :class="{ 'is-invalid': error == 'name' }"
               />
