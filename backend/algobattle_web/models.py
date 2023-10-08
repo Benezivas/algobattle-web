@@ -517,7 +517,7 @@ class Problem(Base, PermissionCheck, unsafe_hash=True):
 
     @property
     def link(self) -> str:
-        return f"{ServerConfig.obj.frontend_base_url}/problems/{self.tournament.name}/{self.name}"
+        return f"/problems/{self.tournament.name}/{self.name}"
 
     def _visible(self, team: Team) -> bool:
         return team.tournament == self.tournament and (self.start is None or self.start <= datetime.now())
