@@ -8,8 +8,8 @@ import { store } from "@/main";
 
 const page = ref(0);
 const error = ref<{
-  type?: string,
-  detail?: string,
+  type?: string;
+  detail?: string;
 }>({});
 const problems = ref<{ [key: string]: Problem }>({});
 const data = ref({
@@ -31,16 +31,18 @@ const imageUrl = computed(() => {
 });
 
 onMounted(async () => {
-  problems.value = await ProblemService.get({tournament: store.tournament?.id});
+  problems.value = await ProblemService.get({ tournament: store.tournament?.id });
 });
 
 async function createProblem() {
   if (!store.tournament) {
-    return
+    return;
   }
   try {
-    const {file, copyFrom, ...payload} = data.value;
-    const location = await ProblemService.create({ formData: {...payload, problem: file || copyFrom!, tournament: store.tournament.id} });
+    const { file, copyFrom, ...payload } = data.value;
+    const location = await ProblemService.create({
+      formData: { ...payload, problem: file || copyFrom!, tournament: store.tournament.id },
+    });
     router.push(location);
   } catch {
     error.value.type = "server";
@@ -98,6 +100,7 @@ function checkName() {
               class="w-em mb-2"
               id="prob_file"
               v-model="data.file"
+              accept=".algo"
               @change="(e: any) => data.copyFrom = undefined"
             />
             <label for="prob_select" class="form-label">Or copy an already existing one</label>
@@ -128,7 +131,7 @@ function checkName() {
               <label for="prob_name" class="form-label">Name</label>
               <input
                 type="text"
-                class="form-control "
+                class="form-control"
                 id="prob_name"
                 v-model="data.name"
                 maxlength="64"
@@ -140,11 +143,11 @@ function checkName() {
             </div>
             <div class="mb-3">
               <label for="start_time" class="form-label">Starting time</label>
-              <input type="datetime-local" class="form-control " id="start_time" v-model="data.start" />
+              <input type="datetime-local" class="form-control" id="start_time" v-model="data.start" />
             </div>
             <div class="mb-3">
               <label for="end_time" class="form-label">Ending time</label>
-              <input type="datetime-local" class="form-control " id="end_time" v-model="data.end" />
+              <input type="datetime-local" class="form-control" id="end_time" v-model="data.end" />
             </div>
 
             <div class="d-flex mt-3">
@@ -167,22 +170,16 @@ function checkName() {
                 </div>
                 <div class="mb-3">
                   <label for="image_file" class="form-label">Thumbnail image</label>
-                  <FileInput class="w-em" id="image_file" v-model="data.image" />
+                  <FileInput class="w-em" id="image_file" v-model="data.image" accept="image/*" />
                 </div>
                 <div class="mb-3">
                   <label for="short_desc" class="form-label">Thumbnail alt text</label>
-                  <textarea
-                    class="form-control "
-                    name="alt_text"
-                    id="alt_text"
-                    rows="5"
-                    v-model="data.alt"
-                  />
+                  <textarea class="form-control" name="alt_text" id="alt_text" rows="5" v-model="data.alt" />
                 </div>
                 <div class="mb-3">
                   <label for="short_desc" class="form-label">Description</label>
                   <textarea
-                    class="form-control "
+                    class="form-control"
                     name="short_description"
                     id="short_desc"
                     rows="5"

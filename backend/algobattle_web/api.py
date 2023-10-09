@@ -1,6 +1,9 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
+from email.message import EmailMessage
 from enum import Enum
+from os import environ
+from smtplib import SMTP
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
 
@@ -19,6 +22,8 @@ from algobattle_web.models import (
     File as DbFile,
     ProblemPageData,
     ResultParticipant,
+    ServerSettings,
+    TeamSettings,
     UserSettings,
     encode,
     Session,
@@ -33,13 +38,13 @@ from algobattle_web.models import (
     User,
 )
 from algobattle_web.util import (
+    EmailConfig,
+    EnvConfig,
     MatchStatus,
+    SessionLocal,
     ValueTaken,
     unwrap,
     BaseSchema,
-    send_email,
-    ServerConfig,
-    HexColor,
 )
 from algobattle_web.dependencies import (
     CurrUser,
@@ -141,11 +146,7 @@ def search_users(
         filters.append(User.teams.any(Team.id == team))
     users = (
         db.scalars(
-            select(User)
-            .where(*filters)
-            .order_by(User.is_admin.desc(), User.name.asc())
-            .limit(SQL_LIMIT)
-            .offset(offset)
+            select(User).where(*filters).order_by(User.is_admin.desc(), User.name.asc()).limit(SQL_LIMIT).offset(offset)
         )
         .unique()
         .all()
@@ -233,7 +234,9 @@ class LoginInfo(BaseSchema):
 def get_self(*, db: Database, login: LoggedIn) -> LoggedIn:
     if login.user is not None:
         if login.user.is_admin and login.user.settings.selected_tournament is None:
-            login.user.settings.selected_tournament = db.scalars(select(Tournament).order_by(Tournament.time.desc())).first()
+            login.user.settings.selected_tournament = db.scalars(
+                select(Tournament).order_by(Tournament.time.desc())
+            ).first()
         if login.team is None and login.user.teams:
             login.user.settings.selected_team = login.user.teams[0]
         db.commit()
@@ -243,11 +246,33 @@ def get_self(*, db: Database, login: LoggedIn) -> LoggedIn:
 @router.post("/user/login", tags=["user"])
 def login(*, db: Database, email: str = Body(), target_url: str = Body(), tasks: BackgroundTasks) -> None:
     user = User.get(db, email)
-    if user is None:
-        return
-    token = user.login_token()
-    url = str(ServerConfig.obj.frontend_base_url) + target_url + f"?login_token={token}"
-    tasks.add_task(send_email, email, url)
+    if user is not None:
+        tasks.add_task(send_login_email, user.id, target_url)
+
+
+def send_login_email(user_id: UUID, target_url: str) -> None:
+    with SessionLocal() as db:
+        user = db.get(User, user_id)
+        if not user:
+            return
+        token = user.login_token(db)
+        url = str(EnvConfig.get().frontend_base_url) + target_url + f"?login_token={token}"
+        if environ.get("DEV"):
+            print(f"sending email to {user.email}: {url}")
+            return
+        config = ServerSettings.get(db).email_config
+        msg = EmailMessage()
+        msg["Subject"] = "Algobattle login"
+        msg["From"] = config.address
+        msg["To"] = user.email
+        msg.set_content(url)
+
+        server = SMTP(config.server, config.port)
+        server.ehlo()
+        server.starttls()
+        server.login(config.username, config.password)
+        server.sendmail(config.username, user.email, msg.as_string())
+        server.close()
 
 
 class TokenData(BaseSchema):
@@ -258,8 +283,7 @@ class TokenData(BaseSchema):
 @router.post("/user/token", tags=["user"])
 def get_token(*, db: Database, login_token: str) -> TokenData:
     user = User.decode_login_token(db, login_token)
-    user.cookie()
-    return TokenData(token=user.cookie(), expires=datetime.now() + timedelta(weeks=4))
+    return TokenData(token=user.cookie(db), expires=datetime.now() + timedelta(weeks=4))
 
 
 # *******************************************************************************
@@ -275,7 +299,7 @@ def get_user_settings(*, db: Database, user: CurrUser) -> UserSettings:
 
 
 @router.patch("/settings/user", tags=["settings"], name="editUser")
-def settings(
+def edit_user_settings(
     *,
     db: Database,
     user: CurrUser,
@@ -284,8 +308,14 @@ def settings(
     tournament: ID | None = None,
 ) -> None:
     if user is None:
-        raise HTTPException(404, "Not logged in")
-    if email is not None:
+        raise HTTPException(400, "Not logged in")
+    if email is not None and email != user.email:
+        if not ServerSettings.get(db).user_change_email:
+            raise HTTPException(400, "Users cannot change their own email")
+        if db.scalar(
+            select(User).where(User.email == email, User.id != user.id)
+        ):
+            raise ValueTaken("email", email)
         user.email = email
     if team == "admin":
         if not user.is_admin:
@@ -302,14 +332,54 @@ def settings(
     db.commit()
 
 
-@router.patch("/settings/team", tags=["settings"], name="getUser")
-def member_edit_team(*, db: Database, login: LoggedIn, name: str32) -> Team:
+@router.get("/settings/team", tags=["settings"], name="getTeam")
+def get_team_settings(*, db: Database, login: LoggedIn) -> TeamSettings:
     team = login.team
     if not isinstance(team, Team):
-        raise HTTPException(404, "User has not selected a team")
-    team.name = name
+        raise HTTPException(400, "User has not selected a team")
+    return team.settings
+
+
+@router.patch("/settings/team", tags=["settings"], name="editTeam")
+def edit_team_settings(*, db: Database, login: LoggedIn, name: InBody[str32 | None] = None) -> None:
+    team = login.team
+    if not isinstance(team, Team):
+        raise HTTPException(400, "User has not selected a team")
+    if name is not None and name != team.name:
+        if not ServerSettings.get(db).team_change_name:
+            raise HTTPException(400, "Teams cannot change their own name")
+        if db.scalar(
+            select(Team).where(Team.tournament_id == team.tournament_id, Team.name == name, Team.id != team.id)
+        ):
+            raise ValueTaken("name", name)
+        team.name = name
     db.commit()
-    return team
+
+
+@router.get("/settings/server", tags=["settings"], name="getServer")
+def get_server_settings(*, db: Database, login: LoggedIn) -> schemas.ServerSettings | schemas.AdminServerSettings:
+    if login.team == "admin":
+        return schemas.AdminServerSettings.model_validate(ServerSettings.get(db))
+    else:
+        return schemas.ServerSettings.model_validate(ServerSettings.get(db))
+
+
+@admin.patch("/settings/server", tags=["settings"], name="editServer")
+def edit_server_settings(
+    *,
+    db: Database,
+    user_change_email: InBody[bool | None] = None,
+    team_change_name: InBody[bool | None],
+    email_config: InBody[EmailConfig | None] = None,
+) -> None:
+    settings = ServerSettings.get(db)
+    if user_change_email is not None:
+        settings.user_change_email = user_change_email
+    if team_change_name is not None:
+        settings.team_change_name = team_change_name
+    if email_config is not None:
+        settings.email_config = email_config
+    db.commit()
 
 
 # *******************************************************************************
@@ -418,7 +488,12 @@ def create_team(*, db: Database, name: str32, tournament: InBody[ID], members: I
 
 @admin.patch("/team", tags=["team"], name="edit")
 def edit_team(
-    *, db: Database, id: ID, name: str32 | None = None, tournament: InBody[ID | None] = None, members: dict[ID, EditAction] = {}
+    *,
+    db: Database,
+    id: ID,
+    name: str32 | None = None,
+    tournament: InBody[ID | None] = None,
+    members: dict[ID, EditAction] = {},
 ) -> Team:
     team = unwrap(Team.get(db, id))
     if name is not None:
@@ -498,7 +573,7 @@ def create_problem(
     image: UploadFile | None = None,
     alt_text: str = Form(""),
     short_description: str = Form(""),
-    color: HexColor = Form(HexColor("#ffffff")),
+    color: str = Form("#ffffff"),
     background_tasks: BackgroundTasks,
 ) -> str:
     _tournament = unwrap(db.get(Tournament, tournament))
@@ -521,7 +596,7 @@ def create_problem(
         end=end,
         image=_image,
         description=short_description,
-        colour=color.as_hex(),
+        colour=color,
         page_data=page_data,
     )
     db.add(prob)
@@ -538,11 +613,11 @@ def edit_problem(
     id: ID,
     name: str | None = None,
     tournament: ID | None = None,
-    start: datetime | None = None,
-    end: datetime | None = None,
+    start: datetime | None | Literal["noedit"] = "noedit",
+    end: datetime | None | Literal["noedit"] = "noedit",
     description: str | None = None,
     alt_text: str | None = None,
-    colour: HexColor | None = None,
+    colour: str | None = None,
     file: UploadFile | None = None,
     image: UploadFile | None | Literal["noedit"] = Form("noedit"),
     tasks: BackgroundTasks,
@@ -561,7 +636,7 @@ def edit_problem(
     if alt_text is not None and problem.image is not None:
         problem.image.alt_text = alt_text
     if colour:
-        problem.colour = colour.as_hex()
+        problem.colour = colour
     if file:
         problem.file = DbFile.from_file(file)
         tasks.add_task(problem.compute_page_data)

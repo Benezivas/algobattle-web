@@ -96,15 +96,15 @@ const displayName = computed(() => {
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0 nav nav-pills">
-          <template v-if="store.user">
+          <template v-if="store.tournament">
             <PageNavbarIcon link="/problems" icon="boxes">Problems</PageNavbarIcon>
             <PageNavbarIcon link="/programs" icon="file-earmark-code">Programs</PageNavbarIcon>
             <PageNavbarIcon link="/schedule" icon="calendar-week">Schedule</PageNavbarIcon>
             <PageNavbarIcon link="/results" icon="bar-chart-line">Results</PageNavbarIcon>
-            <PageNavbarIcon v-if="store.team == 'admin'" link="/admin" icon="people"
-              >Admin panel</PageNavbarIcon
-            >
           </template>
+          <PageNavbarIcon v-if="store.team == 'admin'" link="/admin" icon="people"
+            >Admin panel</PageNavbarIcon
+          >
           <li class="nav-item mx-2">
             <a href="/docs/tutorial" class="nav-link align-middle"><i class="me-1 bi bi-book" />User Guide</a>
           </li>
@@ -137,9 +137,9 @@ const displayName = computed(() => {
               </li>
               <li v-if="store.user.is_admin">
                 <button
-                class="dropdown-item"
-                :class="{ active: store.team == 'admin' }"
-                @click="selectTeam('admin')"
+                  class="dropdown-item"
+                  :class="{ active: store.team == 'admin' }"
+                  @click="selectTeam('admin')"
                 >
                   Admin
                 </button>

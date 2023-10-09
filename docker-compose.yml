@@ -3,7 +3,7 @@ services:
     image: mysql
     restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=${SQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${ALGOBATTLE_DB_PW}
     healthcheck:
       test: mysqladmin ping --protocol tcp
       interval: 5s
@@ -23,9 +23,9 @@ services:
       retries: 12
     environment:
       - TZ=Europe/Berlin
-      - SQL_PASSWORD=${SQL_PASSWORD}
+      - ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW}
+      - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
     volumes:
-      - ./config.toml:/algobattle/config.toml
       - db-files:/algobattle/dbfiles
   runner:
     build: backend
@@ -37,14 +37,18 @@ services:
     environment:
       - ALGOBATTLE_IO_DIR=./io
       - TZ=Europe/Berlin
-      - SQL_PASSWORD=${SQL_PASSWORD}
+      - ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW}
+      - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
     volumes:
-      - ./config.toml:/algobattle/config.toml
       - db-files:/algobattle/dbfiles
       - /var/run/docker.sock,target=/var/run/docker.sock
       - ./io:/algobattle/io
   nginx:
-    build: .
+    build:
+      context: .
+      args:
+        - ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW}
+        - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
     depends_on:
       backend:
         condition: service_healthy

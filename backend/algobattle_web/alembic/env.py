@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from alembic import context
 
 from algobattle_web.models import RawBase
-from algobattle_web.util import ServerConfig
+from algobattle_web.util import EnvConfig
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -39,10 +39,8 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    ServerConfig.load()
-    url = ServerConfig.obj.database_url
     context.configure(
-        url=url,
+        url=EnvConfig.get().db_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -59,8 +57,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    ServerConfig.load()
-    connectable = create_engine(ServerConfig.obj.database_url)
+    connectable = create_engine(EnvConfig.get().db_url)
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)

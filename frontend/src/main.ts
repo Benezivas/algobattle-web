@@ -23,9 +23,9 @@ OpenAPI.HEADERS = async () => {
 };
 
 export const store = reactive<{
-    user: UserLogin | null,
-    team: Team | "admin" | null,
-    tournament: Tournament | null,
+  user: UserLogin | null;
+  team: Team | "admin" | null;
+  tournament: Tournament | null;
 }>({
   user: null,
   team: null,

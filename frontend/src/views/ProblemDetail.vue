@@ -36,15 +36,15 @@ onMounted(async () => {
   if (Object.values(problems).length === 1) {
     problem.value = Object.values(problems)[0];
   } else {
-    return
+    return;
   }
-  pageData.value = await ProblemService.pageData({id: problem.value.id});
+  pageData.value = await ProblemService.pageData({ id: problem.value.id });
   if (store.team == "admin") {
     tournaments.value = await TournamentService.get({});
   }
   const ret = await ReportService.get({ problem: problem.value.id });
-  reports.value = Object.fromEntries(Object.values(ret.reports).map(report => [report.team, report]));
-  teams.value = (await TeamService.get({tournament: problem.value.tournament.id})).teams;
+  reports.value = Object.fromEntries(Object.values(ret.reports).map((report) => [report.team, report]));
+  teams.value = (await TeamService.get({ tournament: problem.value.tournament.id })).teams;
 });
 
 const editReport = {
@@ -92,7 +92,7 @@ async function removeReport() {
     editReport.confirmDelete.value = true;
     return;
   }
-  ReportService.delete({problem: problem.value.id, team: editReport.team.id});
+  ReportService.delete({ problem: problem.value.id, team: editReport.team.id });
   editReport.confirmDelete.value = false;
   if (editReport.fileSelect.value) {
     editReport.fileSelect.value.value = "";
@@ -101,7 +101,7 @@ async function removeReport() {
   Modal.getOrCreateInstance("#reportModal").hide();
 }
 function reportEditable() {
-  return (store.team != "admin" || !problem.value?.end || new Date(problem.value.end) >= now);
+  return store.team != "admin" || !problem.value?.end || new Date(problem.value.end) >= now;
 }
 
 let editProblem = ref<ProblemEdit>();
@@ -109,6 +109,8 @@ let confirmDeleteProblem = ref(false);
 function createProblemEdit(problem: Problem): ProblemEdit {
   return {
     ...problem,
+    start: problem?.start?.slice(0, 19),
+    end: problem?.end?.slice(0, 19),
     file: { location: problem.file.location },
     image: problem.image ? { location: problem.image?.location } : {},
     alt: problem.image?.alt_text || "",
@@ -141,10 +143,12 @@ async function submitEdit() {
 async function checkName() {
   const tournament = editProblem.value!.tournament;
   try {
-    const probs = Object.values(await ProblemService.get({
-      tournament: tournament.name,
-      name: editProblem.value!.name,
-    }));
+    const probs = Object.values(
+      await ProblemService.get({
+        tournament: tournament.name,
+        name: editProblem.value!.name,
+      })
+    );
     if (probs.length != 1 || probs[0].id != problem.value!.id) {
       error.value = "name";
       return;
@@ -159,7 +163,7 @@ async function deleteProblem() {
   }
   await ProblemService.delete({ id: problem.value!.id });
   Modal.getOrCreateInstance("#problemModal").hide();
-  router.push({name: "problems"});
+  router.push({ name: "problems" });
 }
 </script>
 
@@ -167,13 +171,19 @@ async function deleteProblem() {
   <template v-if="error != 'problem' && problem">
     <nav id="navbar" class="navbar bg-body-tertiary px-3 mb-3">
       <a class="navbar-brand" href="#">
-        {{ problem.name  }}
+        {{ problem.name }}
       </a>
       <ul class="nav nav-pills">
         <li v-if="pageData?.description" class="nav-item">
           <a class="nav-link" href="#description">Description</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link" href="#config">Config</a>
+        </li>
+        <li v-if="store.team === 'admin'" class="nav-item">
+          <a class="nav-link" href="#reports">Reports</a>
+        </li>
+        <li v-else-if="store.team" class="nav-item">
           <a class="nav-link" href="#report">Report</a>
         </li>
         <li v-if="pageData?.instance_schema" class="nav-item">
@@ -238,50 +248,63 @@ async function deleteProblem() {
         <h4 id="description" class="mt-5">Description</h4>
         <div v-html="pageData.description"></div>
       </template>
-      <h4 id="report" class="mt-5">Report</h4>
-      <a
-      v-if="store.team !== 'admin' && store.team?.id && store.team?.id in reports"
-      role="button"
-      class="btn btn-primary mb-3 me-3"
-      :href="reports[store.team.id].file.location"
-      title="Download report"
-      >Download report<i class="bi bi-download ms-1"></i
-      ></a>
-      <button
-        v-if="reportEditable() && store.team !== 'admin' && store.team"
-        role="button"
-        class="btn btn-warning mb-3"
-        title="Edit report"
-        @click="(e) => openReportEdit(store.team as any)"
-      >
-        Edit report<i class="bi bi-pencil ms-1"></i>
-      </button>
-      <table v-if="store.team === 'admin'" class="table">
-        <thead>
-          <tr>
-            <th>Team</th>
-            <th>File</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(team, id) in teams" :key="id">
-            <td>{{ team.name }}</td>
-            <td>
-              <a v-if="reports[id]" class="btn btn-primary btn-sm me-2" :href="reports[id].file.location" title="Download file"
-                >Download <i class="bi bi-download ms-1"></i
-              ></a>
-              <button
-                role="button"
-                class="btn btn-warning btn-sm"
-                title="Edit"
-                @click="(e) => openReportEdit(team)"
-              >
-                Edit <i class="bi bi-pencil ms-1"></i>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <template v-if="pageData">
+        <h4 id="config" class="mt-5">Config</h4>
+        <pre><code>{{pageData.config}}</code></pre>
+      </template>
+      <template v-if="store.team !== 'admin'">
+        <h4 id="report" class="mt-5">Report</h4>
+        <a
+          v-if="store.team?.id && store.team?.id in reports"
+          role="button"
+          class="btn btn-primary mb-3 me-3"
+          :href="reports[store.team.id].file.location"
+          title="Download report"
+          >Download report<i class="bi bi-download ms-1"></i
+        ></a>
+        <button
+          v-if="reportEditable() && store.team"
+          role="button"
+          class="btn btn-warning mb-3"
+          title="Edit report"
+          @click="(e) => openReportEdit(store.team as any)"
+        >
+          Edit report<i class="bi bi-pencil ms-1"></i>
+        </button>
+      </template>
+      <template v-else>
+        <h4 id="reports" class="mt-5">Reports</h4>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Team</th>
+              <th>File</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(team, id) in teams" :key="id">
+              <td>{{ team.name }}</td>
+              <td>
+                <a
+                  v-if="reports[id]"
+                  class="btn btn-primary btn-sm me-2"
+                  :href="reports[id].file.location"
+                  title="Download file"
+                  >Download <i class="bi bi-download ms-1"></i
+                ></a>
+                <button
+                  role="button"
+                  class="btn btn-warning btn-sm"
+                  title="Edit"
+                  @click="(e) => openReportEdit(team)"
+                >
+                  Edit <i class="bi bi-pencil ms-1"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </template>
       <template v-if="pageData?.instance_schema">
         <h4 id="instance_schema" class="mt-5">Instance schema</h4>
         <pre><code>{{pageData.instance_schema}}</code></pre>
@@ -308,7 +331,7 @@ async function deleteProblem() {
           <label for="file_select" class="form-label mt-3">Select new file</label>
           <input
             type="file"
-            class="form-control "
+            class="form-control"
             id="file_select"
             ref="editReport.fileSelect"
             @change="(e) => selectFile(e as any)"
@@ -361,7 +384,7 @@ async function deleteProblem() {
               <input
                 type="datetime-local"
                 name="start"
-                class="form-control "
+                class="form-control"
                 id="start_time"
                 v-model="editProblem.start"
               />
@@ -372,11 +395,12 @@ async function deleteProblem() {
               <label for="prob_name" class="form-label">Name</label>
               <input
                 type="text"
-                class="form-control "
+                class="form-control"
                 name="name"
                 id="prob_name"
                 v-model="editProblem.name"
                 required
+                autocomplete="off"
                 @input="checkName"
                 :class="{ 'is-invalid': error == 'name' }"
               />
@@ -387,7 +411,7 @@ async function deleteProblem() {
               <input
                 type="datetime-local"
                 name="end"
-                class="form-control "
+                class="form-control"
                 id="end_time"
                 v-model="editProblem.end"
               />
@@ -412,7 +436,7 @@ async function deleteProblem() {
             <div class="mb-3">
               <label for="alt_text" class="form-label">Image alt text</label>
               <textarea
-                class="form-control "
+                class="form-control"
                 name="alt"
                 id="alt_text"
                 rows="5"
@@ -424,7 +448,7 @@ async function deleteProblem() {
             <div class="mb-3">
               <label for="short_desc" class="form-label">Description</label>
               <textarea
-                class="form-control "
+                class="form-control"
                 name="description"
                 id="short_desc"
                 rows="5"

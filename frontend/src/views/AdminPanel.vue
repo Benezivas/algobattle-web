@@ -3,6 +3,7 @@ import { ref } from "vue";
 import AdminUsers from "./AdminUsers.vue";
 import AdminTeams from "./AdminTeams.vue";
 import AdminTournaments from "./AdminTournaments.vue";
+import AdminSettings from "./AdminSettings.vue";
 
 const tab = ref("users");
 </script>
@@ -39,9 +40,20 @@ const tab = ref("users");
         Tournaments
       </button>
     </li>
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        :class="{ active: tab == 'settings' }"
+        :aria-current="tab == 'settings'"
+        @click="(e) => (tab = 'settings')"
+      >
+        Server Settings
+      </button>
+    </li>
   </ul>
 
   <AdminUsers v-if="tab == 'users'" />
   <AdminTeams v-if="tab == 'teams'" />
   <AdminTournaments v-if="tab == 'tournaments'" />
+  <AdminSettings v-if="tab == 'settings'" />
 </template>

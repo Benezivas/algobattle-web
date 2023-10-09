@@ -1,6 +1,7 @@
 "Database models"
 from abc import abstractmethod
 from datetime import timedelta, datetime
+from secrets import token_bytes
 from typing import IO, Callable, ClassVar, Iterable, Any, TypeAlias
 from typing import Any, BinaryIO, Iterable, Literal, Self, cast, overload, Annotated, Sequence
 from typing_extensions import TypedDict
@@ -11,7 +12,7 @@ from zipfile import ZipFile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import JSON, ColumnElement, MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
+from sqlalchemy import JSON, ColumnElement, LargeBinary, MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
 from sqlalchemy.event import listens_for
 from sqlalchemy.sql import true as sql_true, false as sql_false
 from sqlalchemy.orm import relationship, Mapped, mapped_column, Session, DeclarativeBase, registry, MappedAsDataclass
@@ -26,10 +27,12 @@ from algobattle.match import AlgobattleConfig
 from algobattle_web import schemas
 from algobattle_web.util import (
     BaseSchema,
+    EmailConfig,
+    EnvConfig,
     MatchStatus,
     PermissionExcpetion,
+    SqlableModel,
     guess_mimetype,
-    ServerConfig,
     SessionLocal,
     install_packages,
     render_text,
@@ -37,7 +40,7 @@ from algobattle_web.util import (
 )
 
 
-ID = Annotated[UUID, mapped_column(default=uuid4)]
+ID = UUID
 str32 = Annotated[str, mapped_column(String(32)), Field(max_length=32)]
 str64 = Annotated[str, mapped_column(String(64)), Field(max_length=64)]
 str128 = Annotated[str, mapped_column(String(128)), Field(max_length=128)]
@@ -116,6 +119,7 @@ class ProblemPageData(TypedDict, total=True):
     """Data needed to render a problem page."""
 
     description: str | None
+    config: str
     instance_schema: str | None
     solution_schema: str | None
 
@@ -179,6 +183,23 @@ class Base(RawBase, unsafe_hash=True):
     def get_unwrap(cls, db: Session, id: ID) -> Self:
         """Get the specified entry and raise an error if it does not exist."""
         return unwrap(db.get(cls, id))
+
+
+class ServerSettings(Base, kw_only=True):
+    """Singleton table for server wide settings."""
+
+    secret_key: Mapped[bytes] = mapped_column(LargeBinary(64), default_factory=lambda: token_bytes(64))
+    email_config: Mapped[EmailConfig] = mapped_column(SqlableModel(EmailConfig), default_factory=EmailConfig)
+
+    user_change_email: Mapped[bool] = mapped_column(default=True)
+    team_change_name: Mapped[bool] = mapped_column(default=True)
+
+    @classmethod
+    def get(cls, db: Session) -> Self:
+        obj = db.scalar(select(ServerSettings))
+        if not obj:
+            raise RuntimeError
+        return obj
 
 
 class File(Base):
@@ -255,7 +276,7 @@ class File(Base):
         name = str(self.id)
         if self.extension is not None:
             name += f".{self.extension}"
-        return ServerConfig.obj.storage_path / name
+        return EnvConfig.get().db_files / name
 
     @property
     def extension(self) -> str | None:
@@ -341,6 +362,8 @@ class UserSettings(Base, unsafe_hash=True):
     selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), init=False)
     selected_tournament_id: Mapped[UUID | None] = mapped_column(ForeignKey("tournaments.id"), init=False)
 
+    Schema = schemas.UserSettings
+
 
 class User(Base, unsafe_hash=True):
     """A user object."""
@@ -353,7 +376,7 @@ class User(Base, unsafe_hash=True):
     teams: Mapped[list["Team"]] = relationship(
         secondary=team_members, back_populates="members", lazy="joined", default_factory=list
     )
-    token_id: Mapped[ID] = mapped_column(init=False)
+    token_id: Mapped[ID] = mapped_column(default_factory=uuid4, init=False)
     settings_id: Mapped[UUID] = mapped_column(ForeignKey("usersettingss.id"), init=False)
 
     Schema = schemas.User
@@ -385,21 +408,21 @@ class User(Base, unsafe_hash=True):
         else:
             return db.scalars(select(cls).filter(cls.email == identifier)).first()
 
-    def cookie(self) -> str:
+    def cookie(self, db: Session) -> str:
         payload = {
             "type": "user",
             "user_id": self.id.hex,
             "token_id": self.token_id.hex,
             "exp": datetime.now() + timedelta(weeks=4),
         }
-        return jwt.encode(payload, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
+        return jwt.encode(payload, ServerSettings.get(db).secret_key, "HS256")
 
     @classmethod
     def decode_token(cls, db: Session, token: str | None) -> Self | None:
         if token is None:
             return
         try:
-            payload = jwt.decode(token, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
+            payload = jwt.decode(token, ServerSettings.get(db).secret_key, "HS256")
             if payload["type"] == "user":
                 user_id = UUID(cast(str, payload["user_id"]))
                 token_id = UUID(cast(str, payload["token_id"]))
@@ -409,18 +432,18 @@ class User(Base, unsafe_hash=True):
         except (JWTError, ExpiredSignatureError, NameError):
             return
 
-    def login_token(self, lifetime: timedelta = timedelta(hours=1)) -> str:
+    def login_token(self, db: Session, lifetime: timedelta = timedelta(hours=1)) -> str:
         payload = {
             "type": "login",
             "email": self.email,
             "exp": datetime.now() + lifetime,
         }
-        return jwt.encode(payload, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
+        return jwt.encode(payload, ServerSettings.get(db).secret_key, "HS256")
 
     @classmethod
     def decode_login_token(cls, db: Session, token: str) -> Self:
         try:
-            payload = jwt.decode(token, ServerConfig.obj.secret_key, ServerConfig.obj.algorithm)
+            payload = jwt.decode(token, ServerSettings.get(db).secret_key, "HS256")
             if payload["type"] == "login":
                 user = User.get(db, cast(str, payload["email"]))
                 if user is not None:
@@ -454,6 +477,12 @@ class Tournament(Base, PermissionCheck, unsafe_hash=True):
         return Tournament.id == team.tournament_id
 
 
+class TeamSettings(Base, unsafe_hash=True):
+    """Settings for each team."""
+
+    schema = schemas.TeamSettings
+
+
 class Team(Base, unsafe_hash=True):
     name: Mapped[str32]
     tournament: Mapped[Tournament] = relationship(back_populates="teams", uselist=False, lazy="joined")
@@ -461,6 +490,8 @@ class Team(Base, unsafe_hash=True):
     members: Mapped[list[User]] = relationship(
         secondary=team_members, back_populates="teams", lazy="joined", default_factory=list
     )
+    settings: Mapped[TeamSettings] = relationship(default_factory=TeamSettings)
+    settings_id: Mapped[UUID] = mapped_column(ForeignKey("teamsettingss.id"), init=False)
 
     __table_args__ = (UniqueConstraint("name", "tournament_id"),)
 
@@ -517,14 +548,14 @@ class Problem(Base, PermissionCheck, unsafe_hash=True):
 
     @property
     def link(self) -> str:
-        return f"{ServerConfig.obj.frontend_base_url}/problems/{self.tournament.name}/{self.name}"
+        return f"/problems/{self.tournament.name}/{self.name}"
 
     def _visible(self, team: Team) -> bool:
         return team.tournament == self.tournament and (self.start is None or self.start <= datetime.now())
 
     @classmethod
     def _visible_sql(cls, team: Team) -> ColumnElement[bool]:
-        return (Problem.tournament_id == team.tournament_id) & (Problem.start.is_not(None) | (Problem.start <= datetime.now()))
+        return (Problem.tournament_id == team.tournament_id) & (Problem.start.is_(None) | (Problem.start <= datetime.now()))
 
     def _editable(self, team: Team) -> bool:
         return (self.end is None or self.end >= datetime.now())
@@ -540,11 +571,9 @@ class Problem(Base, PermissionCheck, unsafe_hash=True):
             with ZipFile(problem.file.path, "r") as spec:
                 spec.extractall(folder)
             config = AlgobattleConfig.from_file(folder)
-            prob_name = config.match.problem
-            packages = config.problems[prob_name].dependencies
 
             try:
-                install_packages(packages)
+                install_packages(config.problem.dependencies)
             except RuntimeError:
                 pass
             try:
@@ -555,8 +584,9 @@ class Problem(Base, PermissionCheck, unsafe_hash=True):
 
             problem.page_data = ProblemPageData(
                 description=desc,
-                instance_schema=config.problem.instance_cls.io_schema(),
-                solution_schema=config.problem.solution_cls.io_schema(),
+                config=folder.joinpath("algobattle.toml").read_text(),
+                instance_schema=config.loaded_problem.instance_cls.io_schema(),
+                solution_schema=config.loaded_problem.solution_cls.io_schema(),
             )
             db.commit()
 

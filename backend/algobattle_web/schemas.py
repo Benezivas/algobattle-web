@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import PlainSerializer, computed_field
 
-from algobattle_web.util import BaseSchema, MatchStatus, ObjID, ServerConfig, HexColor
+from algobattle_web.util import BaseSchema, EmailConfig, EnvConfig, MatchStatus, ObjID
 from algobattle.util import Role
 
 
@@ -36,7 +36,7 @@ class DbFile(Base):
     @computed_field
     @property
     def location(self) -> str:
-        return f"{ServerConfig.obj.backend_base_url}/api/files/{urlencode(str(self.id))}"
+        return f"{EnvConfig.get().backend_base_url}/api/files/{urlencode(str(self.id))}"
 
 class Tournament(Base):
     name: str
@@ -46,6 +46,19 @@ class Team(Base):
     name: str
     tournament: Tournament
     members: list[ObjID]
+
+
+class TeamSettings(Base):
+    pass
+
+
+class ServerSettings(Base):
+    user_change_email: bool
+    team_change_name: bool
+
+
+class AdminServerSettings(ServerSettings):
+    email_config: EmailConfig
 
 
 class UserSettings(Base):
@@ -75,7 +88,7 @@ class Problem(Base):
     end: LocalDatetime | None = None
     description: str
     image: DbFile | None = None
-    colour: HexColor
+    colour: str
     # property is defined on db model to make it have access to the tournament name
     link: str
 

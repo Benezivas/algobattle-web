@@ -3,11 +3,25 @@ import { ProblemService, ProgramService, Role } from "@client";
 import { store, type ModelDict } from "@/main";
 import { Modal } from "bootstrap";
 import type { Problem, Program, Team } from "@client";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import FileInput from "@/components/FileInput.vue";
 import Paginator from "@/components/Paginator.vue";
+import DeleteButton from "@/components/DeleteButton.vue";
 
 const programs = ref<ModelDict<Program>>({});
+const sortedPrograms = computed(() => {
+  const sorted = Object.values(programs.value);
+  sorted.sort((a, b) => {
+    const startA = problems.value[a.problem].start || "";
+    const startB = problems.value[b.problem].start || "";
+    return (
+      -1 * startA.localeCompare(startB) ||
+      a.role.localeCompare(b.role) ||
+      -1 * a.creation_time.localeCompare(b.creation_time)
+    );
+  });
+  return sorted;
+});
 const problems = ref<ModelDict<Problem>>({});
 const teams = ref<ModelDict<Team>>({});
 const total = ref(0);
@@ -18,15 +32,15 @@ const searchData = ref({
 });
 
 async function search(offset: number = 0) {
-  const ret = await ProgramService.get({offset: offset });
-  programs.value = ret.programs;
-  teams.value = ret.teams;
-  total.value = ret.total;
+  const ret = await ProgramService.get({ offset: offset });
   if (store.team === "admin") {
     problems.value = ret.problems;
   } else {
-    problems.value = await ProblemService.get({tournament: store.tournament?.id})
+    problems.value = await ProblemService.get({ tournament: store.tournament?.id });
   }
+  programs.value = ret.programs;
+  teams.value = ret.teams;
+  total.value = ret.total;
 }
 
 const newProgData = ref<{
@@ -55,6 +69,7 @@ async function uploadProgram() {
     return;
   }
   const newProgram = await ProgramService.create({
+    name: newProgData.value.name,
     role: newProgData.value.role,
     problem: newProgData.value.problem,
     formData: {
@@ -65,6 +80,11 @@ async function uploadProgram() {
   modal.hide();
 }
 
+async function deleteProgram(program: Program) {
+  await ProgramService.delete({ id: program.id });
+  delete programs.value[program.id];
+}
+
 onMounted(() => {
   search();
   modal = Modal.getOrCreateInstance("#uploadProgram");
@@ -73,7 +93,7 @@ onMounted(() => {
 
 <template>
   <template v-if="store.tournament">
-    <table v-if="Object.keys(programs).length !== 0" class="table table-hover mb-2" id="programs">
+    <table v-if="sortedPrograms.length !== 0" class="table table-hover mb-2" id="programs">
       <thead>
         <tr>
           <th scope="col">Problem</th>
@@ -82,10 +102,11 @@ onMounted(() => {
           <th scope="col">Uploaded</th>
           <th scope="col">Name</th>
           <th scope="col">File</th>
+          <th scope="col"></th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(program, id) in programs" :key="id">
+        <tr v-for="program in sortedPrograms" :key="program.id">
           <td>{{ problems[program.problem].name }}</td>
           <td v-if="store.team == 'admin'">{{ teams[program.team].name }}</td>
           <td>{{ program.role }}</td>
@@ -100,18 +121,28 @@ onMounted(() => {
               >Download <i class="bi bi-download ms-1"></i
             ></a>
           </td>
+          <td class="text-end">
+            <DeleteButton
+              v-if="store.team === 'admin' || program.user_editable"
+              position="after"
+              @delete="deleteProgram(program)"
+            />
+          </td>
         </tr>
       </tbody>
     </table>
-    <div v-else class="alert alert-info" role="alert">
-      There aren't any programs uploaded already.
-    </div>
+    <div v-else class="alert alert-info" role="alert">There aren't any programs uploaded already.</div>
 
     <div class="d-flex mb-3 pe-2">
-      <button v-if="store.team !== 'admin'" type="button" class="btn btn-primary btn-sm me-auto" @click="openModal">
+      <button
+        v-if="store.team !== 'admin'"
+        type="button"
+        class="btn btn-primary btn-sm me-auto"
+        @click="openModal"
+      >
         Upload new program
       </button>
-      <Paginator :total="total" @update="search"/>
+      <Paginator :total="total" @update="search" />
     </div>
   </template>
   <div v-else-if="!store.user" class="alert alert-danger" role="alert">
@@ -146,7 +177,7 @@ onMounted(() => {
               <label for="prog_name" class="form-label">Name</label>
               <input
                 type="text"
-                class="form-control "
+                class="form-control"
                 name="name"
                 id="prog_name"
                 v-model="newProgData.name"
@@ -164,11 +195,7 @@ onMounted(() => {
             </div>
             <div class="mb-3">
               <label for="file_select" class="form-label mt-3">Select new program file</label>
-              <FileInput
-                id="file_select"
-                v-model="newProgData.file"
-                required
-              />
+              <FileInput id="file_select" v-model="newProgData.file" accept=".prog" required />
             </div>
           </div>
         </div>

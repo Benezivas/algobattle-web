@@ -4,35 +4,40 @@
 
 // bootstrap somhow seems to set this to a non zero value, which popper doesn't like
 .dropdown-menu {
-    margin: 0!important;
+  margin: 0 !important;
 }
 
 .w-es {
-    max-width: 150px;
+  max-width: 150px;
 }
 .w-em {
-    max-width: 300px;
+  max-width: 300px;
 }
 .w-xs {
-    max-width: 576px;
+  max-width: 576px;
 }
 .w-sm {
-    max-width: 768px;
+  max-width: 768px;
 }
 .w-md {
-    max-width: 992px;
+  max-width: 992px;
 }
 .w-lg {
-    max-width: 1200px;
+  max-width: 1200px;
 }
 .w-xl {
-    max-width: 1400px;
+  max-width: 1400px;
 }
 
-.form-select, .form-control {
-    max-width: 300px;
+.form-select,
+.form-control {
+  max-width: 300px;
 }
 
 :is(.form-select, .form-control):not(:is(td, .input-group) :is(.form-select, .form-control)) {
-    margin-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+html {
+  scroll-padding-top: 64px;
 }

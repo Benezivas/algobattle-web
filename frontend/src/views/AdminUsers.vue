@@ -54,7 +54,7 @@ async function clearSearch() {
   search();
 }
 
-type UserTeams = Omit<User, "teams"> & {teams: Team[]};
+type UserTeams = Omit<User, "teams"> & { teams: Team[] };
 const error = ref("");
 const editData = ref<UserTeams>(emptyUser());
 const teamSearchData = ref({
@@ -78,7 +78,7 @@ function teamName(team: Team) {
 
 function openModal(user: User | undefined) {
   if (user) {
-    editData.value = {...user, teams: user.teams.map((id) => teams.value[id])};
+    editData.value = { ...user, teams: user.teams.map((id) => teams.value[id]) };
   } else {
     editData.value = emptyUser();
   }
@@ -105,41 +105,41 @@ async function sendData() {
   if (error.value) {
     return;
   }
-    if (editData.value.id) {
-      const oldTeams = users.value[editData.value.id].teams;
-      const newTeams = editData.value.teams.filter(team => !oldTeams.includes(team.id));
-      const removedTeams = oldTeams.filter(id => !editData.value.teams.map(t => t.id).includes(id));
-      try {
-        users.value[editData.value.id] = await UserService.editUser({
-          id: editData.value.id,
-          requestBody: {
-            name: editData.value.name,
+  if (editData.value.id) {
+    const oldTeams = users.value[editData.value.id].teams;
+    const newTeams = editData.value.teams.filter((team) => !oldTeams.includes(team.id));
+    const removedTeams = oldTeams.filter((id) => !editData.value.teams.map((t) => t.id).includes(id));
+    try {
+      users.value[editData.value.id] = await UserService.editUser({
+        id: editData.value.id,
+        requestBody: {
+          name: editData.value.name,
           email: editData.value.email,
           is_admin: editData.value.is_admin,
           teams: Object.fromEntries(
-            newTeams.map(team => [team.id, "add"]).concat(removedTeams.map(id => [id, "remove"]))
+            newTeams.map((team) => [team.id, "add"]).concat(removedTeams.map((id) => [id, "remove"]))
           ),
         },
       });
     } catch {
       error.value = "email";
     }
-    } else {
-      try {
-        const newUser = await UserService.createUser({
-          requestBody: {
-            name: editData.value.name,
+  } else {
+    try {
+      const newUser = await UserService.createUser({
+        requestBody: {
+          name: editData.value.name,
           email: editData.value.email,
           is_admin: editData.value.is_admin,
-          teams: editData.value.teams.map(t => t.id),
+          teams: editData.value.teams.map((t) => t.id),
         },
       });
       users.value[newUser.id] = newUser;
-      } catch {
-        error.value = "email";
-      }
+    } catch {
+      error.value = "email";
     }
-    modal.hide();
+  }
+  modal.hide();
 }
 async function deleteUser() {
   if (!confirmDelete.value) {
@@ -225,7 +225,7 @@ async function checkEmail() {
         <span class="visually-hidden">Applied filters</span>
       </span>
     </button>
-    <Paginator :total="total" @update="search"/>
+    <Paginator :total="total" @update="search" />
   </div>
 
   <div class="d-flex justify-content-end">
@@ -234,11 +234,11 @@ async function checkEmail() {
         <div class="row mb-3">
           <div class="col">
             <label for="nameFilter" class="form-label mb-1">Name</label>
-            <input class="form-control " id="nameFilter" type="text" v-model="filterData.name" />
+            <input class="form-control" id="nameFilter" type="text" v-model="filterData.name" />
           </div>
           <div class="col">
             <label for="emailFilter" class="form-label mb-1">Email</label>
-            <input class="form-control " id="emailFilter" type="text" v-model="filterData.email" />
+            <input class="form-control" id="emailFilter" type="text" v-model="filterData.email" />
           </div>
         </div>
         <div class="row mb-3">
@@ -303,7 +303,15 @@ async function checkEmail() {
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
           <div class="input-group w-em mb-3">
-            <input class="form-control " type="text" v-model="editData.name" required maxlength="32" id="name" autocomplete="off" />
+            <input
+              class="form-control"
+              type="text"
+              v-model="editData.name"
+              required
+              maxlength="32"
+              id="name"
+              autocomplete="off"
+            />
             <input
               type="checkbox"
               class="btn-check"

@@ -19,6 +19,19 @@ const problems = ref<ModelDict<Problem>>({});
 const results = ref<ModelDict<MatchResult>>({});
 const teams = ref<ModelDict<Team>>({});
 const programs = ref<{ [key: string]: Program[] }>({});
+const sortedResults = computed(() => {
+  const sorted = Object.values(results.value);
+  sorted.sort((a, b) => {
+    if (a.time < b.time) {
+      return 1;
+    } else if (a.time > b.time) {
+      return -1;
+    } else {
+      return 0;
+    }
+  });
+  return sorted;
+});
 
 let editModal: Modal;
 let detailModal: Modal;
@@ -60,7 +73,7 @@ const editData = ref<EditData>({
 
 function openEdit(match: MatchResult | undefined) {
   editData.value = match
-    ? { ...structuredClone(toRaw(match)), confirmDelete: false }
+    ? { ...structuredClone(toRaw(match)), time: match.time.slice(0, 19), confirmDelete: false }
     : {
         status: MatchStatus.COMPLETE,
         problem: undefined,
@@ -156,7 +169,7 @@ function openDetail(result: MatchResult) {
 
 <template>
   <template v-if="store.tournament">
-    <table v-if="Object.keys(results).length !== 0" class="table">
+    <table v-if="sortedResults.length !== 0" class="table">
       <thead>
         <tr>
           <th scope="col">Time</th>
@@ -167,7 +180,7 @@ function openDetail(result: MatchResult) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(result, id) in results" :result="result" :key="id">
+        <tr v-for="result in sortedResults" :result="result" :key="result.id">
           <td>{{ formatDateTime(result.time) }}</td>
           <td>
             <RouterLink :to="problems[result.problem].link">{{ problems[result.problem].name }}</RouterLink>
@@ -179,7 +192,12 @@ function openDetail(result: MatchResult) {
             </button>
           </td>
           <td v-if="store.team == 'admin'" class="text-end">
-            <button type="button" class="btn btn-sm btn-warning" title="Edit" @click="(e) => openEdit(result)">
+            <button
+              type="button"
+              class="btn btn-sm btn-warning"
+              title="Edit"
+              @click="(e) => openEdit(result)"
+            >
               <i class="bi bi-pencil"></i>
             </button>
           </td>
@@ -189,7 +207,12 @@ function openDetail(result: MatchResult) {
     <div v-else class="alert alert-info" role="alert">
       There aren't any results in the {{ store.tournament.name }} tournament yet.
     </div>
-    <button v-if="store.team == 'admin'" type="button" class="btn btn-primary btn-sm me-auto" @click="(e) => openEdit(undefined)">
+    <button
+      v-if="store.team == 'admin'"
+      type="button"
+      class="btn btn-primary btn-sm me-auto"
+      @click="(e) => openEdit(undefined)"
+    >
       Add new result
     </button>
   </template>
@@ -230,7 +253,7 @@ function openDetail(result: MatchResult) {
             </option>
           </select>
           <label for="logs" class="form-label">Log file</label>
-          <FileInput id="logs" v-model="editData.newLogs" />
+          <FileInput id="logs" v-model="editData.newLogs" accept=".json, application/json" />
           <table class="table">
             <thead>
               <tr>
