@@ -375,7 +375,7 @@ async function deleteProblem() {
                 v-model="editProblem.tournament"
                 @change="checkName"
               >
-                <option v-for="(tournament, id) in tournaments" :value="id">{{ tournament.name }}</option>
+                <option v-for="(tournament, id) in tournaments" :value="tournament">{{ tournament.name }}</option>
               </select>
               <div class="invalid-feedback"></div>
             </div>
