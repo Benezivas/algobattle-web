@@ -572,7 +572,7 @@ def create_problem(
     end: datetime | None = Form(None),
     image: UploadFile | None = None,
     alt_text: str = Form(""),
-    short_description: str = Form(""),
+    description: str = Form(""),
     color: str = Form("#ffffff"),
     background_tasks: BackgroundTasks,
 ) -> str:
@@ -595,7 +595,7 @@ def create_problem(
         start=start,
         end=end,
         image=_image,
-        description=short_description,
+        description=description,
         colour=color,
         page_data=page_data,
     )
