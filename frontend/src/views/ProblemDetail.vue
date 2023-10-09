@@ -440,6 +440,7 @@ async function deleteProblem() {
                 name="alt"
                 id="alt_text"
                 rows="5"
+                maxlength="256"
                 v-model="editProblem.alt"
               ></textarea>
             </div>
@@ -452,6 +453,7 @@ async function deleteProblem() {
                 name="description"
                 id="short_desc"
                 rows="5"
+                maxlength="256"
                 v-model="editProblem.description"
               ></textarea>
             </div>
