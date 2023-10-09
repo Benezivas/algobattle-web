@@ -126,14 +126,14 @@ async function submitEdit() {
   const prob = editProblem.value!;
   problem.value = await ProblemService.edit({
     id: problem.value!.id,
-    name: prob.name,
-    tournament: prob.tournament.id,
-    start: prob.start,
-    end: prob.end,
-    description: prob.description,
-    altText: prob.alt,
-    colour: prob.colour,
     formData: {
+      name: prob.name,
+      tournament: prob.tournament.id,
+      start: prob.start,
+      end: prob.end,
+      description: prob.description,
+      alt_text: prob.alt,
+      colour: prob.colour,
       file: prob.file.edit,
       image: prob.image.edit,
     },
