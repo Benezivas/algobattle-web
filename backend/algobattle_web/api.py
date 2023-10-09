@@ -413,7 +413,7 @@ def create_tournament(*, db: Database, name: str32) -> Tournament:
 @admin.patch("/tournament", tags=["tournament"], name="edit")
 def edit_tournament(*, db: Database, id: ID, name: str32) -> Tournament:
     tournament = unwrap(Tournament.get(db, id))
-    if db.scalars(select(Tournament).where(Tournament.name == name, Tournament.id != id)).first() is None:
+    if db.scalar(select(Tournament).where(Tournament.name == name, Tournament.id != id)) is not None:
         raise ValueTaken("name", tournament.name)
     tournament.name = name
     db.commit()
