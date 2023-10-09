@@ -44,7 +44,11 @@ services:
       - /var/run/docker.sock,target=/var/run/docker.sock
       - ./io:/algobattle/io
   nginx:
-    build: .
+    build:
+      context: .
+      args:
+        - ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW}
+        - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
     depends_on:
       backend:
         condition: service_healthy

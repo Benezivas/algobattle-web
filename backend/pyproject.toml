@@ -13,7 +13,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "algobattle-base@https://github.com/ImogenBits/algobattle.git@blep",
+    "algobattle-base@git+https://github.com/ImogenBits/algobattle.git@blep",
     "uvicorn",
     "fastapi",
     "python-jose[cryptography]",

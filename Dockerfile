@@ -2,7 +2,9 @@ FROM python:3.11 as api_builder
 WORKDIR /code
 COPY backend .
 RUN pip install .
-COPY config.toml /algobattle/config.toml
+ARG ALGOBATTLE_DB_PW
+ARG ALGOBATTLE_BASE_URL
+ENV ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW} ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
 RUN algobattle_api > openapi.json
 RUN pip show algobattle_base | grep -oP "Version: \K[^\n]+" > algobattle_version.txt
 
