@@ -30,7 +30,7 @@ const sortedResults = computed(() => {
       return 0;
     }
   });
-  return sorted
+  return sorted;
 });
 
 let editModal: Modal;
@@ -192,7 +192,12 @@ function openDetail(result: MatchResult) {
             </button>
           </td>
           <td v-if="store.team == 'admin'" class="text-end">
-            <button type="button" class="btn btn-sm btn-warning" title="Edit" @click="(e) => openEdit(result)">
+            <button
+              type="button"
+              class="btn btn-sm btn-warning"
+              title="Edit"
+              @click="(e) => openEdit(result)"
+            >
               <i class="bi bi-pencil"></i>
             </button>
           </td>
@@ -202,7 +207,12 @@ function openDetail(result: MatchResult) {
     <div v-else class="alert alert-info" role="alert">
       There aren't any results in the {{ store.tournament.name }} tournament yet.
     </div>
-    <button v-if="store.team == 'admin'" type="button" class="btn btn-primary btn-sm me-auto" @click="(e) => openEdit(undefined)">
+    <button
+      v-if="store.team == 'admin'"
+      type="button"
+      class="btn btn-primary btn-sm me-auto"
+      @click="(e) => openEdit(undefined)"
+    >
       Add new result
     </button>
   </template>
@@ -243,7 +253,7 @@ function openDetail(result: MatchResult) {
             </option>
           </select>
           <label for="logs" class="form-label">Log file</label>
-          <FileInput id="logs" v-model="editData.newLogs" accept=".json, application/json"/>
+          <FileInput id="logs" v-model="editData.newLogs" accept=".json, application/json" />
           <table class="table">
             <thead>
               <tr>

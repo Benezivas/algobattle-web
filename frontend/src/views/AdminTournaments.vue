@@ -108,7 +108,7 @@ async function deleteTournament() {
         <div class="modal-body">
           <label for="name" class="form-label">Name</label>
           <input
-            class="form-control "
+            class="form-control"
             type="text"
             v-model="data.name"
             maxlength="32"

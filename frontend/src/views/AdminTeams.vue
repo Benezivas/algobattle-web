@@ -53,11 +53,11 @@ const userSearchData = ref({
 });
 const confirmDelete = ref(false);
 
-function emptyTeam(): Omit<Team, "tournament"> & {tournament: Tournament | null} {
+function emptyTeam(): Omit<Team, "tournament"> & { tournament: Tournament | null } {
   return {
     id: "",
     name: "",
-    tournament: store.tournament ? {...store.tournament} : null,
+    tournament: store.tournament ? { ...store.tournament } : null,
     members: [],
   };
 }
@@ -193,7 +193,7 @@ async function checkName() {
         <span class="visually-hidden">Applied filters</span>
       </span>
     </button>
-    <Paginator :total="total" @update="search"/>
+    <Paginator :total="total" @update="search" />
   </div>
 
   <div class="d-flex justify-content-end">
@@ -202,13 +202,15 @@ async function checkName() {
         <div class="row mb-3">
           <div class="col">
             <label for="nameFilter" class="form-label mb-1">Name</label>
-            <input class="form-control " id="nameFilter" type="text" v-model="searchData.name" />
+            <input class="form-control" id="nameFilter" type="text" v-model="searchData.name" />
           </div>
           <div class="col">
             <label for="tournamentFilter" class="form-label mb-1">Tournament</label>
             <select class="form-select" id="tournamentFilter" v-model="searchData.tournament">
               <option value=""></option>
-              <option v-for="(tournament, id) in tournaments" :value="tournament" :key="id">{{ tournament.name }}</option>
+              <option v-for="(tournament, id) in tournaments" :value="tournament" :key="id">
+                {{ tournament.name }}
+              </option>
             </select>
           </div>
         </div>
@@ -243,7 +245,7 @@ async function checkName() {
           <label for="name" class="form-label">Name</label>
           <input
             id="name"
-            class="form-control "
+            class="form-control"
             type="text"
             v-model="editData.name"
             maxlength="32"
@@ -262,7 +264,11 @@ async function checkName() {
             :required="editData.id != ''"
             @change="checkName"
           >
-            <option v-for="(tournament, id) in tournaments" :value="tournament" :selected="id == editData.tournament?.id">
+            <option
+              v-for="(tournament, id) in tournaments"
+              :value="tournament"
+              :selected="id == editData.tournament?.id"
+            >
               {{ tournament.name }}
             </option>
           </select>

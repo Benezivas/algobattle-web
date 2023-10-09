@@ -137,9 +137,9 @@ const displayName = computed(() => {
               </li>
               <li v-if="store.user.is_admin">
                 <button
-                class="dropdown-item"
-                :class="{ active: store.team == 'admin' }"
-                @click="selectTeam('admin')"
+                  class="dropdown-item"
+                  :class="{ active: store.team == 'admin' }"
+                  @click="selectTeam('admin')"
                 >
                   Admin
                 </button>

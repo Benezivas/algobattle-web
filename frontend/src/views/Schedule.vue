@@ -18,7 +18,7 @@ const sortedMatches = computed(() => {
       return 0;
     }
   });
-  return sorted
+  return sorted;
 });
 
 let modal: Modal;
@@ -87,7 +87,12 @@ async function deleteMatch() {
           </td>
           <td>{{ match.points }}</td>
           <td v-if="store.team == 'admin'" class="text-end">
-            <button type="button" class="btn btn-sm btn-warning" title="Edit" @click="(e) => openModal(match)">
+            <button
+              type="button"
+              class="btn btn-sm btn-warning"
+              title="Edit"
+              @click="(e) => openModal(match)"
+            >
               <i class="bi bi-pencil"></i>
             </button>
           </td>
@@ -97,7 +102,12 @@ async function deleteMatch() {
     <div v-else class="alert alert-info" role="alert">
       There aren't any matches scheduled in the {{ store.tournament.name }} tournament yet.
     </div>
-    <button v-if="store.team == 'admin'" type="button" class="btn btn-primary btn-sm me-auto" @click="(e) => openModal(undefined)">
+    <button
+      v-if="store.team == 'admin'"
+      type="button"
+      class="btn btn-primary btn-sm me-auto"
+      @click="(e) => openModal(undefined)"
+    >
       Schedule new match
     </button>
   </template>
@@ -122,26 +132,13 @@ async function deleteMatch() {
           <label for="name" class="form-label">Name</label>
           <input id="name" class="form-control" type="text" maxlength="32" v-model="editData.name" />
           <label for="time" class="form-label">Time</label>
-          <input
-            id="time"
-            class="form-control"
-            type="datetime-local"
-            required
-            v-model="editData.time"
-          />
+          <input id="time" class="form-control" type="datetime-local" required v-model="editData.time" />
           <label for="problem" class="form-label">Problem</label>
           <select id="problem" class="form-select" required v-model="editData.problem">
             <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>
           </select>
           <label for="points" class="form-label">Points</label>
-          <input
-            id="points"
-            class="form-control"
-            type="number"
-            min="0"
-            required
-            v-model="editData.points"
-          />
+          <input id="points" class="form-control" type="number" min="0" required v-model="editData.points" />
         </div>
         <div class="modal-footer">
           <button

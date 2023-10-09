@@ -5,7 +5,7 @@ import { onMounted, ref, watch } from "vue";
 const settings = ref<AdminServerSettings>();
 const state = ref<"plain" | "success" | "error">("plain");
 
-watch(settings, () => state.value = "plain", {deep: true});
+watch(settings, () => (state.value = "plain"), { deep: true });
 
 onMounted(async () => {
   settings.value = (await SettingsService.getServer()) as AdminServerSettings;

@@ -21,7 +21,7 @@ const settings = ref<{
 const state = ref<"plain" | "success" | { name?: boolean; email?: boolean }>("plain");
 const tournaments = ref<ModelDict<Tournament>>({});
 
-watch(settings, () => state.value = "plain", {deep: true});
+watch(settings, () => (state.value = "plain"), { deep: true });
 
 onMounted(async () => {
   if (!store.user) {
