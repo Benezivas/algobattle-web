@@ -9,7 +9,7 @@ import {
   type ServerSettings,
   ApiError,
 } from "@client";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 
 const serverSettings = ref<ServerSettings>();
 const settings = ref<{
@@ -20,6 +20,8 @@ const settings = ref<{
 }>();
 const state = ref<"plain" | "success" | { name?: boolean; email?: boolean }>("plain");
 const tournaments = ref<ModelDict<Tournament>>({});
+
+watch(settings, () => state.value = "plain", {deep: true});
 
 onMounted(async () => {
   if (!store.user) {

@@ -112,11 +112,11 @@ async function saveEdit() {
     </div>
     <div id="saveBox">
       <button type="submit" class="btn btn-primary" id="saveButton" @click="saveEdit">Save changes</button>
-      <div v-if="state === 'success'" class="alert alert-success state-alert" role="alert">
-        Successfully saved settings
-      </div>
-      <div v-if="state === 'error'" class="alert alert-danger state-alert" role="alert">
-        Something went wrong!
+      <span v-if="state === 'success'" class="text-success notif">
+        <i class="bi bi-check-lg"></i> Successfully saved settings
+      </span>
+      <div v-else-if="state !== 'plain'" class="text-danger notif">
+        <i class="bi bi-x-lg"></i> Couldn't save changes
       </div>
     </div>
   </template>
@@ -136,9 +136,7 @@ async function saveEdit() {
   flex-direction: row;
 }
 
-.state-alert {
-  max-width: fit-content;
+.notif {
   margin-left: 1rem;
-  margin-bottom: 0rem;
 }
 </style>
