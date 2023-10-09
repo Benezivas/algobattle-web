@@ -174,7 +174,14 @@ function checkName() {
                 </div>
                 <div class="mb-3">
                   <label for="short_desc" class="form-label">Thumbnail alt text</label>
-                  <textarea class="form-control" name="alt_text" id="alt_text" rows="5" v-model="data.alt" />
+                  <textarea
+                    class="form-control"
+                    name="alt_text"
+                    id="alt_text"
+                    rows="5"
+                    maxlength="256"
+                    v-model="data.alt"
+                  />
                 </div>
                 <div class="mb-3">
                   <label for="short_desc" class="form-label">Description</label>

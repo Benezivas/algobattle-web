@@ -612,25 +612,28 @@ def edit_problem(
     *,
     db: Database,
     id: ID,
-    name: str | None = None,
-    tournament: ID | None = None,
-    start: datetime | None | Literal["noedit"] = "noedit",
-    end: datetime | None | Literal["noedit"] = "noedit",
-    description: str | None = None,
-    alt_text: str | None = None,
-    colour: str | None = None,
+    name: InForm[str | None] = None,
+    tournament: InForm[ID | None] = None,
+    start: InForm[datetime | None | Literal["noedit"]] = "noedit",
+    end: InForm[datetime | None | Literal["noedit"]] = "noedit",
+    description: InForm[str | None] = None,
+    alt_text: InForm[str | None] = None,
+    colour: InForm[str | None] = None,
     file: UploadFile | None = None,
     image: UploadFile | None | Literal["noedit"] = Form("noedit"),
     tasks: BackgroundTasks,
 ) -> Problem:
     problem = unwrap(db.get(Problem, id))
     if name:
+        new_tournament = tournament or problem.tournament_id
+        if db.scalar(select(Problem).where(Problem.name == name, Problem.id != id, Problem.tournament_id == new_tournament)):
+            raise ValueTaken("name", name)
         problem.name = name
     if tournament:
         problem.tournament = unwrap(db.get(Tournament, tournament))
-    if start:
+    if start != "noedit":
         problem.start = start
-    if end:
+    if end != "noedit":
         problem.end = end
     if description is not None:
         problem.description = description
@@ -641,14 +644,9 @@ def edit_problem(
     if file:
         problem.file = DbFile.from_file(file)
         tasks.add_task(problem.compute_page_data)
-    if image is None:
-        problem.image = None
-    elif image != "noedit":
-        problem.image = DbFile.from_file(image)
-    try:
-        db.commit()
-    except IntegrityError as e:
-        raise ValueTaken("name", "") from e
+    if image != "noedit":
+        problem.image = DbFile.maybe(image)
+    db.commit()
     return problem
 
 

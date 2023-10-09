@@ -126,14 +126,14 @@ async function submitEdit() {
   const prob = editProblem.value!;
   problem.value = await ProblemService.edit({
     id: problem.value!.id,
-    name: prob.name,
-    tournament: prob.tournament.id,
-    start: prob.start,
-    end: prob.end,
-    description: prob.description,
-    altText: prob.alt,
-    colour: prob.colour,
     formData: {
+      name: prob.name,
+      tournament: prob.tournament.id,
+      start: prob.start,
+      end: prob.end,
+      description: prob.description,
+      alt_text: prob.alt,
+      colour: prob.colour,
       file: prob.file.edit,
       image: prob.image.edit,
     },
@@ -145,11 +145,11 @@ async function checkName() {
   try {
     const probs = Object.values(
       await ProblemService.get({
-        tournament: tournament.name,
+        tournamentName: tournament.name,
         name: editProblem.value!.name,
       })
     );
-    if (probs.length != 1 || probs[0].id != problem.value!.id) {
+    if (probs.length != 0 && probs[0].id != problem.value!.id) {
       error.value = "name";
       return;
     }
@@ -440,6 +440,7 @@ async function deleteProblem() {
                 name="alt"
                 id="alt_text"
                 rows="5"
+                maxlength="256"
                 v-model="editProblem.alt"
               ></textarea>
             </div>
@@ -452,6 +453,7 @@ async function deleteProblem() {
                 name="description"
                 id="short_desc"
                 rows="5"
+                maxlength="256"
                 v-model="editProblem.description"
               ></textarea>
             </div>
