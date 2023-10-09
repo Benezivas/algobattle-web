@@ -362,6 +362,8 @@ class UserSettings(Base, unsafe_hash=True):
     selected_team_id: Mapped[UUID | None] = mapped_column(ForeignKey("teams.id"), init=False)
     selected_tournament_id: Mapped[UUID | None] = mapped_column(ForeignKey("tournaments.id"), init=False)
 
+    Schema = schemas.UserSettings
+
 
 class User(Base, unsafe_hash=True):
     """A user object."""

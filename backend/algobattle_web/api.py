@@ -308,10 +308,14 @@ def edit_user_settings(
     tournament: ID | None = None,
 ) -> None:
     if user is None:
-        raise HTTPException(404, "Not logged in")
+        raise HTTPException(400, "Not logged in")
     if email is not None and email != user.email:
         if not ServerSettings.get(db).user_change_email:
             raise HTTPException(400, "Users cannot change their own email")
+        if db.scalar(
+            select(User).where(User.email == email, User.id != user.id)
+        ):
+            raise ValueTaken("email", email)
         user.email = email
     if team == "admin":
         if not user.is_admin:
@@ -332,7 +336,7 @@ def edit_user_settings(
 def get_team_settings(*, db: Database, login: LoggedIn) -> TeamSettings:
     team = login.team
     if not isinstance(team, Team):
-        raise HTTPException(404, "User has not selected a team")
+        raise HTTPException(400, "User has not selected a team")
     return team.settings
 
 
@@ -340,10 +344,14 @@ def get_team_settings(*, db: Database, login: LoggedIn) -> TeamSettings:
 def edit_team_settings(*, db: Database, login: LoggedIn, name: InBody[str32 | None] = None) -> None:
     team = login.team
     if not isinstance(team, Team):
-        raise HTTPException(404, "User has not selected a team")
+        raise HTTPException(400, "User has not selected a team")
     if name is not None and name != team.name:
         if not ServerSettings.get(db).team_change_name:
             raise HTTPException(400, "Teams cannot change their own name")
+        if db.scalar(
+            select(Team).where(Team.tournament_id == team.tournament_id, Team.name == name, Team.id != team.id)
+        ):
+            raise ValueTaken("name", name)
         team.name = name
     db.commit()
 
