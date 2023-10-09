@@ -130,7 +130,7 @@ async function saveEdit() {
 <style>
 #saveBox {
   margin-top: 1.5rem;
-  height: 56px;
+  height: 3rem + 2px;
   align-items: center;
   display: block flex;
   flex-direction: row;
