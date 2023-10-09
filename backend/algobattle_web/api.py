@@ -6,6 +6,7 @@ from os import environ
 from smtplib import SMTP
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
+from urllib.parse import quote
 
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, BackgroundTasks
 from fastapi.routing import APIRoute
@@ -413,7 +414,7 @@ def create_tournament(*, db: Database, name: str32) -> Tournament:
 @admin.patch("/tournament", tags=["tournament"], name="edit")
 def edit_tournament(*, db: Database, id: ID, name: str32) -> Tournament:
     tournament = unwrap(Tournament.get(db, id))
-    if db.scalars(select(Tournament).where(Tournament.name == name, Tournament.id != id)).first() is None:
+    if db.scalar(select(Tournament).where(Tournament.name == name, Tournament.id != id)) is not None:
         raise ValueTaken("name", tournament.name)
     tournament.name = name
     db.commit()
@@ -572,7 +573,7 @@ def create_problem(
     end: datetime | None = Form(None),
     image: UploadFile | None = None,
     alt_text: str = Form(""),
-    short_description: str = Form(""),
+    description: str = Form(""),
     color: str = Form("#ffffff"),
     background_tasks: BackgroundTasks,
 ) -> str:
@@ -595,7 +596,7 @@ def create_problem(
         start=start,
         end=end,
         image=_image,
-        description=short_description,
+        description=description,
         colour=color,
         page_data=page_data,
     )
@@ -603,7 +604,7 @@ def create_problem(
     db.commit()
     if page_data is None:
         background_tasks.add_task(prob.compute_page_data)
-    return f"/problems/{prob.tournament.name}/{prob.name}"
+    return f"/problems/{quote(prob.tournament.name, safe='')}/{quote(prob.name, safe='')}"
 
 
 @admin.patch("/problem", tags=["problem"], name="edit")
