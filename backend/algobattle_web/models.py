@@ -555,7 +555,7 @@ class Problem(Base, PermissionCheck, unsafe_hash=True):
 
     @classmethod
     def _visible_sql(cls, team: Team) -> ColumnElement[bool]:
-        return (Problem.tournament_id == team.tournament_id) & (Problem.start.is_not(None) | (Problem.start <= datetime.now()))
+        return (Problem.tournament_id == team.tournament_id) & (Problem.start.is_(None) | (Problem.start <= datetime.now()))
 
     def _editable(self, team: Team) -> bool:
         return (self.end is None or self.end >= datetime.now())

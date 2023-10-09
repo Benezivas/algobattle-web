@@ -21,7 +21,7 @@ const now = new Date();
 const future_problems = computed(() => {
   return Object.fromEntries(
     Object.entries(problems.value).filter(
-      ([id, problem]) => problem.start != null && new Date(problem.start) > now
+      ([id, problem]) => problem.start && new Date(problem.start) > now
     )
   );
 });
@@ -30,8 +30,8 @@ const current_problems = computed(() => {
   return Object.fromEntries(
     Object.entries(problems.value).filter(
       ([id, problem]) =>
-        (problem.start == null || new Date(problem.start) <= now) &&
-        (problem.end == null || new Date(problem.end) > now)
+        (!problem.start || new Date(problem.start) <= now) &&
+        (!problem.end || new Date(problem.end) > now)
     )
   );
 });
@@ -39,7 +39,7 @@ const current_problems = computed(() => {
 const past_problems = computed(() => {
   return Object.fromEntries(
     Object.entries(problems.value).filter(
-      ([id, problem]) => problem.end != null && new Date(problem.end) < now
+      ([id, problem]) => problem.end && new Date(problem.end) < now
     )
   );
 });
