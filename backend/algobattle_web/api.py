@@ -6,6 +6,7 @@ from os import environ
 from smtplib import SMTP
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
+from urllib.parse import quote
 
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, BackgroundTasks
 from fastapi.routing import APIRoute
@@ -603,7 +604,7 @@ def create_problem(
     db.commit()
     if page_data is None:
         background_tasks.add_task(prob.compute_page_data)
-    return f"/problems/{prob.tournament.name}/{prob.name}"
+    return f"/problems/{quote(prob.tournament.name, safe='')}/{quote(prob.name, safe='')}"
 
 
 @admin.patch("/problem", tags=["problem"], name="edit")
