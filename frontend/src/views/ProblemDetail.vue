@@ -145,11 +145,11 @@ async function checkName() {
   try {
     const probs = Object.values(
       await ProblemService.get({
-        tournament: tournament.name,
+        tournamentName: tournament.name,
         name: editProblem.value!.name,
       })
     );
-    if (probs.length != 1 || probs[0].id != problem.value!.id) {
+    if (probs.length != 0 && probs[0].id != problem.value!.id) {
       error.value = "name";
       return;
     }
