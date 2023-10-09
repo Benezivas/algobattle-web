@@ -73,7 +73,7 @@ const editData = ref<EditData>({
 
 function openEdit(match: MatchResult | undefined) {
   editData.value = match
-    ? { ...structuredClone(toRaw(match)), confirmDelete: false }
+    ? { ...structuredClone(toRaw(match)), time: match.time.slice(0, 19), confirmDelete: false }
     : {
         status: MatchStatus.COMPLETE,
         problem: undefined,

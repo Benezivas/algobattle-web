@@ -33,7 +33,7 @@ onMounted(async () => {
 });
 
 function openModal(match: ScheduledMatch | undefined) {
-  editData.value = match ? structuredClone(toRaw(match)) : { points: 100 };
+  editData.value = match ? {...structuredClone(toRaw(match)), time: match.time.slice(0, 19)} : { points: 100 };
   modal.show();
 }
 

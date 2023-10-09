@@ -109,6 +109,8 @@ let confirmDeleteProblem = ref(false);
 function createProblemEdit(problem: Problem): ProblemEdit {
   return {
     ...problem,
+    start: problem?.start?.slice(0, 19),
+    end: problem?.end?.slice(0, 19),
     file: { location: problem.file.location },
     image: problem.image ? { location: problem.image?.location } : {},
     alt: problem.image?.alt_text || "",
