@@ -36,7 +36,7 @@ const sortedResults = computed(() => {
 let editModal: Modal;
 let detailModal: Modal;
 onMounted(async () => {
-  const res = await MatchService.getResult();
+  const res = await MatchService.getResult({ tournament: store.tournament?.id });
   problems.value = res.problems;
   results.value = res.results;
   teams.value = res.teams;

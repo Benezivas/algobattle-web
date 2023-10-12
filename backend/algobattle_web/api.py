@@ -877,8 +877,13 @@ class MatchResultData(BaseSchema):
 
 
 @router.get("/match/result", tags=["match"], name="getResult")
-def results(*, db: Database, login: LoggedIn) -> MatchResultData:
-    results = db.scalars(select(MatchResult).where(MatchResult.problem.has(Problem.visible_sql(login.team)))).all()
+def results(*, db: Database, login: LoggedIn, problem: ID | None = None, tournament: ID | None = None) -> MatchResultData:
+    filters = [MatchResult.problem.has(Problem.visible_sql(login.team))]
+    if problem is not None:
+        filters.append(MatchResult.problem_id == problem)
+    if tournament is not None:
+        filters.append(MatchResult.problem.has(Problem.tournament_id == tournament))
+    results = db.scalars(select(MatchResult).where(*filters)).all()
     return MatchResultData(
         results=encode(results),
         problems=encode(result.problem for result in results),
