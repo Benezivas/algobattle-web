@@ -41,7 +41,7 @@ services:
       - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
     volumes:
       - db-files:/algobattle/dbfiles
-      - /var/run/docker.sock.raw:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./io:/algobattle/io
   nginx:
     build:
