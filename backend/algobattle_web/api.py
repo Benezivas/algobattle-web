@@ -53,7 +53,6 @@ from algobattle_web.dependencies import (
     LoggedIn,
     check_if_admin,
     get_db,
-    TeamIfAdmin,
 )
 
 __all__ = ("router", "admin")
