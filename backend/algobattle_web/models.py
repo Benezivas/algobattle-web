@@ -179,6 +179,9 @@ class Base(RawBase, unsafe_hash=True):
 
     id: Mapped[UUID] = mapped_column(default_factory=uuid4, primary_key=True, init=False, autoincrement=False)
 
+    def __hash__(self) -> int:
+        return hash(self.id)
+
     @classmethod
     def get_unwrap(cls, db: Session, id: ID) -> Self:
         """Get the specified entry and raise an error if it does not exist."""
