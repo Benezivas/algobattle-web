@@ -19,7 +19,6 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column, Session, Declara
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.base import _NoArg
 from fastapi import UploadFile
-from fastapi.responses import FileResponse
 from pydantic import Field
 
 from algobattle.util import TempDir, Role as ProgramRole
@@ -289,7 +288,8 @@ class File(Base):
 
     def remove(self) -> None:
         """Removes the associated file from disk."""
-        self.path.unlink()
+        if self.path.exists():
+            self.path.unlink()
 
     def save(self) -> None:
         """Saves the associated file to disk."""
@@ -305,12 +305,6 @@ class File(Base):
                 with open(self.path, "wb+") as target:
                     copyfileobj(self._file, target)
             self._file = None
-
-    def response(self, content_disposition: Literal["attachment", "inline"] = "attachment") -> FileResponse:
-        """Creates a fastapi FileResponse that serves this file."""
-        return FileResponse(
-            self.path, filename=self.filename, content_disposition_type=content_disposition, media_type=self.media_type
-        )
 
     def open(self, mode: str = "rb") -> IO[Any]:
         """Opens the underlying file object."""

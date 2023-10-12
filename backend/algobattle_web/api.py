@@ -98,7 +98,13 @@ admin = APIRouter(prefix="/admin", dependencies=[Depends(check_if_admin)], route
 @router.get("/files/{id}", tags=["files"])
 def get_file(db: Database, *, id: ID) -> FileResponse:
     file = unwrap(db.get(DbFile, id))
-    return file.response("inline" if file.media_type == "application/pdf" else "attachment")
+    return FileResponse(
+        file.path,
+        status_code=200 if file.path.exists() else 404,
+        filename=file.filename,
+        content_disposition_type="inline" if file.media_type == "application/pdf" else "attachment",
+        media_type=file.media_type,
+    )
 
 
 # *******************************************************************************
@@ -312,9 +318,7 @@ def edit_user_settings(
     if email is not None and email != user.email:
         if not ServerSettings.get(db).user_change_email:
             raise HTTPException(400, "Users cannot change their own email")
-        if db.scalar(
-            select(User).where(User.email == email, User.id != user.id)
-        ):
+        if db.scalar(select(User).where(User.email == email, User.id != user.id)):
             raise ValueTaken("email", email)
         user.email = email
     if team == "admin":
@@ -625,7 +629,9 @@ def edit_problem(
     problem = unwrap(db.get(Problem, id))
     if name:
         new_tournament = tournament or problem.tournament_id
-        if db.scalar(select(Problem).where(Problem.name == name, Problem.id != id, Problem.tournament_id == new_tournament)):
+        if db.scalar(
+            select(Problem).where(Problem.name == name, Problem.id != id, Problem.tournament_id == new_tournament)
+        ):
             raise ValueTaken("name", name)
         problem.name = name
     if tournament:
@@ -876,7 +882,9 @@ class MatchResultData(BaseSchema):
 
 
 @router.get("/match/result", tags=["match"], name="getResult")
-def results(*, db: Database, login: LoggedIn, problem: ID | None = None, tournament: ID | None = None) -> MatchResultData:
+def results(
+    *, db: Database, login: LoggedIn, problem: ID | None = None, tournament: ID | None = None
+) -> MatchResultData:
     filters = [MatchResult.problem.has(Problem.visible_sql(login.team))]
     if problem is not None:
         filters.append(MatchResult.problem_id == problem)
