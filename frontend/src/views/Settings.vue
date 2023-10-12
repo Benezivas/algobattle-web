@@ -45,8 +45,10 @@ async function saveEdit() {
   }
   try {
     await SettingsService.editUser({
-      email: settings.value.email,
-      tournament: settings.value.user.selected_tournament?.id,
+      requestBody: {
+        email: settings.value.email,
+        tournament: settings.value.user.selected_tournament?.id,
+      }
     });
     state.value = "success";
     store.user.email = settings.value.email;

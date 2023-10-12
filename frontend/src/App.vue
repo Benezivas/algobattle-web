@@ -59,7 +59,9 @@ async function selectTeam(team: Team | "admin") {
     return;
   }
   await SettingsService.editUser({
-    team: team == "admin" ? team : team.id,
+    requestBody: {
+      team: team == "admin" ? team : team.id,
+    }
   });
   router.go(0);
 }
