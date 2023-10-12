@@ -53,7 +53,6 @@ from algobattle_web.dependencies import (
     LoggedIn,
     check_if_admin,
     get_db,
-    TeamIfAdmin,
 )
 
 __all__ = ("router", "admin")
@@ -191,7 +190,7 @@ class EditUser(BaseSchema):
     teams: dict[ID, EditAction] = {}
 
 
-@admin.patch("/user", tags=["user"])
+@admin.patch("/user/{id}", tags=["user"])
 def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     user = unwrap(User.get(db, id))
 
@@ -217,7 +216,7 @@ def edit_user(*, db: Session = Depends(get_db), id: ID, edit: EditUser) -> User:
     return user
 
 
-@admin.delete("/user", tags=["user"])
+@admin.delete("/user/{id}", tags=["user"])
 def delete_user(*, db: Session = Depends(get_db), id: ID) -> bool:
     user = unwrap(User.get(db, id))
     db.delete(user)
@@ -245,7 +244,7 @@ def get_self(*, db: Database, login: LoggedIn) -> LoggedIn:
 
 
 @router.post("/user/login", tags=["user"])
-def login(*, db: Database, email: str = Body(), target_url: str = Body(), tasks: BackgroundTasks) -> None:
+def login(*, db: Database, email: str = Body(), target_url: InBody[str], tasks: BackgroundTasks) -> None:
     user = User.get(db, email)
     if user is not None:
         tasks.add_task(send_login_email, user.id, target_url)
@@ -281,7 +280,7 @@ class TokenData(BaseSchema):
     expires: datetime
 
 
-@router.post("/user/token", tags=["user"])
+@router.get("/user/token/{login_token}", tags=["user"])
 def get_token(*, db: Database, login_token: str) -> TokenData:
     user = User.decode_login_token(db, login_token)
     return TokenData(token=user.cookie(db), expires=datetime.now() + timedelta(weeks=4))
@@ -304,9 +303,9 @@ def edit_user_settings(
     *,
     db: Database,
     user: CurrUser,
-    email: str | None = None,
-    team: ID | Literal["admin"] | None = None,
-    tournament: ID | None = None,
+    email: InBody[str | None] = None,
+    team: InBody[ID | Literal["admin"] | None] = None,
+    tournament: InBody[ID | None] = None,
 ) -> None:
     if user is None:
         raise HTTPException(400, "Not logged in")
@@ -411,7 +410,7 @@ def create_tournament(*, db: Database, name: str32) -> Tournament:
     return tournament
 
 
-@admin.patch("/tournament", tags=["tournament"], name="edit")
+@admin.patch("/tournament/{id}", tags=["tournament"], name="edit")
 def edit_tournament(*, db: Database, id: ID, name: str32) -> Tournament:
     tournament = unwrap(Tournament.get(db, id))
     if db.scalar(select(Tournament).where(Tournament.name == name, Tournament.id != id)) is not None:
@@ -421,7 +420,7 @@ def edit_tournament(*, db: Database, id: ID, name: str32) -> Tournament:
     return tournament
 
 
-@admin.delete("/tournament", tags=["tournament"], name="delete")
+@admin.delete("/tournament/{id}", tags=["tournament"], name="delete")
 def delete_tournament(*, db: Database, id: ID) -> None:
     tournament = unwrap(Tournament.get(db, id))
     db.delete(tournament)
@@ -487,7 +486,7 @@ def create_team(*, db: Database, name: str32, tournament: InBody[ID], members: I
     return team_
 
 
-@admin.patch("/team", tags=["team"], name="edit")
+@admin.patch("/team/{id}", tags=["team"], name="edit")
 def edit_team(
     *,
     db: Database,
@@ -519,7 +518,7 @@ def edit_team(
     return team
 
 
-@admin.delete("/team", tags=["team"])
+@admin.delete("/team/{id}", tags=["team"])
 def delete_team(*, db: Database, id: ID):
     team = unwrap(Team.get(db, id))
     db.delete(team)
@@ -607,7 +606,7 @@ def create_problem(
     return f"/problems/{quote(prob.tournament.name, safe='')}/{quote(prob.name, safe='')}"
 
 
-@admin.patch("/problem", tags=["problem"], name="edit")
+@admin.patch("/problem/{id}", tags=["problem"], name="edit")
 def edit_problem(
     *,
     db: Database,
@@ -650,7 +649,7 @@ def edit_problem(
     return problem
 
 
-@admin.delete("/problem", tags=["problem"], name="delete")
+@admin.delete("/problem/{id}", tags=["problem"], name="delete")
 def delete_problem(*, db: Database, id: ID) -> bool:
     problem = unwrap(db.get(Problem, id))
     db.delete(problem)
@@ -663,28 +662,31 @@ def delete_problem(*, db: Database, id: ID) -> bool:
 # *******************************************************************************
 
 
-@router.put("/report", tags=["report"], name="upload")
+@router.put("/report/{problem}/{team}", tags=["report"], name="upload")
 def add_report(
     *,
     db: Database,
-    team: TeamIfAdmin,
+    login: LoggedIn,
+    team: ID,
     problem: ID,
     file: UploadFile,
 ) -> Report:
     problem_model = Problem.get_unwrap(db, problem)
-    if problem_model.tournament != team.tournament:
+    team_model = Team.get_unwrap(db, team)
+    if problem_model.tournament != team_model.tournament:
         raise HTTPException(400, "Selected team and problem are not in the same tournament")
-    report = db.scalars(select(Report).where(Report.team == team, Report.problem_id == problem)).unique().first()
+    problem_model.assert_editable(login.team)
+    report = db.scalar(select(Report).where(Report.team == team, Report.problem_id == problem))
     if report:
         report.file = DbFile.from_file(file)
     else:
-        report = Report(team, problem_model, DbFile.from_file(file))
+        report = Report(team_model, problem_model, DbFile.from_file(file))
         db.add(report)
     db.commit()
     return report
 
 
-@router.delete("/report", tags=["report"], name="delete")
+@router.delete("/report/{problem}/{team}", tags=["report"], name="delete")
 def delete_report(db: Database, login: LoggedIn, team: ID, problem: ID) -> None:
     if isinstance(login.team, Team) and team != login.team.id:
         raise HTTPException(403)
@@ -737,6 +739,7 @@ def search_program(
     team: ID | None = None,
     role: Role | None = None,
     problem: ID | None = None,
+    tournament: ID | None = None,
     offset: int = 0,
 ) -> ProgramResults:
     filters = [Program.visible_sql(login.team)]
@@ -748,6 +751,8 @@ def search_program(
         filters.append(Program.role == role)
     if problem is not None:
         filters.append(Program.problem_id == problem)
+    if tournament is not None:
+        filters.append(Program.problem.has(Problem.tournament_id == tournament))
     programs = (
         db.scalars(
             select(Program).where(*filters).order_by(Program.creation_time.desc()).limit(SQL_LIMIT).offset(offset)
@@ -785,13 +790,12 @@ def upload_program(
     return prog
 
 
-@router.delete("/program", tags=["program"], name="delete")
-def delete_program(*, db: Database, login: LoggedIn, id: ID) -> bool:
+@router.delete("/program/{id}", tags=["program"], name="delete")
+def delete_program(*, db: Database, login: LoggedIn, id: ID) -> None:
     program = Program.get_unwrap(db, id)
     program.assert_editable(login.team)
     db.delete(program)
     db.commit()
-    return True
 
 
 # *******************************************************************************
@@ -834,15 +838,15 @@ def create_schedule(
     return schedule
 
 
-@admin.patch("/match/schedule", tags=["match"], name="editSchedule")
+@admin.patch("/match/schedule/{id}", tags=["match"], name="editSchedule")
 def edit_schedule(
     *,
     db: Database,
     id: ID,
-    name: str | None = None,
-    time: datetime | None = None,
-    problem: ID | None = None,
-    points: int | None = None,
+    name: InBody[str | None] = None,
+    time: InBody[datetime | None] = None,
+    problem: InBody[ID | None] = None,
+    points: InBody[int | None] = None,
 ) -> ScheduledMatch:
     match = unwrap(db.get(ScheduledMatch, id))
     if name is not None:
@@ -857,7 +861,7 @@ def edit_schedule(
     return match
 
 
-@admin.delete("/match/schedule", tags=["match"], name="deleteSchedule")
+@admin.delete("/match/schedule/{id}", tags=["match"], name="deleteSchedule")
 def delete_schedule(*, db: Database, id: ID) -> bool:
     match = unwrap(db.get(ScheduledMatch, id))
     db.delete(match)
@@ -872,8 +876,13 @@ class MatchResultData(BaseSchema):
 
 
 @router.get("/match/result", tags=["match"], name="getResult")
-def results(*, db: Database, login: LoggedIn) -> MatchResultData:
-    results = db.scalars(select(MatchResult).where(MatchResult.problem.has(Problem.visible_sql(login.team)))).all()
+def results(*, db: Database, login: LoggedIn, problem: ID | None = None, tournament: ID | None = None) -> MatchResultData:
+    filters = [MatchResult.problem.has(Problem.visible_sql(login.team))]
+    if problem is not None:
+        filters.append(MatchResult.problem_id == problem)
+    if tournament is not None:
+        filters.append(MatchResult.problem.has(Problem.tournament_id == tournament))
+    results = db.scalars(select(MatchResult).where(*filters)).all()
     return MatchResultData(
         results=encode(results),
         problems=encode(result.problem for result in results),
@@ -881,11 +890,10 @@ def results(*, db: Database, login: LoggedIn) -> MatchResultData:
     )
 
 
-@admin.delete("/match/result", tags=["match"], name="deleteResults")
-def delete_results(*, db: Database, ids: list[ID]) -> None:
-    results = db.scalars(select(MatchResult).where(MatchResult.id.in_(ids))).all()
-    for res in results:
-        db.delete(res)
+@admin.delete("/match/result/{id}", tags=["match"], name="deleteResults")
+def delete_results(*, db: Database, id: ID) -> None:
+    result = MatchResult.get_unwrap(db, id)
+    db.delete(result)
     db.commit()
 
 
@@ -924,20 +932,20 @@ def add_result(
     return db_res
 
 
-@admin.put("/match/result", tags=["match"], name="editResult", response_model=schemas.MatchResult)
+@admin.put("/match/result/{id}", tags=["match"], name="editResult", response_model=schemas.MatchResult)
 def update_result(
     db: Database,
-    result: UUID,
-    time: datetime,
-    problem: UUID,
-    status: MatchStatus,
+    id: UUID,
+    time: InForm[datetime],
+    problem: InForm[UUID],
+    status: InForm[MatchStatus],
     teams: InForm[list[UUID]],
     generators: InForm[list[UUID]],
     solvers: InForm[list[UUID]],
     points: InForm[list[float]],
     logs: UploadFile | UUID | None = None,
 ) -> MatchResult:
-    res = MatchResult.get_unwrap(db, result)
+    res = MatchResult.get_unwrap(db, id)
     res.time = time
     res.problem = Problem.get_unwrap(db, problem)
     res.status = status

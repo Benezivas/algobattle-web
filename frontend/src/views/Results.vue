@@ -36,7 +36,7 @@ const sortedResults = computed(() => {
 let editModal: Modal;
 let detailModal: Modal;
 onMounted(async () => {
-  const res = await MatchService.getResult();
+  const res = await MatchService.getResult({ tournament: store.tournament?.id });
   problems.value = res.problems;
   results.value = res.results;
   teams.value = res.teams;
@@ -86,11 +86,11 @@ function openEdit(match: MatchResult | undefined) {
 async function sendData() {
   if (editData.value.id) {
     const res = await MatchService.editResult({
-      result: editData.value.id,
-      problem: editData.value.problem!,
-      status: editData.value.status!,
-      time: editData.value.time!,
+      id: editData.value.id,
       formData: {
+        problem: editData.value.problem!,
+        status: editData.value.status!,
+        time: editData.value.time!,
         logs: editData.value.newLogs,
         teams: editData.value.participants.map((p) => p.team_id!),
         generators: editData.value.participants.map((p) => p.generator?.id!),
@@ -121,7 +121,7 @@ async function sendData() {
 async function deleteResult() {
   if (editData.value.id) {
     await MatchService.deleteResults({
-      requestBody: [editData.value.id],
+      id: editData.value.id,
     });
     delete results.value[editData.value.id];
     editModal.hide();

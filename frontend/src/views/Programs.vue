@@ -32,7 +32,7 @@ const searchData = ref({
 });
 
 async function search(offset: number = 0) {
-  const ret = await ProgramService.get({ offset: offset });
+  const ret = await ProgramService.get({tournament: store.tournament?.id, offset: offset });
   if (store.team === "admin") {
     problems.value = ret.problems;
   } else {

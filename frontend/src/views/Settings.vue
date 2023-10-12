@@ -45,11 +45,14 @@ async function saveEdit() {
   }
   try {
     await SettingsService.editUser({
-      email: settings.value.email,
-      tournament: settings.value.user.selected_tournament?.id,
+      requestBody: {
+        email: settings.value.email,
+        tournament: settings.value.user.selected_tournament?.id,
+      }
     });
     state.value = "success";
     store.user.email = settings.value.email;
+    store.tournament = settings.value.user.selected_tournament;
   } catch (error) {
     state.value = {};
     if (error instanceof ApiError && error.status == 409 && error.body.field == "email") {
