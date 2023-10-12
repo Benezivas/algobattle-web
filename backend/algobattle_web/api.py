@@ -740,6 +740,7 @@ def search_program(
     team: ID | None = None,
     role: Role | None = None,
     problem: ID | None = None,
+    tournament: ID | None = None,
     offset: int = 0,
 ) -> ProgramResults:
     filters = [Program.visible_sql(login.team)]
@@ -751,6 +752,8 @@ def search_program(
         filters.append(Program.role == role)
     if problem is not None:
         filters.append(Program.problem_id == problem)
+    if tournament is not None:
+        filters.append(Program.problem.has(Problem.tournament_id == tournament))
     programs = (
         db.scalars(
             select(Program).where(*filters).order_by(Program.creation_time.desc()).limit(SQL_LIMIT).offset(offset)
