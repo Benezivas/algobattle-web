@@ -55,20 +55,26 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         db.add(db_result)
         db.commit()
 
-        result = Match()
-        run(result.run, config)
-        result.excluded_teams |= {
-            team: ExceptionInfo(type="RuntimeError", message="missing program") for team in excluded_teams
-        }
-        points = result.calculate_points(scheduled_match.points)
+        try:
+            result = run(Match().run, config)
+        except Exception as e:
+            db_result.status = MatchStatus.failed
+            folder.joinpath("result.json").write_text(ExceptionInfo.from_exception(e).model_dump_json())
+            db_result.logs = File.from_file(folder / "result.json", action="move")
+        else:
+            result.excluded_teams |= {
+                team: ExceptionInfo(type="RuntimeError", message="missing program") for team in excluded_teams
+            }
+            points = result.calculate_points(scheduled_match.points)
 
-        for team in db_result.participants:
-            team.points = points[team.team.name]
-        db_result.status = MatchStatus.complete
-        folder.joinpath("result.json").write_text(result.model_dump_json())
-        db_result.logs = File.from_file(folder / "result.json", action="move")
-        db.delete(scheduled_match)
-        db.commit()
+            for team in db_result.participants:
+                team.points = points[team.team.name]
+            db_result.status = MatchStatus.complete
+            folder.joinpath("result.json").write_text(result.model_dump_json())
+            db_result.logs = File.from_file(folder / "result.json", action="move")
+        finally:
+            db.delete(scheduled_match)
+            db.commit()
 
 
 def main():
