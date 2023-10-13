@@ -7,7 +7,7 @@ from typing import Any, BinaryIO, Iterable, Literal, Self, cast, overload, Annot
 from typing_extensions import TypedDict
 from uuid import UUID, uuid4
 from pathlib import Path
-from shutil import copyfileobj, copyfile
+from shutil import copyfileobj, copyfile, move
 from zipfile import ZipFile
 
 from jose import jwt
@@ -298,7 +298,7 @@ class File(Base):
             if isinstance(self._file, Path):
                 match self._action:
                     case "move":
-                        self._file.rename(self.path)
+                        move(self._file, self.path)
                     case "copy":
                         copyfile(self._file, self.path)
             else:
