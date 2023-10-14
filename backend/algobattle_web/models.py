@@ -171,7 +171,7 @@ class RawBase(MappedAsDataclass, DeclarativeBase):
         return db.scalars(select(cls)).unique().all()
 
 
-class Base(RawBase, unsafe_hash=True):
+class Base(RawBase):
     """Base class of ORM objects."""
 
     __abstract__ = True
@@ -350,7 +350,7 @@ team_members = Table(
 )
 
 
-class UserSettings(Base, unsafe_hash=True):
+class UserSettings(Base):
     """Settings for each user."""
 
     selected_team: Mapped["Team | None"] = relationship(lazy="joined", default=None)
@@ -362,7 +362,7 @@ class UserSettings(Base, unsafe_hash=True):
     Schema = schemas.UserSettings
 
 
-class User(Base, unsafe_hash=True):
+class User(Base):
     """A user object."""
 
     email: Mapped[str128] = mapped_column(unique=True)
@@ -450,7 +450,7 @@ class User(Base, unsafe_hash=True):
         raise ValueError
 
 
-class Tournament(Base, PermissionCheck, unsafe_hash=True):
+class Tournament(Base, PermissionCheck):
     name: Mapped[str32] = mapped_column(unique=True)
     time: Mapped[datetime] = mapped_column(default_factory=datetime.now, init=False)
 
@@ -474,13 +474,13 @@ class Tournament(Base, PermissionCheck, unsafe_hash=True):
         return Tournament.id == team.tournament_id
 
 
-class TeamSettings(Base, unsafe_hash=True):
+class TeamSettings(Base):
     """Settings for each team."""
 
     schema = schemas.TeamSettings
 
 
-class Team(Base, unsafe_hash=True):
+class Team(Base):
     name: Mapped[str32]
     tournament: Mapped[Tournament] = relationship(back_populates="teams", uselist=False, lazy="joined")
     tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
@@ -521,7 +521,7 @@ class Team(Base, unsafe_hash=True):
 
 
 
-class Problem(Base, PermissionCheck, unsafe_hash=True):
+class Problem(Base, PermissionCheck):
     file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
     image_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
@@ -588,7 +588,7 @@ class Problem(Base, PermissionCheck, unsafe_hash=True):
             db.commit()
 
 
-class Report(Base, PermissionCheck, unsafe_hash=True):
+class Report(Base, PermissionCheck):
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
@@ -614,7 +614,7 @@ class Report(Base, PermissionCheck, unsafe_hash=True):
         return Report.problem.has(Problem._editable_sql(team))
 
 
-class Program(Base, PermissionCheck, unsafe_hash=True):
+class Program(Base, PermissionCheck):
     name: Mapped[str32]
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
@@ -643,7 +643,7 @@ class Program(Base, PermissionCheck, unsafe_hash=True):
         return Program.user_editable & Program.problem.has(Problem._editable_sql(team))
 
 
-class ScheduledMatch(Base, unsafe_hash=True):
+class ScheduledMatch(Base):
     __tablename__ = "scheduledmatches"  # type: ignore
     Schema = schemas.ScheduledMatch
 
@@ -671,7 +671,7 @@ class ResultParticipant(RawBase):
         return hash(self.team_id)
 
 
-class MatchResult(Base, PermissionCheck, unsafe_hash=True):
+class MatchResult(Base, PermissionCheck):
     status: Mapped[MatchStatus]
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
