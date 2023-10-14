@@ -7,7 +7,7 @@ from typing import Any, BinaryIO, Iterable, Literal, Self, cast, overload, Annot
 from typing_extensions import TypedDict
 from uuid import UUID, uuid4
 from pathlib import Path
-from shutil import copyfileobj, copyfile
+from shutil import copyfileobj, copyfile, move
 from zipfile import ZipFile
 
 from jose import jwt
@@ -19,7 +19,6 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column, Session, Declara
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.base import _NoArg
 from fastapi import UploadFile
-from fastapi.responses import FileResponse
 from pydantic import Field
 
 from algobattle.util import TempDir, Role as ProgramRole
@@ -172,12 +171,15 @@ class RawBase(MappedAsDataclass, DeclarativeBase):
         return db.scalars(select(cls)).unique().all()
 
 
-class Base(RawBase, unsafe_hash=True):
+class Base(RawBase):
     """Base class of ORM objects."""
 
     __abstract__ = True
 
     id: Mapped[UUID] = mapped_column(default_factory=uuid4, primary_key=True, init=False, autoincrement=False)
+
+    def __hash__(self) -> int:
+        return hash(self.id)
 
     @classmethod
     def get_unwrap(cls, db: Session, id: ID) -> Self:
@@ -286,7 +288,8 @@ class File(Base):
 
     def remove(self) -> None:
         """Removes the associated file from disk."""
-        self.path.unlink()
+        if self.path.exists():
+            self.path.unlink()
 
     def save(self) -> None:
         """Saves the associated file to disk."""
@@ -295,19 +298,13 @@ class File(Base):
             if isinstance(self._file, Path):
                 match self._action:
                     case "move":
-                        self._file.rename(self.path)
+                        move(self._file, self.path)
                     case "copy":
                         copyfile(self._file, self.path)
             else:
                 with open(self.path, "wb+") as target:
                     copyfileobj(self._file, target)
             self._file = None
-
-    def response(self, content_disposition: Literal["attachment", "inline"] = "attachment") -> FileResponse:
-        """Creates a fastapi FileResponse that serves this file."""
-        return FileResponse(
-            self.path, filename=self.filename, content_disposition_type=content_disposition, media_type=self.media_type
-        )
 
     def open(self, mode: str = "rb") -> IO[Any]:
         """Opens the underlying file object."""
@@ -353,7 +350,7 @@ team_members = Table(
 )
 
 
-class UserSettings(Base, unsafe_hash=True):
+class UserSettings(Base):
     """Settings for each user."""
 
     selected_team: Mapped["Team | None"] = relationship(lazy="joined", default=None)
@@ -365,7 +362,7 @@ class UserSettings(Base, unsafe_hash=True):
     Schema = schemas.UserSettings
 
 
-class User(Base, unsafe_hash=True):
+class User(Base):
     """A user object."""
 
     email: Mapped[str128] = mapped_column(unique=True)
@@ -453,7 +450,7 @@ class User(Base, unsafe_hash=True):
         raise ValueError
 
 
-class Tournament(Base, PermissionCheck, unsafe_hash=True):
+class Tournament(Base, PermissionCheck):
     name: Mapped[str32] = mapped_column(unique=True)
     time: Mapped[datetime] = mapped_column(default_factory=datetime.now, init=False)
 
@@ -477,13 +474,13 @@ class Tournament(Base, PermissionCheck, unsafe_hash=True):
         return Tournament.id == team.tournament_id
 
 
-class TeamSettings(Base, unsafe_hash=True):
+class TeamSettings(Base):
     """Settings for each team."""
 
     schema = schemas.TeamSettings
 
 
-class Team(Base, unsafe_hash=True):
+class Team(Base):
     name: Mapped[str32]
     tournament: Mapped[Tournament] = relationship(back_populates="teams", uselist=False, lazy="joined")
     tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
@@ -524,7 +521,7 @@ class Team(Base, unsafe_hash=True):
 
 
 
-class Problem(Base, PermissionCheck, unsafe_hash=True):
+class Problem(Base, PermissionCheck):
     file_id: Mapped[ID] = mapped_column(ForeignKey("files.id"), init=False)
     image_id: Mapped[ID | None] = mapped_column(ForeignKey("files.id"), init=False)
     tournament_id: Mapped[ID] = mapped_column(ForeignKey("tournaments.id"), init=False)
@@ -591,7 +588,7 @@ class Problem(Base, PermissionCheck, unsafe_hash=True):
             db.commit()
 
 
-class Report(Base, PermissionCheck, unsafe_hash=True):
+class Report(Base, PermissionCheck):
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
     problem: Mapped[Problem] = relationship(lazy="joined")
@@ -617,7 +614,7 @@ class Report(Base, PermissionCheck, unsafe_hash=True):
         return Report.problem.has(Problem._editable_sql(team))
 
 
-class Program(Base, PermissionCheck, unsafe_hash=True):
+class Program(Base, PermissionCheck):
     name: Mapped[str32]
     team: Mapped[Team] = relationship(lazy="joined")
     team_id: Mapped[UUID] = mapped_column(ForeignKey("teams.id"), init=False)
@@ -646,7 +643,7 @@ class Program(Base, PermissionCheck, unsafe_hash=True):
         return Program.user_editable & Program.problem.has(Problem._editable_sql(team))
 
 
-class ScheduledMatch(Base, unsafe_hash=True):
+class ScheduledMatch(Base):
     __tablename__ = "scheduledmatches"  # type: ignore
     Schema = schemas.ScheduledMatch
 
@@ -674,7 +671,7 @@ class ResultParticipant(RawBase):
         return hash(self.team_id)
 
 
-class MatchResult(Base, PermissionCheck, unsafe_hash=True):
+class MatchResult(Base, PermissionCheck):
     status: Mapped[MatchStatus]
     time: Mapped[datetime]
     problem: Mapped[Problem] = relationship()
