@@ -35,14 +35,14 @@ services:
       backend:
         condition: service_healthy
     environment:
-      - ALGOBATTLE_IO_DIR=./io
+      - ALGOBATTLE_IO_DIR=${ALGOBATTLE_IO_DIR}
       - TZ=Europe/Berlin
       - ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW}
       - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
     volumes:
       - db-files:/algobattle/dbfiles
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./io:/algobattle/io
+      - ${ALGOBATTLE_IO_DIR}:/algobattle/io
   nginx:
     build:
       context: .
