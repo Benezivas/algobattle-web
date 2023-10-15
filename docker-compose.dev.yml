@@ -1,0 +1,50 @@
+services:
+  database:
+    extends:
+      file: common.yml
+      service: database
+
+  backend:
+    extends:
+      file: common.yml
+      service: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend/algobattle_web:/algobattle/algobattle_web
+    ports:
+      - 8000:8000
+    depends_on:
+      database:
+        condition: service_healthy
+
+  runner:
+    extends:
+      file: common.yml
+      service: runner
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend/algobattle_web:/algobattle/algobattle_web
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend/public:/algobattle/public
+      - ./frontend/src:/algobattle/src
+      - ./frontend/typescript_client:/algobattle/typescript_client
+    ports:
+      - 5173:5173
+
+volumes:
+  db-data:
+    # intentionally empty
+  db-files:
+    # intentionally empty

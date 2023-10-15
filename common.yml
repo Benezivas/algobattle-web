@@ -1,0 +1,45 @@
+services:
+  database:
+    image: mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${ALGOBATTLE_DB_PW}
+    healthcheck:
+      test: mysqladmin ping --protocol tcp
+      interval: 5s
+      timeout: 10s
+      retries: 12
+    volumes:
+      - db-data:/var/lib/mysql
+
+  backend:
+    environment:
+      - TZ=Europe/Berlin
+      - ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW}
+      - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
+    volumes:
+      - db-files:/algobattle/dbfiles
+
+  runner:
+    command: algobattle_runner
+    stop_grace_period: 1s
+    environment:
+      - ALGOBATTLE_IO_DIR=${ALGOBATTLE_IO_DIR}
+      - TZ=Europe/Berlin
+      - ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW}
+      - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
+    volumes:
+      - db-files:/algobattle/dbfiles
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${ALGOBATTLE_IO_DIR}:/algobattle/io
+
+  nginx:
+    build:
+      context: .
+      args:
+        - ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW}
+        - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
+    ports:
+      - 8080:8080
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf

@@ -1,0 +1,7 @@
+FROM node
+
+WORKDIR /algobattle
+COPY package.json package-lock.json env.d.ts index.html tsconfig.json tsconfig.node.json vite.config.ts ./
+RUN npm ci
+
+CMD ["npm", "run", "dev", "--", "--host"]
