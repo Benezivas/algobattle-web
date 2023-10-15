@@ -33,8 +33,12 @@ class EnvConfig:
     @lru_cache(maxsize=1)
     def get(cls) -> Self:
         if environ.get("DEV"):
+            print(__file__)
+            db_path = Path(__file__).parent.parent.joinpath("database.db").resolve()
+            print(db_path)
+            "database.db"
             return cls(
-                db_url="sqlite:///database.db",
+                db_url=f"sqlite:///{db_path}",
                 frontend_base_url="http://localhost:5173",
                 backend_base_url="http://127.0.0.1:8000",
                 db_files=Path("db_files"),
