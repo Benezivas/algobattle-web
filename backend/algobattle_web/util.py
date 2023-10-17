@@ -25,9 +25,7 @@ from sqlalchemy.orm import sessionmaker
 @dataclass
 class EnvConfig:
     db_url: str
-    frontend_base_url: str
-    backend_base_url: str
-    db_files: Path
+    base_url: str
 
     @classmethod
     @lru_cache(maxsize=1)
@@ -46,9 +44,7 @@ class EnvConfig:
             )
         return cls(
             db_url=f"mysql+mysqldb://root:{db_password}@database:3306/algobattle",
-            frontend_base_url=web_url,
-            backend_base_url=web_url,
-            db_files=Path("/algobattle/dbfiles"),
+            base_url=web_url,
         )
 
 

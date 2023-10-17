@@ -278,7 +278,7 @@ class File(Base):
         name = str(self.id)
         if self.extension is not None:
             name += f".{self.extension}"
-        return EnvConfig.get().db_files / name
+        return Path("/algobattle/dbfiles") / name
 
     @property
     def extension(self) -> str | None:
