@@ -32,36 +32,24 @@ class EnvConfig:
     @classmethod
     @lru_cache(maxsize=1)
     def get(cls) -> Self:
-        if environ.get("DEV"):
-            print(__file__)
-            db_path = Path(__file__).parent.parent.joinpath("database.db").resolve()
-            print(db_path)
-            "database.db"
-            return cls(
-                db_url=f"sqlite:///{db_path}",
-                frontend_base_url="http://localhost:5173",
-                backend_base_url="http://127.0.0.1:8000",
-                db_files=Path("db_files"),
+        try:
+            db_password = environ["ALGOBATTLE_DB_PW"]
+        except KeyError:
+            raise SystemExit(
+                "You need to specify the database password in the `ALGOBATTLE_DB_PW` environment variable"
             )
-        else:
-            try:
-                db_password = environ["ALGOBATTLE_DB_PW"]
-            except:
-                raise SystemExit(
-                    "You need to specify the database password in the `ALGOBATTLE_DB_PW` environment variable"
-                )
-            try:
-                web_url = environ["ALGOBATTLE_BASE_URL"]
-            except KeyError:
-                raise SystemExit(
-                    "You need to specify the base url of your server in the `ALGOBATTLE_BASE_URL` environment variable"
-                )
-            return cls(
-                db_url=f"mysql+mysqldb://root:{db_password}@database:3306/algobattle",
-                frontend_base_url=web_url,
-                backend_base_url=web_url,
-                db_files=Path("/algobattle/dbfiles"),
+        try:
+            web_url = environ["ALGOBATTLE_BASE_URL"]
+        except KeyError:
+            raise SystemExit(
+                "You need to specify the base url of your server in the `ALGOBATTLE_BASE_URL` environment variable"
             )
+        return cls(
+            db_url=f"mysql+mysqldb://root:{db_password}@database:3306/algobattle",
+            frontend_base_url=web_url,
+            backend_base_url=web_url,
+            db_files=Path("/algobattle/dbfiles"),
+        )
 
 
 SessionLocal = sessionmaker()

@@ -1,0 +1,12 @@
+FROM python:3.11 as backend
+WORKDIR /algobattle
+COPY backend/pyproject.toml ./
+RUN mkdir algobattle_web algobattle_web/alembic
+RUN pip install -e .
+RUN pip show algobattle_base | grep -oP "Version: \K[^\n]+" > algobattle_version.txt
+
+FROM nginx
+WORKDIR /code
+COPY --from=backend /algobattle/algobattle_version.txt algobattle_version.txt
+RUN curl -OL https://github.com/Benezivas/algobattle/releases/download/v`cat algobattle_version.txt`/docs.tar.gz
+RUN mkdir docs && tar xzf docs.tar.gz -C docs

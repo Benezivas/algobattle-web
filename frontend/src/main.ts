@@ -17,7 +17,6 @@ export function formatDateTime(datetime: string): string {
 }
 
 const cookies = useCookies();
-OpenAPI.BASE = import.meta.env.MODE == "production" ? "" : "http://127.0.0.1:8000";
 OpenAPI.HEADERS = async () => {
   return { "X-User-Token": cookies.get("algobattle_user_token") };
 };

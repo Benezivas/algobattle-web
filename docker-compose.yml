@@ -9,11 +9,6 @@ services:
       file: common.yml
       service: backend
     build: backend
-    healthcheck:
-      test: "curl --fail localhost:8000/openapi.json || exit 1"
-      interval: 5s
-      timeout: 10s
-      retries: 12
     depends_on:
       database:
         condition: service_healthy
