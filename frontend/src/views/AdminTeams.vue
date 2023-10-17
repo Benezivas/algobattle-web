@@ -3,7 +3,7 @@ import HoverBadgeVue from "@/components/HoverBadge.vue";
 import { Modal } from "bootstrap";
 import { TournamentService, TeamService, UserService } from "@client";
 import type { Team, Tournament, User } from "@client";
-import { store, type ModelDict } from "@/main";
+import { store, type ModelDict } from "@/shared";
 import { computed, onMounted, ref, toRaw } from "vue";
 import Paginator from "@/components/Paginator.vue";
 

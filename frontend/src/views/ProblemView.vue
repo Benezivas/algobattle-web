@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ProblemCard from "@/components/ProblemCard.vue";
-import { type ModelDict, store } from "../main";
+import { type ModelDict, store } from "@/shared";
 import { ProblemService } from "@client";
 import type { Problem } from "@client";
 import { computed, onMounted, ref, watch, type Ref } from "vue";

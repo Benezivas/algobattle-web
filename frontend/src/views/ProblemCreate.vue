@@ -4,7 +4,7 @@ import { ProblemService } from "@client";
 import router from "@/router";
 import type { Tournament, Problem } from "@client";
 import { computed, onMounted, ref } from "vue";
-import { store } from "@/main";
+import { store } from "@/shared";
 
 const page = ref(0);
 const error = ref<{

@@ -7,9 +7,9 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '~bootstrap': resolve("node_modules/bootstrap"),
-      '@': resolve("src"),
-      "@client": resolve("typescript_client"),
+      '~bootstrap': resolve("./node_modules/bootstrap"),
+      '@': resolve("./src"),
+      "@client": resolve("./typescript_client"),
     }
   },
   server: {

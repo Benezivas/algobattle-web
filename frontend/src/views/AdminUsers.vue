@@ -3,7 +3,7 @@ import HoverBadgeVue from "@/components/HoverBadge.vue";
 import Paginator from "@/components/Paginator.vue";
 import { TournamentService, TeamService, UserService, type Team, type User, type Tournament } from "@client";
 import { Modal } from "bootstrap";
-import type { ModelDict } from "@/main";
+import type { ModelDict } from "@/shared";
 import { computed, onMounted, ref, toRaw } from "vue";
 
 const teams = ref<ModelDict<Team>>({});

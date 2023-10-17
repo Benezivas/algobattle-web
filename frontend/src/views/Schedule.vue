@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { store, type ModelDict } from "@/main";
+import { store, type ModelDict } from "@/shared";
 import { MatchService, TournamentService, ProblemService } from "@client";
 import { Modal } from "bootstrap";
 import type { ScheduledMatch, Problem, Tournament } from "@client";

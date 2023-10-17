@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { Modal } from "bootstrap";
-import { store } from "../main";
-import { TournamentService, ReportService, ProblemService, TeamService, ApiError } from "@client";
-import type { Tournament, Report, DbFile, Problem, Team, ProblemPageData } from "@client";
-import type { InputFileEvent, ModelDict } from "@/main";
-import { computed, onMounted, ref, type Ref } from "vue";
+import { TournamentService, ReportService, ProblemService, TeamService } from "@client";
+import type { Tournament, Report, Problem, Team, ProblemPageData } from "@client";
+import { store, type InputFileEvent, type ModelDict } from "@/shared";
+import { onMounted, ref, type Ref } from "vue";
 import { useRoute } from "vue-router";
 import router from "@/router";
 import FileEditRow from "@/components/FileEditRow.vue";
