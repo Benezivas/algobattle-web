@@ -1,4 +1,5 @@
 from datetime import datetime
+from os import environ
 from time import sleep
 from zipfile import ZipFile
 from anyio import run
@@ -89,7 +90,8 @@ def main():
             if scheduled_matches:
                 run_match(db, scheduled_matches[0])
             else:
-                print(f"{datetime.now()}: no matches to run")
+                if environ.get("DEV"):
+                    print(f"{datetime.now()}: no matches to run")
                 last_check = datetime.now()
         now = datetime.now()
         sleep(60 - (now.second - now.microsecond / 1_000_000))
