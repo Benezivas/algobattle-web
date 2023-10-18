@@ -7,7 +7,7 @@ from sqlalchemy import select, create_engine
 
 from algobattle.match import Match, AlgobattleConfig, TeamInfo, ProjectConfig
 from algobattle.util import Role, TempDir, ExceptionInfo
-from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session, ID
+from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session
 from algobattle_web.util import EnvConfig, MatchStatus, install_packages, SessionLocal
 
 
@@ -21,7 +21,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         config.project = ProjectConfig(name_images=False, cleanup_images=True)
         install_packages(config.problem.dependencies)
 
-        paricipants: dict[ID, ResultParticipant] = {}
+        participants: dict[str, ResultParticipant] = {}
         excluded_teams = set[str]()
         for team in scheduled_match.problem.tournament.teams:
             gen = (
@@ -51,8 +51,8 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
                 config.teams[team.name] = TeamInfo(generator=gen.file.path, solver=sol.file.path)
             else:
                 excluded_teams.add(team.name)
-            paricipants[team.id] = ResultParticipant(team, gen, sol, 0)
-        db_result = MatchResult(MatchStatus.running, datetime.now(), scheduled_match.problem, set(paricipants.values()))
+            participants[team.name] = ResultParticipant(team, gen, sol, 0)
+        db_result = MatchResult(MatchStatus.running, datetime.now(), scheduled_match.problem, set(participants.values()))
         db.add(db_result)
         db.commit()
 
@@ -68,8 +68,8 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
             }
             points = result.calculate_points(scheduled_match.points)
 
-            for team in db_result.participants:
-                team.points = points[team.team.name]
+            for orig_name, team in participants.items():
+                team.points = points.get(orig_name, 0)
             db_result.status = MatchStatus.complete
             folder.joinpath("result.json").write_text(result.model_dump_json(exclude_defaults=True))
             db_result.logs = File.from_file(folder / "result.json", action="move")
