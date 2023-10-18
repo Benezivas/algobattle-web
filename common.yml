@@ -20,6 +20,7 @@ services:
     volumes:
       - db-files:/algobattle/dbfiles
     tty: true
+    restart: on-failure
 
   runner:
     command: algobattle_runner
@@ -34,3 +35,4 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${ALGOBATTLE_IO_DIR}:/algobattle/io
     tty: true
+    restart: on-failure
