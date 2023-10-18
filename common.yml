@@ -6,9 +6,9 @@ services:
       - MYSQL_ROOT_PASSWORD=${ALGOBATTLE_DB_PW}
     healthcheck:
       test: mysqladmin ping --protocol tcp
-      interval: 5s
-      timeout: 10s
-      retries: 12
+      interval: 2s
+      timeout: 4s
+      retries: 30
     volumes:
       - db-data:/var/lib/mysql
 

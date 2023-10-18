@@ -20,7 +20,7 @@ services:
     build: backend
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_started
 
   nginx:
     build:
@@ -30,7 +30,7 @@ services:
         - ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_URL}
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_started
     ports:
       - 8080:8080
     volumes:

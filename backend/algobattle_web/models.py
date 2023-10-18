@@ -27,7 +27,6 @@ from algobattle_web import schemas
 from algobattle_web.util import (
     BaseSchema,
     EmailConfig,
-    EnvConfig,
     MatchStatus,
     PermissionExcpetion,
     SqlableModel,
