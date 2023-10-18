@@ -27,7 +27,6 @@ from algobattle_web import schemas
 from algobattle_web.util import (
     BaseSchema,
     EmailConfig,
-    EnvConfig,
     MatchStatus,
     PermissionExcpetion,
     SqlableModel,
@@ -278,7 +277,7 @@ class File(Base):
         name = str(self.id)
         if self.extension is not None:
             name += f".{self.extension}"
-        return EnvConfig.get().db_files / name
+        return Path("/algobattle/dbfiles") / name
 
     @property
     def extension(self) -> str | None:

@@ -4,6 +4,7 @@
 **/config.toml
 db_files
 frontend/typescript_client
+.pdm-python
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

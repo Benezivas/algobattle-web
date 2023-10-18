@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI):
             root = User(email="", name="Root", is_admin=True)
             db.add(root)
             db.commit()
-        print(f"Root user login link:\n{EnvConfig.get().frontend_base_url}?login_token={root.login_token(db)}")
+        print(f"Root user login link:\n{EnvConfig.get().base_url}?login_token={root.login_token(db)}")
     yield
 
 
@@ -118,7 +118,7 @@ for route in app.routes:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=(EnvConfig.get().frontend_base_url,),
+    allow_origins=[EnvConfig.get().base_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

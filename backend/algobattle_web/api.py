@@ -262,7 +262,7 @@ def send_login_email(user_id: UUID, target_url: str) -> None:
         if not user:
             return
         token = user.login_token(db)
-        url = str(EnvConfig.get().frontend_base_url) + target_url + f"?login_token={token}"
+        url = str(EnvConfig.get().base_url) + target_url + f"?login_token={token}"
         if environ.get("DEV"):
             print(f"sending email to {user.email}: {url}")
             return

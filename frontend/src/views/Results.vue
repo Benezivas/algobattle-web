@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { store, type ModelDict, formatDateTime } from "@/main";
+import { store, type ModelDict, formatDateTime } from "@/shared";
 import {
   MatchService,
   TournamentService,

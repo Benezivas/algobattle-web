@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ProblemService, ProgramService, Role } from "@client";
-import { store, type ModelDict } from "@/main";
+import { store, type ModelDict } from "@/shared";
 import { Modal } from "bootstrap";
 import type { Problem, Program, Team } from "@client";
 import { computed, onMounted, ref } from "vue";

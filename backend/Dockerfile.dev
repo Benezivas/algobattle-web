@@ -1,0 +1,9 @@
+FROM python:3.11
+
+WORKDIR /algobattle
+COPY pyproject.toml ./
+RUN mkdir algobattle_web algobattle_web/alembic
+RUN pip install -e .[dev]
+ENV DEV=true
+
+CMD ["uvicorn", "algobattle_web.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-exclude", "'alembic/*'"]

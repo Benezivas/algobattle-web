@@ -5,3 +5,4 @@ db_files
 openapitools.json
 config.toml
 .env
+io/

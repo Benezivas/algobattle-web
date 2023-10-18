@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { store, type ModelDict } from "@/main";
+import { store, type ModelDict } from "@/shared";
 import {
   type Tournament,
   TournamentService,

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { RouterView, useRouter } from "vue-router";
 import PageNavbarIcon from "./components/HomeNavbarIcon.vue";
-import { store } from "./main";
-import { UserService, type Team, SettingsService } from "../typescript_client";
+import { store } from "@/shared";
+import { UserService, type Team, SettingsService } from "@client";
 import LoginPane from "./components/LoginPane.vue";
 import { useCookies } from "@vueuse/integrations/useCookies";
 import { computed, watch } from "vue";
