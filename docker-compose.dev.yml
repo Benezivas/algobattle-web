@@ -4,7 +4,7 @@ services:
       file: common.yml
       service: database
 
-  backend:
+  dev-backend:
     extends:
       file: common.yml
       service: backend
@@ -19,7 +19,7 @@ services:
       database:
         condition: service_healthy
 
-  runner:
+  dev-runner:
     extends:
       file: common.yml
       service: runner
@@ -32,7 +32,7 @@ services:
       database:
         condition: service_healthy
 
-  frontend:
+  dev-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
@@ -43,7 +43,7 @@ services:
     ports:
       - 5173:5173
     depends_on:
-      backend:
+      dev-backend:
         condition: service_started
 
 volumes:
