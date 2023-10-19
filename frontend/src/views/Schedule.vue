@@ -33,7 +33,9 @@ onMounted(async () => {
 });
 
 function openModal(match: ScheduledMatch | undefined) {
-  editData.value = match ? {...structuredClone(toRaw(match)), time: match.time.slice(0, 19)} : { points: 100 };
+  editData.value = match
+    ? { ...structuredClone(toRaw(match)), time: match.time.slice(0, 19) }
+    : { points: 100 };
   modal.show();
 }
 
@@ -44,7 +46,11 @@ async function sendData() {
   if (editData.value.id) {
     newMatch = await MatchService.editSchedule(editData.value as ScheduledMatch);
   } else {
-    if (!editData.value.time || !editData.value.problem || !editData.value.points) {
+    if (
+      editData.value.time === undefined ||
+      editData.value.problem === undefined ||
+      editData.value.points === undefined
+    ) {
       return;
     }
     newMatch = await MatchService.createSchedule({
