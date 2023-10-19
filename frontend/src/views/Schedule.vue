@@ -44,7 +44,7 @@ const confirmDelete = ref<boolean>(false);
 async function sendData() {
   let newMatch;
   if (editData.value.id) {
-    newMatch = await MatchService.editSchedule(editData.value as ScheduledMatch);
+    newMatch = await MatchService.editSchedule({ id: editData.value.id, requestBody: editData.value });
   } else {
     if (
       editData.value.time === undefined ||
