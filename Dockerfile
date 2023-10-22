@@ -8,7 +8,7 @@ ENV ALGOBATTLE_DB_PW=${ALGOBATTLE_DB_PW} ALGOBATTLE_BASE_URL=${ALGOBATTLE_BASE_U
 RUN algobattle_api > openapi.json
 RUN pip show algobattle_base | grep -oP "Version: \K[^\n]+" > algobattle_version.txt
 
-FROM node as frontend_builder
+FROM node:20 as frontend_builder
 WORKDIR /code
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
