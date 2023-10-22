@@ -682,7 +682,7 @@ def add_report(
     if problem_model.tournament != team_model.tournament:
         raise HTTPException(400, "Selected team and problem are not in the same tournament")
     problem_model.assert_editable(login.team)
-    report = db.scalar(select(Report).where(Report.team == team, Report.problem_id == problem))
+    report = db.scalar(select(Report).where(Report.team_id == team, Report.problem_id == problem))
     if report:
         report.file = DbFile.from_file(file)
     else:
