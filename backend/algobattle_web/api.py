@@ -91,7 +91,7 @@ admin = APIRouter(prefix="/admin", dependencies=[Depends(check_if_admin)], route
 
 
 # *******************************************************************************
-# * Files
+# * General
 # *******************************************************************************
 
 
@@ -384,6 +384,11 @@ def edit_server_settings(
     if email_config is not None:
         settings.email_config = email_config
     db.commit()
+
+
+@router.get("/settings/home", tags=["settings"])
+def home(db: Database) -> str | None:
+    return ServerSettings.get(db).home_page_compiled
 
 
 # *******************************************************************************

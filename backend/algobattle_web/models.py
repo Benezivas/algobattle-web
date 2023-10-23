@@ -329,11 +329,12 @@ class ServerSettings(Base, kw_only=True):
 
     secret_key: Mapped[bytes] = mapped_column(LargeBinary(64), default_factory=lambda: token_bytes(64))
     email_config: Mapped[EmailConfig] = mapped_column(SqlableModel(EmailConfig), default_factory=EmailConfig)
-    landing_page: Mapped[File | None] = relationship(default=None)
+    home_page: Mapped[File | None] = relationship(default=None)
     user_change_email: Mapped[bool] = mapped_column(default=True)
     team_change_name: Mapped[bool] = mapped_column(default=True)
 
-    landing_page_id: Mapped[UUID | None] = mapped_column(ForeignKey("files.id"), init=False)
+    home_page_id: Mapped[UUID | None] = mapped_column(ForeignKey("files.id"), init=False)
+    home_page_compiled: Mapped[strText | None] = mapped_column(default=None)
 
     @classmethod
     def get(cls, db: Session) -> Self:
