@@ -4,9 +4,9 @@ import {
   MatchService,
   TournamentService,
   ProblemService,
-  MatchStatus,
+  type MatchStatus,
   ProgramService,
-  Role,
+  type Role,
   TeamService,
 } from "@client";
 import { Modal } from "bootstrap";
@@ -66,7 +66,7 @@ interface EditData {
 }
 
 const editData = ref<EditData>({
-  status: MatchStatus.COMPLETE,
+  status: "complete",
   participants: [],
   confirmDelete: false,
 });
@@ -75,7 +75,7 @@ function openEdit(match: MatchResult | undefined) {
   editData.value = match
     ? { ...structuredClone(toRaw(match)), time: match.time.slice(0, 19), confirmDelete: false }
     : {
-        status: MatchStatus.COMPLETE,
+        status: "complete",
         problem: undefined,
         participants: [],
         confirmDelete: false,
@@ -145,8 +145,8 @@ function getPrograms(team: string, role: Role) {
 function getAllPrograms() {
   for (const participant of editData.value.participants) {
     if (participant.team_id) {
-      getPrograms(participant.team_id, Role.GENERATOR);
-      getPrograms(participant.team_id, Role.SOLVER);
+      getPrograms(participant.team_id, "generator");
+      getPrograms(participant.team_id, "solver");
     }
   }
 }

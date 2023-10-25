@@ -6,6 +6,9 @@ import { OpenAPI } from "@client";
 import { useCookies } from "@vueuse/integrations/useCookies";
 
 import "./assets/styles.scss";
+import '@fontsource/roboto/400.css';
+import '@fontsource/roboto/500.css';
+import '@fontsource/roboto/700.css';
 
 const cookies = useCookies();
 OpenAPI.HEADERS = async () => {

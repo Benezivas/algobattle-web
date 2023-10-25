@@ -53,7 +53,6 @@ const past_problems = computed(() => {
         <ProblemCard
           v-for="(problem, id) in future_problems"
           :problem="problem"
-          :tournament="problem.tournament"
           :key="id"
         />
         <div class="card border border-success-subtle m-2" style="width: 18rem; height: 24rem">
@@ -78,7 +77,6 @@ const past_problems = computed(() => {
         <ProblemCard
           v-for="(problem, id) in current_problems"
           :problem="problem"
-          :tournament="problem.tournament"
           :key="id"
         />
       </div>
@@ -87,7 +85,6 @@ const past_problems = computed(() => {
         <ProblemCard
           v-for="(problem, id) in past_problems"
           :problem="problem"
-          :tournament="problem.tournament"
           :key="id"
         />
       </div>

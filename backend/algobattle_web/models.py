@@ -186,23 +186,6 @@ class Base(RawBase):
         return unwrap(db.get(cls, id))
 
 
-class ServerSettings(Base, kw_only=True):
-    """Singleton table for server wide settings."""
-
-    secret_key: Mapped[bytes] = mapped_column(LargeBinary(64), default_factory=lambda: token_bytes(64))
-    email_config: Mapped[EmailConfig] = mapped_column(SqlableModel(EmailConfig), default_factory=EmailConfig)
-
-    user_change_email: Mapped[bool] = mapped_column(default=True)
-    team_change_name: Mapped[bool] = mapped_column(default=True)
-
-    @classmethod
-    def get(cls, db: Session) -> Self:
-        obj = db.scalar(select(ServerSettings))
-        if not obj:
-            raise RuntimeError
-        return obj
-
-
 class File(Base):
     """A file that is stored on disk with metadata in the database."""
 
@@ -339,6 +322,26 @@ def commit_files(db: Session):
 def encode(col: Iterable[Base]) -> dict[ID, Any]:
     """Encodes a collection of database items into a jsonable container."""
     return {el.id: el.encode() for el in col}
+
+
+class ServerSettings(Base, kw_only=True):
+    """Singleton table for server wide settings."""
+
+    secret_key: Mapped[bytes] = mapped_column(LargeBinary(64), default_factory=lambda: token_bytes(64))
+    email_config: Mapped[EmailConfig] = mapped_column(SqlableModel(EmailConfig), default_factory=EmailConfig)
+    home_page: Mapped[File | None] = relationship(default=None)
+    user_change_email: Mapped[bool] = mapped_column(default=True)
+    team_change_name: Mapped[bool] = mapped_column(default=True)
+
+    home_page_id: Mapped[UUID | None] = mapped_column(ForeignKey("files.id"), init=False)
+    home_page_compiled: Mapped[strText | None] = mapped_column(default=None)
+
+    @classmethod
+    def get(cls, db: Session) -> Self:
+        obj = db.scalar(select(ServerSettings))
+        if not obj:
+            raise RuntimeError
+        return obj
 
 
 team_members = Table(
