@@ -20,6 +20,9 @@ const generator = ref<Program>();
 const solver = ref<Program>();
 onMounted(async () => {
   home_page.value = await SettingsService.home();
+  if (!store.team) {
+    return;
+  }
   const problems = await ProblemService.get({ tournament: store.tournament?.id });
   curr_prob.value = Object.values(problems).sort((a, b) => {
     if (!a.end) {
