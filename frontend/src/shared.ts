@@ -1,5 +1,6 @@
 import { reactive } from "vue";
 import type { UserLogin, Team, Tournament } from "@client";
+import { DateTime } from "luxon";
 
 export type ModelDict<T> = { [key: string]: T };
 
@@ -8,7 +9,7 @@ export interface InputFileEvent extends InputEvent {
 }
 
 export function formatDateTime(datetime: string): string {
-  return new Date(datetime).toLocaleString();
+  return DateTime.fromISO(datetime).toLocaleString(DateTime.DATETIME_SHORT);
 }
 
 export const store = reactive<{

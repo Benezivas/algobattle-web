@@ -4,11 +4,10 @@ import { computed } from "vue";
 
 const props = defineProps<{
   problem: Problem;
-  tournament: Tournament;
 }>();
 
 const problem_url = computed(() => {
-  const tournamentStr = encodeURIComponent(props.tournament.name);
+  const tournamentStr = encodeURIComponent(props.problem.tournament.name);
   const name = encodeURIComponent(props.problem.name);
   return `/problems/${tournamentStr}/${name}`;
 });
