@@ -12,9 +12,11 @@ FROM node:20 as frontend_builder
 WORKDIR /code
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
+COPY frontend/env.d.ts frontend/index.html frontend/tsconfig.json frontend/tsconfig.node.json frontend/vite.config.ts ./
 COPY --from=api_builder /code/openapi.json openapi.json
-RUN npx openapi-typescript-codegen --input ./openapi.json --output ./typescript_client --useOptions
-COPY frontend .
+RUN npx openapi-typescript-codegen --input ./openapi.json --output ./typescript_client --useOptions --useUnionTypes
+COPY frontend/public public/
+COPY frontend/src src/
 RUN npm run build
 
 FROM nginx
