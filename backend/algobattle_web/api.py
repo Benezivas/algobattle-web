@@ -7,6 +7,7 @@ from smtplib import SMTP
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
 from urllib.parse import quote
+from annotated_types import Interval
 
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, BackgroundTasks
 from fastapi.routing import APIRoute
@@ -15,7 +16,7 @@ from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
-from pydantic import Field
+from pydantic import ByteSize, Field
 
 from algobattle.util import Role
 from algobattle_web import schemas
@@ -375,6 +376,7 @@ def edit_server_settings(
     user_change_email: InBody[bool | None] = None,
     team_change_name: InBody[bool | None],
     email_config: InBody[EmailConfig | None] = None,
+    upload_file_limit: InBody[Annotated[ByteSize, Interval(ge=0, le=2_000_000_000)] | None] = None,
 ) -> None:
     settings = ServerSettings.get(db)
     if user_change_email is not None:
@@ -383,6 +385,8 @@ def edit_server_settings(
         settings.team_change_name = team_change_name
     if email_config is not None:
         settings.email_config = email_config
+    if upload_file_limit is not None:
+        settings.upload_file_limit = upload_file_limit
     db.commit()
 
 
