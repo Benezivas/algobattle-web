@@ -5,7 +5,7 @@ from typing import Annotated
 from urllib.parse import quote as urlencode
 from uuid import UUID
 
-from pydantic import ByteSize, PlainSerializer, ValidationInfo, computed_field, field_validator
+from pydantic import ByteSize, Field, PlainSerializer, computed_field, field_validator, model_validator
 
 from algobattle_web.util import BaseSchema, EmailConfig, EnvConfig, MatchStatus, ObjID
 from algobattle.util import Role
@@ -56,18 +56,19 @@ class TeamSettings(Base):
 class ServerSettings(Base):
     user_change_email: bool
     team_change_name: bool
-    upload_file_limit: str
-
-    @field_validator("upload_file_limit", mode="plain")
-    @classmethod
-    def _(cls, value: object, info: ValidationInfo) -> str:
-        if not isinstance(value, ByteSize):
-            value = ByteSize._validate(value, info)
-        return value.human_readable(True)
+    upload_file_limit: int
 
 
 class AdminServerSettings(ServerSettings):
     email_config: EmailConfig
+    upload_file_limit_text: str = Field(validation_alias="upload_file_limit")
+
+    @field_validator("upload_file_limit_text", mode="before")
+    @classmethod
+    def _(cls, value: object) -> str:
+        if not isinstance(value, int):
+            raise ValueError
+        return ByteSize(value).human_readable(True)
 
 
 class UserSettings(Base):

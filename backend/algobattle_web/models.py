@@ -127,7 +127,6 @@ class RawBase(MappedAsDataclass, DeclarativeBase):
         type_annotation_map={
             datetime: DateTime,
             ProblemPageData: JSON,
-            ByteSize: Integer,
         }
     )
 
@@ -333,7 +332,7 @@ class ServerSettings(Base, kw_only=True):
     home_page: Mapped[File | None] = relationship(default=None)
     user_change_email: Mapped[bool] = mapped_column(default=True)
     team_change_name: Mapped[bool] = mapped_column(default=True)
-    upload_file_limit: Mapped[ByteSize] = mapped_column(default=ByteSize(200_000_000))
+    upload_file_limit: Mapped[int] = mapped_column(default=ByteSize(200_000_000))
 
     home_page_id: Mapped[UUID | None] = mapped_column(ForeignKey("files.id"), init=False)
     home_page_compiled: Mapped[strText | None] = mapped_column(default=None)

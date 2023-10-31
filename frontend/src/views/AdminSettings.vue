@@ -20,7 +20,7 @@ async function saveEdit() {
   } else {
     formElement.classList.remove("was-validated");
   }
-  const size = settings.value?.upload_file_limit && parseSize(settings.value?.upload_file_limit);
+  const size = settings.value?.upload_file_limit_text && parseSize(settings.value?.upload_file_limit_text);
   if (size && size > 2_000_000_000) {
     document.getElementById("uploadLimit")?.classList.add("is-invalid");
     return;
@@ -29,7 +29,7 @@ async function saveEdit() {
   }
   if (settings.value) {
     try {
-      await SettingsService.editServer({ requestBody: settings.value });
+      await SettingsService.editServer({ requestBody: {...settings.value, upload_file_limit: settings.value.upload_file_limit_text} });
       state.value = "success";
     } catch {
       state.value = "error";
@@ -94,7 +94,7 @@ function parseSize(size: string): number | undefined {
         class="form-control mb-0"
         id="uploadLimit"
         autocomplete="off"
-        v-model="settings.upload_file_limit"
+        v-model="settings.upload_file_limit_text"
         pattern="^\s*(\d*\.?\d+)\s*(\w+)?"
         title="(decimal) number and unit"
       />

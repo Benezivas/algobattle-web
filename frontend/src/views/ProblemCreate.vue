@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import FileInput from "../components/FileInput.vue";
-import { ProblemService } from "@client";
+import { ProblemService, type ServerSettings, SettingsService } from "@client";
 import router from "@/router";
 import type { Tournament, Problem } from "@client";
 import { computed, onMounted, ref } from "vue";
@@ -29,9 +29,11 @@ const imageUrl = computed(() => {
     return URL.createObjectURL(data.value.image);
   }
 });
+const settings = ref<ServerSettings>();
 
 onMounted(async () => {
   problems.value = await ProblemService.get({ tournament: store.tournament?.id });
+  settings.value = await SettingsService.getServer();
 });
 
 async function createProblem() {
@@ -53,6 +55,17 @@ function checkName() {
     error.value.type = "name";
   } else {
     error.value = {};
+  }
+}
+
+const probFileSelect = ref<InstanceType<typeof FileInput>>();
+const valid = ref(true);
+function validateProblem() {
+  if (data.value.file) {
+    valid.value = data.value.file.size <= settings.value!.upload_file_limit;
+    data.value.copyFrom = undefined;
+  } else {
+    valid.value = true;
   }
 }
 </script>
@@ -80,9 +93,8 @@ function checkName() {
           <form
             v-if="page == 0"
             id="file_form"
-            ref="file_form"
             class="card-body"
-            @submit.prevent="page = 1"
+            @submit.prevent="validateProblem"
             novalidate
           >
             <div class="alert alert-danger" role="alert" v-if="error.type == 'missing'">
@@ -98,11 +110,14 @@ function checkName() {
             <label for="prob_file" class="form-label">Upload a new problem file</label>
             <FileInput
               class="w-em mb-2"
+              :class="{'is-invalid': !valid}"
               id="prob_file"
+              ref="probFileSelect"
               v-model="data.file"
               accept=".algo"
-              @change="(e: any) => data.copyFrom = undefined"
+              @change="validateProblem"
             />
+            <div class="invalid-feedback">Selected file is too large</div>
             <label for="prob_select" class="form-label">Or copy an already existing one</label>
             <select
               class="form-select"
@@ -116,7 +131,7 @@ function checkName() {
               </option>
             </select>
             <div class="d-flex mt-3">
-              <button class="btn btn-primary ms-auto" type="submit">Next</button>
+              <button v-if="data.copyFrom || (data.file && valid)" class="btn btn-primary ms-auto" type="submit">Next</button>
             </div>
           </form>
 
