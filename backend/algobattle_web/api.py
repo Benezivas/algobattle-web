@@ -1,7 +1,7 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
 from email.message import EmailMessage
-from enum import Enum, StrEnum
+from enum import Enum
 from os import environ
 from smtplib import SMTP
 from typing import Annotated, Any, Callable, Literal, Self, TypeVar
