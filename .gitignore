@@ -6,3 +6,4 @@ openapitools.json
 config.toml
 .env
 io/
+backups/
