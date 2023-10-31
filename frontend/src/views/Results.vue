@@ -41,9 +41,18 @@ onMounted(async () => {
   results.value = res.results;
   teams.value = res.teams;
   if (store.team == "admin") {
-    const res = await TeamService.get({ tournament: store.tournament?.id });
-    // TODO: get all teams not just first page
-    teams.value = res.teams;
+    var remaining = true;
+    var offset = 0;
+    while (remaining) {
+      const res = await TeamService.get({ tournament: store.tournament?.id, offset: offset });
+      teams.value = {...teams.value, ...res.teams};
+      const numResults = Object.keys(res.teams).length;
+      if (res.total > offset + numResults) {
+        offset += numResults;
+      } else {
+        remaining = false;
+      }
+    }
   }
   editModal = Modal.getOrCreateInstance("#editModal");
   if (store.team == "admin") {
