@@ -25,3 +25,4 @@ COPY --from=api_builder /code/algobattle_version.txt algobattle_version.txt
 RUN curl -OL https://github.com/Benezivas/algobattle/releases/download/v`cat algobattle_version.txt`/docs.tar.gz
 RUN mkdir docs && tar xzf docs.tar.gz -C docs
 COPY --from=frontend_builder /code/dist frontend
+COPY nginx.conf /etc/nginx/nginx.conf

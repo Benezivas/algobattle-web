@@ -33,8 +33,6 @@ services:
         condition: service_started
     ports:
       - 8080:8080
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
     restart: on-failure
 
 volumes:
