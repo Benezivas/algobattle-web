@@ -593,18 +593,19 @@ def create_problem(
 ) -> str:
     _tournament = unwrap(db.get(Tournament, tournament))
     _image = DbFile.maybe(image, alt_text=alt_text)
+    limit = ServerSettings.get(db).upload_file_limit
     if isinstance(problem, UUID):
         template_prob = unwrap(db.get(Problem, problem))
         file = DbFile.from_file(template_prob.file.path, action="copy")
         page_data = template_prob.page_data
     else:
-        if problem.size and ServerSettings.get(db).upload_file_limit > problem.size:
+        if problem.size and problem.size > limit:
             raise ValueError
         file = DbFile.from_file(problem)
         page_data = None
     if db.scalars(select(Problem).where(Problem.name == name, Problem.tournament_id == tournament)).first():
         raise ValueTaken("name", name)
-    if image is not None and image.size and ServerSettings.get(db).upload_file_limit > image.size:
+    if image is not None and image.size and image.size > limit:
         raise ValueError
 
     prob = Problem(
@@ -662,12 +663,12 @@ def edit_problem(
     if colour:
         problem.colour = colour
     if file:
-        if file.size and ServerSettings.get(db).upload_file_limit > file.size:
+        if file.size and ServerSettings.get(db).upload_file_limit < file.size:
             raise ValueError
         problem.file = DbFile.from_file(file)
         tasks.add_task(problem.compute_page_data)
     if image != "noedit":
-        if image is not None and image.size and ServerSettings.get(db).upload_file_limit > image.size:
+        if image is not None and image.size and ServerSettings.get(db).upload_file_limit < image.size:
             raise ValueError
         problem.image = DbFile.maybe(image)
     db.commit()
@@ -696,7 +697,7 @@ def add_report(
     problem: ID,
     file: UploadFile,
 ) -> Report:
-    if file.size and ServerSettings.get(db).upload_file_limit > file.size:
+    if file.size and ServerSettings.get(db).upload_file_limit < file.size:
         raise ValueError
     problem_model = Problem.get_unwrap(db, problem)
     team_model = Team.get_unwrap(db, team)
@@ -806,7 +807,7 @@ def upload_program(
     problem: ID,
     file: UploadFile,
 ) -> Program:
-    if file.size and ServerSettings.get(db).upload_file_limit > file.size:
+    if file.size and ServerSettings.get(db).upload_file_limit < file.size:
         raise ValueError
     problem_obj = unwrap(db.get(Problem, problem))
     problem_obj.assert_visible(login.team)
@@ -941,7 +942,7 @@ def add_result(
     points: InForm[list[float]],
     logs: UploadFile | None = None,
 ) -> MatchResult:
-    if logs is not None and logs.size and ServerSettings.get(db).upload_file_limit > logs.size:
+    if logs is not None and logs.size and ServerSettings.get(db).upload_file_limit < logs.size:
         raise ValueError
     problem_model = unwrap(db.get(Problem, problem))
     file = DbFile.from_file(logs) if logs else None
@@ -986,7 +987,7 @@ def update_result(
         res.logs = None
     elif isinstance(logs, UUID):
         res.logs = DbFile.get_unwrap(db, logs)
-    elif logs.size and ServerSettings.get(db).upload_file_limit > logs.size:
+    elif logs.size and ServerSettings.get(db).upload_file_limit < logs.size:
         raise ValueError
     else:
         res.logs = DbFile.from_file(logs)
