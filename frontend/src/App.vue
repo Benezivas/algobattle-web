@@ -5,7 +5,7 @@ import { store } from "@/shared";
 import { UserService, type Team, SettingsService } from "@client";
 import LoginPane from "./components/LoginPane.vue";
 import { useCookies } from "@vueuse/integrations/useCookies";
-import { computed, watch } from "vue";
+import { computed, onMounted, watch } from "vue";
 import { Dropdown } from "bootstrap";
 
 const router = useRouter();
@@ -77,6 +77,10 @@ const displayName = computed(() => {
     return store.team.name;
   }
 });
+
+onMounted(async () => {
+  store.serverSettings = await SettingsService.getServer();
+})
 </script>
 
 <template>

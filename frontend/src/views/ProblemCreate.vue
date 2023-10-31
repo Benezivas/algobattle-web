@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import FileInput from "../components/FileInput.vue";
-import { ProblemService, type ServerSettings, SettingsService } from "@client";
+import { ProblemService } from "@client";
 import router from "@/router";
-import type { Tournament, Problem } from "@client";
+import type { Problem } from "@client";
 import { computed, onMounted, ref } from "vue";
 import { store } from "@/shared";
 
@@ -29,11 +29,9 @@ const imageUrl = computed(() => {
     return URL.createObjectURL(data.value.image);
   }
 });
-const settings = ref<ServerSettings>();
 
 onMounted(async () => {
   problems.value = await ProblemService.get({ tournament: store.tournament?.id });
-  settings.value = await SettingsService.getServer();
 });
 
 async function createProblem() {
@@ -62,7 +60,7 @@ const probFileSelect = ref<InstanceType<typeof FileInput>>();
 const valid = ref(true);
 function validateProblem() {
   if (data.value.file) {
-    valid.value = data.value.file.size <= settings.value!.upload_file_limit;
+    valid.value = data.value.file.size <= store.serverSettings!.upload_file_limit;
     data.value.copyFrom = undefined;
   } else {
     valid.value = true;

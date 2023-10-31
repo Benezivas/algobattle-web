@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { store } from "@/shared";
 import { type AdminServerSettings, SettingsService } from "@client";
 import { onMounted, ref, watch } from "vue";
 
@@ -31,6 +32,7 @@ async function saveEdit() {
     try {
       await SettingsService.editServer({ requestBody: {...settings.value, upload_file_limit: settings.value.upload_file_limit_text} });
       state.value = "success";
+      store.serverSettings = await SettingsService.getServer();
     } catch {
       state.value = "error";
     }
