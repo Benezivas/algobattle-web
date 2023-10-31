@@ -598,10 +598,14 @@ def create_problem(
         file = DbFile.from_file(template_prob.file.path, action="copy")
         page_data = template_prob.page_data
     else:
+        if problem.size and ServerSettings.get(db).upload_file_limit > problem.size:
+            raise ValueError
         file = DbFile.from_file(problem)
         page_data = None
     if db.scalars(select(Problem).where(Problem.name == name, Problem.tournament_id == tournament)).first():
         raise ValueTaken("name", name)
+    if image is not None and image.size and ServerSettings.get(db).upload_file_limit > image.size:
+        raise ValueError
 
     prob = Problem(
         file=file,
@@ -658,9 +662,13 @@ def edit_problem(
     if colour:
         problem.colour = colour
     if file:
+        if file.size and ServerSettings.get(db).upload_file_limit > file.size:
+            raise ValueError
         problem.file = DbFile.from_file(file)
         tasks.add_task(problem.compute_page_data)
     if image != "noedit":
+        if image is not None and image.size and ServerSettings.get(db).upload_file_limit > image.size:
+            raise ValueError
         problem.image = DbFile.maybe(image)
     db.commit()
     return problem
@@ -688,6 +696,8 @@ def add_report(
     problem: ID,
     file: UploadFile,
 ) -> Report:
+    if file.size and ServerSettings.get(db).upload_file_limit > file.size:
+        raise ValueError
     problem_model = Problem.get_unwrap(db, problem)
     team_model = Team.get_unwrap(db, team)
     if problem_model.tournament != team_model.tournament:
@@ -796,6 +806,8 @@ def upload_program(
     problem: ID,
     file: UploadFile,
 ) -> Program:
+    if file.size and ServerSettings.get(db).upload_file_limit > file.size:
+        raise ValueError
     problem_obj = unwrap(db.get(Problem, problem))
     problem_obj.assert_visible(login.team)
     if not isinstance(login.team, Team):
@@ -929,6 +941,8 @@ def add_result(
     points: InForm[list[float]],
     logs: UploadFile | None = None,
 ) -> MatchResult:
+    if logs is not None and logs.size and ServerSettings.get(db).upload_file_limit > logs.size:
+        raise ValueError
     problem_model = unwrap(db.get(Problem, problem))
     file = DbFile.from_file(logs) if logs else None
     if len(teams) != len(set(teams)):
@@ -972,6 +986,8 @@ def update_result(
         res.logs = None
     elif isinstance(logs, UUID):
         res.logs = DbFile.get_unwrap(db, logs)
+    elif logs.size and ServerSettings.get(db).upload_file_limit > logs.size:
+        raise ValueError
     else:
         res.logs = DbFile.from_file(logs)
     try:
