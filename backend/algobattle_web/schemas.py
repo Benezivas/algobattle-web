@@ -38,6 +38,7 @@ class DbFile(Base):
     def location(self) -> str:
         return f"{EnvConfig.get().base_url}/api/files/{urlencode(str(self.id))}"
 
+
 class Tournament(Base):
     name: str
 
@@ -57,11 +58,11 @@ class ServerSettings(Base):
     team_change_name: bool
     upload_file_limit: str
 
-    @field_validator("upload_file_limit")
+    @field_validator("upload_file_limit", mode="plain")
     @classmethod
     def _(cls, value: object, info: ValidationInfo) -> str:
         if not isinstance(value, ByteSize):
-            value =ByteSize._validate(value, info)
+            value = ByteSize._validate(value, info)
         return value.human_readable(True)
 
 

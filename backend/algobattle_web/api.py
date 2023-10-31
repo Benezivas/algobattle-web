@@ -16,7 +16,7 @@ from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
-from pydantic import ByteSize, Field
+from pydantic import ByteSize, Field, WithJsonSchema, TypeAdapter
 
 from algobattle.util import Role
 from algobattle_web import schemas
@@ -376,7 +376,9 @@ def edit_server_settings(
     user_change_email: InBody[bool | None] = None,
     team_change_name: InBody[bool | None],
     email_config: InBody[EmailConfig | None] = None,
-    upload_file_limit: InBody[Annotated[ByteSize, Interval(ge=0, le=2_000_000_000)] | None] = None,
+    upload_file_limit: InBody[
+        Annotated[ByteSize, Interval(ge=0, le=2_000_000_000), WithJsonSchema(TypeAdapter(str).json_schema())] | None
+    ] = None,
 ) -> None:
     settings = ServerSettings.get(db)
     if user_change_email is not None:
