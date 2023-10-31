@@ -3,7 +3,7 @@ import FileInput from "../components/FileInput.vue";
 import { ProblemService } from "@client";
 import router from "@/router";
 import type { Problem } from "@client";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { store } from "@/shared";
 
 const page = ref(0);
@@ -56,16 +56,7 @@ function checkName() {
   }
 }
 
-const probFileSelect = ref<InstanceType<typeof FileInput>>();
-const valid = ref(true);
-function validateProblem() {
-  if (data.value.file) {
-    valid.value = data.value.file.size <= store.serverSettings!.upload_file_limit;
-    data.value.copyFrom = undefined;
-  } else {
-    valid.value = true;
-  }
-}
+watch(() => data.value.file, () => data.value.copyFrom = undefined);
 </script>
 
 <template>
@@ -88,13 +79,7 @@ function validateProblem() {
           </li>
         </ul>
         <div class="card">
-          <form
-            v-if="page == 0"
-            id="file_form"
-            class="card-body"
-            @submit.prevent="validateProblem"
-            novalidate
-          >
+          <form v-if="page == 0" id="file_form" class="card-body" @submit.prevent="page++" novalidate>
             <div class="alert alert-danger" role="alert" v-if="error.type == 'missing'">
               Select either a problem file to upload, or an already existing problem to copy.
             </div>
@@ -108,14 +93,10 @@ function validateProblem() {
             <label for="prob_file" class="form-label">Upload a new problem file</label>
             <FileInput
               class="w-em mb-2"
-              :class="{'is-invalid': !valid}"
               id="prob_file"
-              ref="probFileSelect"
               v-model="data.file"
               accept=".algo"
-              @change="validateProblem"
             />
-            <div class="invalid-feedback">Selected file is too large</div>
             <label for="prob_select" class="form-label">Or copy an already existing one</label>
             <select
               class="form-select"
@@ -129,7 +110,9 @@ function validateProblem() {
               </option>
             </select>
             <div class="d-flex mt-3">
-              <button v-if="data.copyFrom || (data.file && valid)" class="btn btn-primary ms-auto" type="submit">Next</button>
+              <button v-if="data.copyFrom || data.file" class="btn btn-primary ms-auto" type="submit">
+                Next
+              </button>
             </div>
           </form>
 
