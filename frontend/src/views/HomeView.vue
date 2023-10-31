@@ -16,7 +16,7 @@ import ProblemCard from "@/components/ProblemCard.vue";
 import { DateTime } from "luxon";
 
 const home_page = ref<string | null>();
-const curr_prob = ref<Problem>();
+const curr_prob = ref<Problem | undefined>(undefined);
 const next_match = ref<ScheduledMatch>();
 const generator = ref<Program>();
 const solver = ref<Program>();
@@ -27,18 +27,23 @@ onMounted(async () => {
     return;
   }
   const problems = await ProblemService.get({ tournament: store.tournament?.id });
-  curr_prob.value = Object.values(problems).sort((a, b) => {
-    if (!a.end) {
-      return 1;
-    } else if (!b.end) {
-      return -1;
-    } else {
-      return a.end.localeCompare(b.end);
-    }
-  })[0];
+  curr_prob.value = Object.values(problems)
+    .filter((p) => !p.end || DateTime.now() <= DateTime.fromISO(p.end))
+    .sort((a, b) => {
+      if (!a.end) {
+        return 1;
+      } else if (!b.end) {
+        return -1;
+      } else {
+        return a.end.localeCompare(b.end);
+      }
+    })[0];
+  if (!curr_prob) {
+    return;
+  }
   const schedules = await MatchService.getScheduled();
   next_match.value = Object.values(schedules.matches)
-    .filter((m) => m.problem == curr_prob.value?.id)
+    .filter((m) => m.problem == curr_prob.value?.id && DateTime.now() <= DateTime.fromISO(m.time))
     .sort((a, b) => a.time.localeCompare(b.time))[0];
   if (store.team instanceof Object) {
     const programs = await ProgramService.get({ team: store.team.id, problem: curr_prob.value.id });
@@ -60,7 +65,9 @@ onMounted(async () => {
     }
     generator.value = generators.sort((a, b) => b.creation_time.localeCompare(a.creation_time))[0];
     solver.value = solvers.sort((a, b) => b.creation_time.localeCompare(a.creation_time))[0];
-    report.value = Object.values((await ReportService.get({problem: curr_prob.value.id, team: store.team.id})).reports)[0];
+    report.value = Object.values(
+      (await ReportService.get({ problem: curr_prob.value.id, team: store.team.id })).reports
+    )[0];
   }
 });
 function until(timestamp: string): string {
@@ -93,29 +100,23 @@ function until(timestamp: string): string {
                 <td>
                   Using generator
                   {{
-                    generator.name
-                      ? generator.name
-                      : "uploaded at " + formatDateTime(generator.creation_time)
+                    generator.name ? generator.name : "uploaded at " + formatDateTime(generator.creation_time)
                   }}
                 </td>
               </tr>
-              <tr v-else-if="(store.team instanceof Object)">
+              <tr v-else-if="store.team instanceof Object">
                 <td class="text-danger">You still need to uploaded a generator for this problem!</td>
               </tr>
               <tr v-if="solver">
                 <td>
                   Using solver
-                  {{
-                    solver.name
-                      ? solver.name
-                      : "uploaded at " + formatDateTime(solver.creation_time)
-                  }}
+                  {{ solver.name ? solver.name : "uploaded at " + formatDateTime(solver.creation_time) }}
                 </td>
               </tr>
-              <tr v-else-if="(store.team instanceof Object)">
+              <tr v-else-if="store.team instanceof Object">
                 <td class="text-danger">You still need to uploaded a solver for this problem!</td>
               </tr>
-              <tr v-if="(store.team instanceof Object) && report === undefined">
+              <tr v-if="store.team instanceof Object && report === undefined">
                 <td class="text-warning">You haven't yet uploaded a report for this problem.</td>
               </tr>
             </template>
