@@ -1,10 +1,10 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
 from email.message import EmailMessage
-from enum import Enum
+from enum import Enum, StrEnum
 from os import environ
 from smtplib import SMTP
-from typing import Annotated, Any, Callable, Literal, TypeVar
+from typing import Annotated, Any, Callable, Literal, Self, TypeVar
 from uuid import UUID
 from urllib.parse import quote
 from annotated_types import Interval
@@ -57,6 +57,19 @@ from algobattle_web.dependencies import (
 )
 
 __all__ = ("router", "admin")
+T = TypeVar("T")
+
+
+class Remove(Enum):
+    remove = "remove"
+    _dummy = "_dummy"
+
+    @classmethod
+    def convert(cls, value: Self | T) -> T | None:
+        if isinstance(value, cls):
+            return None
+        else:
+            return value
 
 
 class EditAction(Enum):
@@ -64,7 +77,6 @@ class EditAction(Enum):
     remove = "remove"
 
 
-T = TypeVar("T")
 str32 = Annotated[str, Body(max_length=32)]
 str64 = Annotated[str, Body(max_length=64)]
 str128 = Annotated[str, Body(max_length=128)]
@@ -633,13 +645,13 @@ def edit_problem(
     id: ID,
     name: InForm[str | None] = None,
     tournament: InForm[ID | None] = None,
-    start: InForm[datetime | None | Literal["noedit"]] = "noedit",
-    end: InForm[datetime | None | Literal["noedit"]] = "noedit",
+    start: InForm[datetime | Remove | None] = None,
+    end: InForm[datetime | Remove | None] = None,
     description: InForm[str | None] = None,
     alt_text: InForm[str | None] = None,
     colour: InForm[str | None] = None,
     file: UploadFile | None = None,
-    image: UploadFile | None | Literal["noedit"] = Form("noedit"),
+    image: UploadFile | InForm[Remove] | None = None,
     tasks: BackgroundTasks,
 ) -> Problem:
     problem = unwrap(db.get(Problem, id))
@@ -652,10 +664,10 @@ def edit_problem(
         problem.name = name
     if tournament:
         problem.tournament = unwrap(db.get(Tournament, tournament))
-    if start != "noedit":
-        problem.start = start
-    if end != "noedit":
-        problem.end = end
+    if start is not None:
+        problem.start = Remove.convert(start)
+    if end is not None:
+        problem.end = Remove.convert(end)
     if description is not None:
         problem.description = description
     if alt_text is not None and problem.image is not None:
@@ -667,7 +679,8 @@ def edit_problem(
             raise ValueError
         problem.file = DbFile.from_file(file)
         tasks.add_task(problem.compute_page_data)
-    if image != "noedit":
+    if image is not None:
+        image = Remove.convert(image)
         if image is not None and image.size and ServerSettings.get(db).upload_file_limit < image.size:
             raise ValueError
         problem.image = DbFile.maybe(image)

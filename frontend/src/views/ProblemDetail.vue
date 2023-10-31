@@ -1,17 +1,16 @@
 <script setup lang="ts">
 import { Modal } from "bootstrap";
 import { TournamentService, ReportService, ProblemService, TeamService } from "@client";
-import type { Tournament, Report, Problem, Team, ProblemPageData } from "@client";
+import type { Tournament, Report, Problem, Team, ProblemPageData, DbFile } from "@client";
 import { store, type InputFileEvent, type ModelDict } from "@/shared";
 import { onMounted, ref, type Ref } from "vue";
 import { useRoute } from "vue-router";
 import router from "@/router";
 import FileEditRow from "@/components/FileEditRow.vue";
-import type { DbFileEdit } from "@/components/FileEditRow.vue";
 
 interface ProblemEdit extends Omit<Problem, "file" | "image"> {
-  file: DbFileEdit;
-  image: DbFileEdit;
+  file: DbFile | File;
+  image?: DbFile | File | "remove" | null;
   alt: string;
 }
 
@@ -110,8 +109,6 @@ function createProblemEdit(problem: Problem): ProblemEdit {
     ...problem,
     start: problem?.start?.slice(0, 19),
     end: problem?.end?.slice(0, 19),
-    file: { location: problem.file.location },
-    image: problem.image ? { location: problem.image?.location } : {},
     alt: problem.image?.alt_text || "",
   };
 }
@@ -121,6 +118,15 @@ function openEdit() {
   error.value = null;
   Modal.getOrCreateInstance("#problemModal").show();
 }
+
+function convertFileEdit<T>(file: DbFile | T): T | undefined {
+  if (file instanceof Object && "location" in file) {
+    return undefined;
+  } else {
+    return file;
+  }
+}
+
 async function submitEdit() {
   const prob = editProblem.value!;
   problem.value = await ProblemService.edit({
@@ -128,13 +134,13 @@ async function submitEdit() {
     formData: {
       name: prob.name,
       tournament: prob.tournament.id,
-      start: prob.start,
-      end: prob.end,
+      start: prob.start || "remove",
+      end: prob.end || "remove",
       description: prob.description,
       alt_text: prob.alt,
       colour: prob.colour,
-      file: prob.file.edit,
-      image: prob.image.edit,
+      file: convertFileEdit(prob.file),
+      image: convertFileEdit(prob.image),
     },
   });
   Modal.getOrCreateInstance("#problemModal").hide();
@@ -426,8 +432,8 @@ async function deleteProblem() {
               </tr>
             </thead>
             <tbody>
-              <FileEditRow :removable="false" :file="editProblem.file">Problem</FileEditRow>
-              <FileEditRow :removable="true" :file="editProblem.image">Image</FileEditRow>
+              <FileEditRow :removable="false" v-model="editProblem.file">Problem</FileEditRow>
+              <FileEditRow :removable="true" v-model="editProblem.image">Image</FileEditRow>
             </tbody>
           </table>
 
