@@ -122,7 +122,7 @@ function parseSize(size: string): number | undefined {
       <div class="col-md-3 mb-3">
         <label for="mailServerUrl" class="form-label">Mail server url</label>
         <input
-          type="url"
+          type="text"
           class="form-control"
           id="mailServerUrl"
           autocomplete="off"
