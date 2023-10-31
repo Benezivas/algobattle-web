@@ -5,7 +5,7 @@ from typing import Annotated
 from urllib.parse import quote as urlencode
 from uuid import UUID
 
-from pydantic import ByteSize, Field, PlainSerializer, computed_field, field_validator, model_validator
+from pydantic import ByteSize, Field, PlainSerializer, computed_field, field_validator
 
 from algobattle_web.util import BaseSchema, EmailConfig, EnvConfig, MatchStatus, ObjID
 from algobattle.util import Role

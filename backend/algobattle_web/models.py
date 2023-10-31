@@ -12,7 +12,7 @@ from zipfile import ZipFile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import JSON, ColumnElement, Integer, LargeBinary, MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
+from sqlalchemy import JSON, ColumnElement, LargeBinary, MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
 from sqlalchemy.event import listens_for
 from sqlalchemy.sql import true as sql_true, false as sql_false
 from sqlalchemy.orm import relationship, Mapped, mapped_column, Session, DeclarativeBase, registry, MappedAsDataclass
