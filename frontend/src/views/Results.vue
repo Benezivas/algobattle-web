@@ -248,7 +248,7 @@ function openDetail(result: MatchResult) {
           </select>
           <label for="status" class="form-label">Status</label>
           <select id="status" class="form-select" required v-model="editData.status">
-            <option v-for="status in Object.values(MatchStatus)" :value="status">
+            <option v-for="status in ['running', 'complete', 'failed']" :value="status">
               {{ status }}
             </option>
           </select>

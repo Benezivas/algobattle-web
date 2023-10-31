@@ -7,6 +7,7 @@ from smtplib import SMTP
 from typing import Annotated, Any, Callable, Literal, TypeVar
 from uuid import UUID
 from urllib.parse import quote
+from annotated_types import Interval
 
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, Form, BackgroundTasks
 from fastapi.routing import APIRoute
@@ -15,7 +16,7 @@ from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.responses import FileResponse
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
-from pydantic import Field
+from pydantic import ByteSize, Field, WithJsonSchema, TypeAdapter
 
 from algobattle.util import Role
 from algobattle_web import schemas
@@ -375,6 +376,9 @@ def edit_server_settings(
     user_change_email: InBody[bool | None] = None,
     team_change_name: InBody[bool | None],
     email_config: InBody[EmailConfig | None] = None,
+    upload_file_limit: InBody[
+        Annotated[ByteSize, Interval(ge=0, le=2_000_000_000), WithJsonSchema(TypeAdapter(str).json_schema())] | None
+    ] = None,
 ) -> None:
     settings = ServerSettings.get(db)
     if user_change_email is not None:
@@ -383,6 +387,8 @@ def edit_server_settings(
         settings.team_change_name = team_change_name
     if email_config is not None:
         settings.email_config = email_config
+    if upload_file_limit is not None:
+        settings.upload_file_limit = upload_file_limit
     db.commit()
 
 
@@ -592,10 +598,14 @@ def create_problem(
         file = DbFile.from_file(template_prob.file.path, action="copy")
         page_data = template_prob.page_data
     else:
+        if problem.size and ServerSettings.get(db).upload_file_limit > problem.size:
+            raise ValueError
         file = DbFile.from_file(problem)
         page_data = None
     if db.scalars(select(Problem).where(Problem.name == name, Problem.tournament_id == tournament)).first():
         raise ValueTaken("name", name)
+    if image is not None and image.size and ServerSettings.get(db).upload_file_limit > image.size:
+        raise ValueError
 
     prob = Problem(
         file=file,
@@ -652,9 +662,13 @@ def edit_problem(
     if colour:
         problem.colour = colour
     if file:
+        if file.size and ServerSettings.get(db).upload_file_limit > file.size:
+            raise ValueError
         problem.file = DbFile.from_file(file)
         tasks.add_task(problem.compute_page_data)
     if image != "noedit":
+        if image is not None and image.size and ServerSettings.get(db).upload_file_limit > image.size:
+            raise ValueError
         problem.image = DbFile.maybe(image)
     db.commit()
     return problem
@@ -682,6 +696,8 @@ def add_report(
     problem: ID,
     file: UploadFile,
 ) -> Report:
+    if file.size and ServerSettings.get(db).upload_file_limit > file.size:
+        raise ValueError
     problem_model = Problem.get_unwrap(db, problem)
     team_model = Team.get_unwrap(db, team)
     if problem_model.tournament != team_model.tournament:
@@ -790,6 +806,8 @@ def upload_program(
     problem: ID,
     file: UploadFile,
 ) -> Program:
+    if file.size and ServerSettings.get(db).upload_file_limit > file.size:
+        raise ValueError
     problem_obj = unwrap(db.get(Problem, problem))
     problem_obj.assert_visible(login.team)
     if not isinstance(login.team, Team):
@@ -923,6 +941,8 @@ def add_result(
     points: InForm[list[float]],
     logs: UploadFile | None = None,
 ) -> MatchResult:
+    if logs is not None and logs.size and ServerSettings.get(db).upload_file_limit > logs.size:
+        raise ValueError
     problem_model = unwrap(db.get(Problem, problem))
     file = DbFile.from_file(logs) if logs else None
     if len(teams) != len(set(teams)):
@@ -966,6 +986,8 @@ def update_result(
         res.logs = None
     elif isinstance(logs, UUID):
         res.logs = DbFile.get_unwrap(db, logs)
+    elif logs.size and ServerSettings.get(db).upload_file_limit > logs.size:
+        raise ValueError
     else:
         res.logs = DbFile.from_file(logs)
     try:

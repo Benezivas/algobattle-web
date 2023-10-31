@@ -2,8 +2,8 @@
 import FileInput from "../components/FileInput.vue";
 import { ProblemService } from "@client";
 import router from "@/router";
-import type { Tournament, Problem } from "@client";
-import { computed, onMounted, ref } from "vue";
+import type { Problem } from "@client";
+import { computed, onMounted, ref, watch } from "vue";
 import { store } from "@/shared";
 
 const page = ref(0);
@@ -55,6 +55,8 @@ function checkName() {
     error.value = {};
   }
 }
+
+watch(() => data.value.file, () => data.value.copyFrom = undefined);
 </script>
 
 <template>
@@ -77,14 +79,7 @@ function checkName() {
           </li>
         </ul>
         <div class="card">
-          <form
-            v-if="page == 0"
-            id="file_form"
-            ref="file_form"
-            class="card-body"
-            @submit.prevent="page = 1"
-            novalidate
-          >
+          <form v-if="page == 0" id="file_form" class="card-body" @submit.prevent="page++" novalidate>
             <div class="alert alert-danger" role="alert" v-if="error.type == 'missing'">
               Select either a problem file to upload, or an already existing problem to copy.
             </div>
@@ -101,7 +96,6 @@ function checkName() {
               id="prob_file"
               v-model="data.file"
               accept=".algo"
-              @change="(e: any) => data.copyFrom = undefined"
             />
             <label for="prob_select" class="form-label">Or copy an already existing one</label>
             <select
@@ -116,7 +110,9 @@ function checkName() {
               </option>
             </select>
             <div class="d-flex mt-3">
-              <button class="btn btn-primary ms-auto" type="submit">Next</button>
+              <button v-if="data.copyFrom || data.file" class="btn btn-primary ms-auto" type="submit">
+                Next
+              </button>
             </div>
           </form>
 

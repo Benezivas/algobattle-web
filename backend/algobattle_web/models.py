@@ -12,14 +12,14 @@ from zipfile import ZipFile
 
 from jose import jwt
 from jose.exceptions import ExpiredSignatureError, JWTError
-from sqlalchemy import JSON, ColumnElement, LargeBinary, MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
+from sqlalchemy import JSON, ColumnElement, Integer, LargeBinary, MetaData, Table, ForeignKey, Column, select, DateTime, inspect, String, Text
 from sqlalchemy.event import listens_for
 from sqlalchemy.sql import true as sql_true, false as sql_false
 from sqlalchemy.orm import relationship, Mapped, mapped_column, Session, DeclarativeBase, registry, MappedAsDataclass
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.base import _NoArg
 from fastapi import UploadFile
-from pydantic import Field
+from pydantic import ByteSize, Field
 
 from algobattle.util import TempDir, Role as ProgramRole
 from algobattle.match import AlgobattleConfig
@@ -332,6 +332,7 @@ class ServerSettings(Base, kw_only=True):
     home_page: Mapped[File | None] = relationship(default=None)
     user_change_email: Mapped[bool] = mapped_column(default=True)
     team_change_name: Mapped[bool] = mapped_column(default=True)
+    upload_file_limit: Mapped[int] = mapped_column(default=ByteSize(200_000_000))
 
     home_page_id: Mapped[UUID | None] = mapped_column(ForeignKey("files.id"), init=False)
     home_page_compiled: Mapped[strText | None] = mapped_column(default=None)
