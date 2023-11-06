@@ -14,6 +14,7 @@ import type { Problem, Tournament, MatchResult, Team, DbFile, ResultParticipant,
 import { computed, onMounted, ref, toRaw } from "vue";
 import DownloadButton from "@/components/DownloadButton.vue";
 import FileInput from "@/components/FileInput.vue";
+import ResultChart from "@/components/ResultChart.vue";
 
 const problems = ref<ModelDict<Problem>>({});
 const results = ref<ModelDict<MatchResult>>({});
@@ -178,6 +179,7 @@ function openDetail(result: MatchResult) {
 
 <template>
   <template v-if="store.tournament">
+    <ResultChart v-if="sortedResults.length !== 0" :results="sortedResults"/>
     <table v-if="sortedResults.length !== 0" class="table">
       <thead>
         <tr>
