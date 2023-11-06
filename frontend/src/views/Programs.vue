@@ -7,6 +7,7 @@ import { computed, onMounted, ref } from "vue";
 import FileInput from "@/components/FileInput.vue";
 import Paginator from "@/components/Paginator.vue";
 import DeleteButton from "@/components/DeleteButton.vue";
+import { DateTime } from "luxon";
 
 const programs = ref<ModelDict<Program>>({});
 const sortedPrograms = computed(() => {
@@ -30,9 +31,19 @@ const searchData = ref({
   team: null,
   role: null,
 });
+const activeProblems = computed(() => {
+  const now = DateTime.now();
+  const probs = Object.values(problems.value).filter((p) => 
+    (!p.start || DateTime.fromISO(p.start) <= now) && (!p.end || DateTime.fromISO(p.end) > now)
+  );
+  if (probs.length == 1) {
+    newProgData.value.problem = probs[0].id;
+  }
+  return probs;
+});
 
 async function search(offset: number = 0) {
-  const ret = await ProgramService.get({tournament: store.tournament?.id, offset: offset });
+  const ret = await ProgramService.get({ tournament: store.tournament?.id, offset: offset });
   if (store.team === "admin") {
     problems.value = ret.problems;
   } else {
@@ -135,7 +146,7 @@ onMounted(() => {
 
     <div class="d-flex mb-3 pe-2">
       <button
-        v-if="store.team !== 'admin'"
+        v-if="store.team !== 'admin' && activeProblems.length >= 1"
         type="button"
         class="btn btn-primary btn-sm me-auto"
         @click="openModal"
@@ -164,14 +175,17 @@ onMounted(() => {
             <div class="mb-3">
               <label for="problem_sel" class="form-label">Problem</label>
               <select
+                v-if="activeProblems.length >= 0"
                 class="form-select"
                 id="problem_sel"
                 name="problem"
                 required
                 v-model="newProgData.problem"
               >
-                <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>
+                <option v-for="problem in activeProblems" :value="problem.id">{{ problem.name }}</option>
               </select>
+              <span v-else-if="activeProblems[0]" if="problem_sel">{{ activeProblems[0].name }}</span>
+              <span v-else>No active problems available</span>
             </div>
             <div class="mb-3">
               <label for="prog_name" class="form-label">Name</label>
