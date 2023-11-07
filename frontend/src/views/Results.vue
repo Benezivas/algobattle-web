@@ -179,7 +179,8 @@ function openDetail(result: MatchResult) {
 
 <template>
   <template v-if="store.tournament">
-    <ResultChart v-if="sortedResults.length !== 0" :results="sortedResults"/>
+    <h1>Tournament overview</h1>
+    <ResultChart v-if="sortedResults.length !== 0" :results="sortedResults" :teams="teams"/>
     <table v-if="sortedResults.length !== 0" class="table">
       <thead>
         <tr>
@@ -296,10 +297,10 @@ function openDetail(result: MatchResult) {
                     class="form-select"
                     required
                     v-model="participant.generator"
-                    @click="getPrograms(participant.team_id, Role.GENERATOR)"
+                    @click="getPrograms(participant.team_id, 'generator')"
                   >
                     <option
-                      v-for="prog in programs[editData.problem + participant.team_id + Role.GENERATOR]"
+                      v-for="prog in programs[editData.problem + participant.team_id + 'generator']"
                       :value="prog"
                     >
                       {{ `${prog.name}(${formatDateTime(prog.creation_time)})` }}
@@ -313,10 +314,10 @@ function openDetail(result: MatchResult) {
                     class="form-select"
                     required
                     v-model="participant.solver"
-                    @click="getPrograms(participant.team_id, Role.SOLVER)"
+                    @click="getPrograms(participant.team_id, 'solver')"
                   >
                     <option
-                      v-for="prog in programs[editData.problem + participant.team_id + Role.SOLVER]"
+                      v-for="prog in programs[editData.problem + participant.team_id + 'solver']"
                       :value="prog"
                     >
                       {{ `${prog.name}(${formatDateTime(prog.creation_time)})` }}
