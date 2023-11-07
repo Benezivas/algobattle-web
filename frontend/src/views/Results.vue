@@ -14,6 +14,7 @@ import type { Problem, Tournament, MatchResult, Team, DbFile, ResultParticipant,
 import { computed, onMounted, ref, toRaw } from "vue";
 import DownloadButton from "@/components/DownloadButton.vue";
 import FileInput from "@/components/FileInput.vue";
+import ResultChart from "@/components/ResultChart.vue";
 
 const problems = ref<ModelDict<Problem>>({});
 const results = ref<ModelDict<MatchResult>>({});
@@ -178,6 +179,8 @@ function openDetail(result: MatchResult) {
 
 <template>
   <template v-if="store.tournament">
+    <h1>Tournament overview</h1>
+    <ResultChart v-if="sortedResults.length !== 0" :results="sortedResults" :teams="teams" :problems="problems" id="overallChart"/>
     <table v-if="sortedResults.length !== 0" class="table">
       <thead>
         <tr>
@@ -294,10 +297,10 @@ function openDetail(result: MatchResult) {
                     class="form-select"
                     required
                     v-model="participant.generator"
-                    @click="getPrograms(participant.team_id, Role.GENERATOR)"
+                    @click="getPrograms(participant.team_id, 'generator')"
                   >
                     <option
-                      v-for="prog in programs[editData.problem + participant.team_id + Role.GENERATOR]"
+                      v-for="prog in programs[editData.problem + participant.team_id + 'generator']"
                       :value="prog"
                     >
                       {{ `${prog.name}(${formatDateTime(prog.creation_time)})` }}
@@ -311,10 +314,10 @@ function openDetail(result: MatchResult) {
                     class="form-select"
                     required
                     v-model="participant.solver"
-                    @click="getPrograms(participant.team_id, Role.SOLVER)"
+                    @click="getPrograms(participant.team_id, 'solver')"
                   >
                     <option
-                      v-for="prog in programs[editData.problem + participant.team_id + Role.SOLVER]"
+                      v-for="prog in programs[editData.problem + participant.team_id + 'solver']"
                       :value="prog"
                     >
                       {{ `${prog.name}(${formatDateTime(prog.creation_time)})` }}
@@ -431,3 +434,10 @@ function openDetail(result: MatchResult) {
     </div>
   </div>
 </template>
+
+<style>
+#overallChart {
+  margin-bottom: 4rem;
+}
+
+</style>

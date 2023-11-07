@@ -11,8 +11,10 @@ import {
   type Program,
   ReportService,
   type Report,
+  type MatchResultData,
 } from "@client";
 import ProblemCard from "@/components/ProblemCard.vue";
+import ResultChart from "@/components/ResultChart.vue";
 import { DateTime } from "luxon";
 
 const home_page = ref<string | null>();
@@ -21,6 +23,7 @@ const next_match = ref<ScheduledMatch>();
 const generator = ref<Program>();
 const solver = ref<Program>();
 const report = ref<Report>();
+const results = ref<MatchResultData>();
 onMounted(async () => {
   home_page.value = await SettingsService.home();
   if (!store.team) {
@@ -69,6 +72,7 @@ onMounted(async () => {
       (await ReportService.get({ problem: curr_prob.value.id, team: store.team.id })).reports
     )[0];
   }
+  results.value = await MatchService.getResult({ tournament: store.tournament?.id });
 });
 function until(timestamp: string): string {
   return DateTime.fromISO(timestamp).diff(DateTime.now().startOf("minute"), ["minutes"]).rescale().toHuman();
@@ -137,6 +141,15 @@ function until(timestamp: string): string {
     <div v-else class="alert alert-danger" role="alert">
       You haven't selected a team. You can do so in the <RouterLink to="settings">user settings</RouterLink>.
     </div>
+    <template v-if="results && Object.values(results.results).length !== 0">
+      <h1 id="resultsHeading">Tournament results overview</h1>
+      <ResultChart
+        :results="Object.values(results.results)"
+        :teams="results.teams"
+        :problems="results.problems"
+        id="overallChart"
+      />
+    </template>
   </main>
   <main v-else-if="typeof home_page === 'string'" v-html="home_page" />
   <main v-else-if="home_page === null">
@@ -214,5 +227,9 @@ h1 {
   max-width: 28rem;
   margin-left: 1rem;
   align-self: flex-start;
+}
+
+#resultsHeading {
+  margin-top: 4rem;
 }
 </style>
