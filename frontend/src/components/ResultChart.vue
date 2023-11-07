@@ -11,21 +11,35 @@ import {
   LineElement,
   Colors,
   TimeSeriesScale,
-type ChartOptions,
-type ChartData,
+  type ChartOptions,
+  type ChartData,
 } from "chart.js";
 import { Line } from "vue-chartjs";
 import type { MatchResult, Problem, Team } from "@client";
 import { computed } from "vue";
 import type { ModelDict } from "@/shared";
 import { DateTime, Duration } from "luxon";
-import 'chartjs-adapter-luxon';
+import "chartjs-adapter-luxon";
+import annotationPlugin from "chartjs-plugin-annotation";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, Colors, TimeSeriesScale);
+ChartJS.register(
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  PointElement,
+  LineElement,
+  Colors,
+  LinearScale,
+  CategoryScale,
+  TimeSeriesScale,
+  annotationPlugin
+);
 
 const props = defineProps<{
   results: MatchResult[];
   teams: ModelDict<Team>;
+  problems: ModelDict<Problem>;
 }>();
 
 const orderedResults = computed(() => {
@@ -45,7 +59,7 @@ const timestamps = computed(() => {
   if (t.length == 0) {
     return t;
   } else {
-    t.splice(0, 0, t[0].minus(Duration.fromObject({days: 1})).startOf("day"));
+    t.splice(0, 0, t[0].minus({ days: 1 }).startOf("day"));
     return t;
   }
 });
@@ -62,28 +76,93 @@ const data = computed(() => {
   return data;
 });
 
-const options: ChartOptions<"line"> = {
-  scales: {
-    y: {
-      title: {
-        display: true,
-        text: "Points"
-      },
-    },
-    x: {
-      type: "timeseries",
-    },
-  },
-  plugins: {
-    title: {
-      display: true,
-      text: "Total points"
-    },
-  },
+function interpolate(main: DateTime, offset: DateTime) {
+  return main.plus(offset.minus(main.toMillis()).toMillis() / 3);
 }
 
+const options = computed<ChartOptions<"line">>(() => {
+  interface Block {
+    start: number;
+    end: number;
+    problem: string;
+    id: string;
+  }
+  const blocks: Block[] = [];
+  var currProb: string | undefined = undefined;
+  orderedResults.value.forEach((result, index) => {
+    if (currProb !== result.problem) {
+      blocks.push({
+        id: "block" + index,
+        start: index,
+        end: index,
+        problem: result.problem,
+      });
+      currProb = result.problem;
+    } else {
+      blocks[blocks.length - 1].end = index;
+    }
+  });
+  const times = orderedResults.value.map((r) => DateTime.fromISO(r.time));
+  const blocksTimed = blocks.map((b) => {
+    return {
+      ...b,
+      start:
+        b.start === 0
+          ? interpolate(times[0], times[0].minus({ days: 1 }).startOf("day"))
+          : interpolate(times[b.start], times[b.end - 1]),
+      end: b.end === times.length - 1 ? times[times.length - 1] : interpolate(times[b.end], times[b.end + 1]),
+    };
+  });
+  const o: ChartOptions<"line"> = {
+    scales: {
+      y: {
+        title: {
+          display: true,
+          text: "Points",
+        },
+      },
+      x: {
+        type: "timeseries",
+        time: {
+          unit: "day",
+        },
+      },
+    },
+    plugins: {
+      title: {
+        display: true,
+        text: "Total points",
+      },
+      annotation: {
+        annotations: Object.fromEntries(
+          blocksTimed.map((b) => {
+            return [
+              b.id,
+              {
+                type: "box",
+                xMin: b.start as any,
+                xMax: b.end as any,
+                backgroundColor: props.problems[b.problem].colour + "4D",
+                borderWidth: 0,
+                label: {
+                  content: props.problems[b.problem].name,
+                  display: true,
+                  position: {
+                    x: "center",
+                    y: "start"
+                  }
+                },
+              },
+            ];
+          })
+        ),
+      },
+    },
+  };
+  return o;
+});
 </script>
 
 <template>
-  <Line :data="data" :options="options"/>
+  <Line :data="data" :options="options" />
 </template>
