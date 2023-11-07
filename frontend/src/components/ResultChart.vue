@@ -37,7 +37,7 @@ const orderedResults = computed(() => {
 function scores(team: Team) {
   return orderedResults.value
     .map((r) => r.participants.find((p) => p.team_id == team.id)?.points || 0)
-    .reduce((acc, next) => acc.concat(acc[acc.length - 1] + next + 25), [0]);
+    .reduce((acc, next) => acc.concat(acc[acc.length - 1] + next), [0]);
 }
 
 const timestamps = computed(() => {

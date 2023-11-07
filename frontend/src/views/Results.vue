@@ -180,7 +180,7 @@ function openDetail(result: MatchResult) {
 <template>
   <template v-if="store.tournament">
     <h1>Tournament overview</h1>
-    <ResultChart v-if="sortedResults.length !== 0" :results="sortedResults" :teams="teams"/>
+    <ResultChart v-if="sortedResults.length !== 0" :results="sortedResults" :teams="teams" id="overallChart"/>
     <table v-if="sortedResults.length !== 0" class="table">
       <thead>
         <tr>
@@ -434,3 +434,10 @@ function openDetail(result: MatchResult) {
     </div>
   </div>
 </template>
+
+<style>
+#overallChart {
+  margin-bottom: 4rem;
+}
+
+</style>
