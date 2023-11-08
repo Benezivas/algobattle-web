@@ -4,7 +4,7 @@ import { Modal } from "bootstrap";
 import { TournamentService, TeamService, UserService } from "@client";
 import type { Team, Tournament, User } from "@client";
 import { store, type ModelDict } from "@/shared";
-import { computed, onMounted, ref, toRaw } from "vue";
+import { computed, onMounted, ref, toRaw, watch } from "vue";
 import Paginator from "@/components/Paginator.vue";
 
 const teams = ref<ModelDict<Team>>({});
@@ -25,6 +25,7 @@ onMounted(async () => {
   await search();
 });
 const total = ref(0);
+const offset = ref(0);
 
 async function search(offset: number = 0) {
   const result = await TeamService.get({
@@ -36,6 +37,8 @@ async function search(offset: number = 0) {
   users.value = result.users;
   total.value = result.total;
 }
+watch(offset, search);
+
 async function clearSearch() {
   searchData.value = {
     name: "",
@@ -193,7 +196,7 @@ async function checkName() {
         <span class="visually-hidden">Applied filters</span>
       </span>
     </button>
-    <Paginator :total="total" @update="search" />
+    <Paginator v-model="offset" :total="total" />
   </div>
 
   <div class="d-flex justify-content-end">

@@ -4,18 +4,18 @@ import { computed, ref } from "vue";
 const PAGE_SIZE = 25;
 
 const props = defineProps<{
+  modelValue: number,
   total: number;
 }>();
 const emit = defineEmits<{
-  update: [offset: number];
+  "update:modelValue": [offset: number];
 }>();
-const offset = ref(0);
 
 const currPage = computed(() => {
-  return Math.floor(offset.value / PAGE_SIZE) + 1;
+  return Math.floor(props.modelValue / PAGE_SIZE);
 });
 const maxPage = computed(() => {
-  return Math.ceil(props.total / PAGE_SIZE);
+  return Math.ceil(props.total / PAGE_SIZE) - 1;
 });
 </script>
 
@@ -23,24 +23,24 @@ const maxPage = computed(() => {
   <nav v-if="total > PAGE_SIZE" aria-label="Table pagination">
     <ul class="pagination pagination-sm justify-content-end mb-0 ms-2">
       <li class="page-item">
-        <a class="page-link" :class="{ disabled: currPage <= 1 }" @click="emit('update', 0)"
+        <a class="page-link" :class="{ disabled: currPage === 0 }" @click="emit('update:modelValue', 0)"
           ><i class="bi bi-chevron-double-left"></i
         ></a>
       </li>
       <li class="page-item">
         <a
           class="page-link"
-          :class="{ disabled: currPage <= 1 }"
-          @click="emit('update', (currPage - 1) * PAGE_SIZE)"
+          :class="{ disabled: currPage === 0 }"
+          @click="emit('update:modelValue', (currPage - 1) * PAGE_SIZE)"
           ><i class="bi bi-chevron-compact-left"></i
         ></a>
       </li>
-      <li class="page-item">currPage / maxPage</li>
+      <li class="page-item" id="text">{{currPage + 1}} / {{maxPage + 1}}</li>
       <li class="page-item">
         <a
           class="page-link"
           :class="{ disabled: currPage >= maxPage }"
-          @click="emit('update', (currPage + 1) * PAGE_SIZE)"
+          @click="emit('update:modelValue', (currPage + 1) * PAGE_SIZE)"
           ><i class="bi bi-chevron-compact-right"></i
         ></a>
       </li>
@@ -48,10 +48,18 @@ const maxPage = computed(() => {
         <a
           class="page-link"
           :class="{ disabled: currPage >= maxPage }"
-          @click="emit('update', maxPage * PAGE_SIZE)"
+          @click="emit('update:modelValue', maxPage * PAGE_SIZE)"
           ><i class="bi bi-chevron-double-right"></i
         ></a>
       </li>
     </ul>
   </nav>
 </template>
+
+<style>
+#text {
+  margin-left: 0.4rem;
+  margin-right: 0.4rem;
+  align-self: center;
+}
+</style>

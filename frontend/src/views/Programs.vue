@@ -3,7 +3,7 @@ import { ProblemService, ProgramService, type Role } from "@client";
 import { store, type ModelDict } from "@/shared";
 import { Modal } from "bootstrap";
 import type { Problem, Program, Team } from "@client";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import FileInput from "@/components/FileInput.vue";
 import Paginator from "@/components/Paginator.vue";
 import DeleteButton from "@/components/DeleteButton.vue";
@@ -26,6 +26,7 @@ const sortedPrograms = computed(() => {
 const problems = ref<ModelDict<Problem>>({});
 const teams = ref<ModelDict<Team>>({});
 const total = ref(0);
+const offset = ref(0);
 const searchData = ref({
   name: null,
   team: null,
@@ -53,6 +54,7 @@ async function search(offset: number = 0) {
   teams.value = ret.teams;
   total.value = ret.total;
 }
+watch(offset, search);
 
 const newProgData = ref<{
   name?: string;
@@ -153,7 +155,7 @@ onMounted(() => {
       >
         Upload new program
       </button>
-      <Paginator :total="total" @update="search" />
+      <Paginator v-model="offset" :total="total" />
     </div>
   </template>
   <div v-else-if="!store.user" class="alert alert-danger" role="alert">

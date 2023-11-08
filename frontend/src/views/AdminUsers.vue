@@ -4,11 +4,12 @@ import Paginator from "@/components/Paginator.vue";
 import { TournamentService, TeamService, UserService, type Team, type User, type Tournament } from "@client";
 import { Modal } from "bootstrap";
 import type { ModelDict } from "@/shared";
-import { computed, onMounted, ref, toRaw } from "vue";
+import { computed, onMounted, ref, toRaw, watch } from "vue";
 
 const teams = ref<ModelDict<Team>>({});
 const users = ref<ModelDict<User>>({});
 const tournaments = ref<ModelDict<Tournament>>({});
+const offset = ref(0);
 const total = ref(0);
 let modal: Modal;
 
@@ -53,6 +54,7 @@ async function clearSearch() {
   };
   search();
 }
+watch(offset, search);
 
 type UserTeams = Omit<User, "teams"> & { teams: Team[] };
 const error = ref("");
@@ -225,7 +227,7 @@ async function checkEmail() {
         <span class="visually-hidden">Applied filters</span>
       </span>
     </button>
-    <Paginator :total="total" @update="search" />
+    <Paginator v-model="offset" :total="total" />
   </div>
 
   <div class="d-flex justify-content-end">
