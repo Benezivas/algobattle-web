@@ -15,6 +15,7 @@ import { computed, onMounted, ref, toRaw } from "vue";
 import DownloadButton from "@/components/DownloadButton.vue";
 import FileInput from "@/components/FileInput.vue";
 import ResultChart from "@/components/ResultChart.vue";
+import { DateTime } from "luxon";
 
 const problems = ref<ModelDict<Problem>>({});
 const results = ref<ModelDict<MatchResult>>({});
@@ -46,7 +47,7 @@ onMounted(async () => {
     var offset = 0;
     while (remaining) {
       const res = await TeamService.get({ tournament: store.tournament?.id, offset: offset });
-      teams.value = {...teams.value, ...res.teams};
+      teams.value = { ...teams.value, ...res.teams };
       const numResults = Object.keys(res.teams).length;
       if (res.total > offset + numResults) {
         offset += numResults;
@@ -55,6 +56,23 @@ onMounted(async () => {
       }
     }
   }
+  programs.value = {};
+  Object.values(res.results)
+  .flatMap((r) => r.participants.flatMap((p) => [p.generator, p.solver]))
+  .forEach(prog => {
+    if (!prog) {
+      return
+    }
+    const tag = prog.problem + prog.team + prog.role;
+    if (tag in programs.value) {
+      if (programs.value[tag].findIndex(p => p.id === prog.id) !== -1) {
+        return
+      }
+      programs.value[tag].push(prog);
+    } else {
+      programs.value[tag] = [prog];
+    }
+  })
   editModal = Modal.getOrCreateInstance("#editModal");
   if (store.team == "admin") {
     problems.value = await ProblemService.get({
@@ -152,11 +170,13 @@ function getPrograms(team: string, role: Role) {
   });
 }
 
-function getAllPrograms() {
+function selectProblem() {
   for (const participant of editData.value.participants) {
     if (participant.team_id) {
       getPrograms(participant.team_id, "generator");
       getPrograms(participant.team_id, "solver");
+      participant.generator = null;
+      participant.solver = null;
     }
   }
 }
@@ -175,12 +195,25 @@ function openDetail(result: MatchResult) {
   detailView.value = result;
   detailModal.show();
 }
+
+const datetimeStep = computed(() => {
+  if (!editData.value.time) {
+    return 60;
+  }
+  return DateTime.fromISO(editData.value.time).second !== 0 ? 1 : 60;
+});
 </script>
 
 <template>
   <template v-if="store.tournament">
     <h1>Tournament overview</h1>
-    <ResultChart v-if="sortedResults.length !== 0" :results="sortedResults" :teams="teams" :problems="problems" id="overallChart"/>
+    <ResultChart
+      v-if="sortedResults.length !== 0"
+      :results="sortedResults"
+      :teams="teams"
+      :problems="problems"
+      id="overallChart"
+    />
     <table v-if="sortedResults.length !== 0" class="table">
       <thead>
         <tr>
@@ -247,14 +280,21 @@ function openDetail(result: MatchResult) {
         </div>
         <div class="modal-body">
           <label for="time" class="form-label">Time</label>
-          <input id="time" class="form-control" type="datetime-local" required v-model="editData.time" />
+          <input
+            id="time"
+            class="form-control"
+            type="datetime-local"
+            :step="datetimeStep"
+            required
+            v-model="editData.time"
+          />
           <label for="problem" class="form-label">Problem</label>
           <select
             id="problem"
             class="form-select"
             required
             v-model="editData.problem"
-            @click="getAllPrograms"
+            @click="selectProblem"
           >
             <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>
           </select>
@@ -299,6 +339,7 @@ function openDetail(result: MatchResult) {
                     v-model="participant.generator"
                     @click="getPrograms(participant.team_id, 'generator')"
                   >
+                    <option :value="null">None</option>
                     <option
                       v-for="prog in programs[editData.problem + participant.team_id + 'generator']"
                       :value="prog"
@@ -316,6 +357,7 @@ function openDetail(result: MatchResult) {
                     v-model="participant.solver"
                     @click="getPrograms(participant.team_id, 'solver')"
                   >
+                    <option :value="null">None</option>
                     <option
                       v-for="prog in programs[editData.problem + participant.team_id + 'solver']"
                       :value="prog"
@@ -439,5 +481,4 @@ function openDetail(result: MatchResult) {
 #overallChart {
   margin-bottom: 4rem;
 }
-
 </style>
