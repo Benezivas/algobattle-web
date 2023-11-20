@@ -43,7 +43,7 @@ const props = defineProps<{
 }>();
 
 const orderedResults = computed(() => {
-  const results = props.results.filter(r => r.participants.map(p => p.points).reduce((a, b) => a + b, 0) !== 0);
+  const results = props.results.filter(r => r.participants.reduce((s, p) => s + p.points, 0) !== 0);
   results.sort((a, b) => a.time.localeCompare(b.time));
   return results;
 });
@@ -109,7 +109,7 @@ const options = computed<ChartOptions<"line">>(() => {
       start:
         b.start === 0
           ? interpolate(times[0], times[0].minus({ days: 1 }).startOf("day"))
-          : interpolate(times[b.start], times[b.end - 1]),
+          : interpolate(times[b.start], times[b.start - 1]),
       end: b.end === times.length - 1 ? times[times.length - 1] : interpolate(times[b.end], times[b.end + 1]),
     };
   });
