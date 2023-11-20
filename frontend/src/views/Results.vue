@@ -337,6 +337,7 @@ const datetimeStep = computed(() => {
                     v-model="participant.generator"
                     @click="getPrograms(participant.team_id, 'generator')"
                   >
+                    <option :value="null">None</option>
                     <option
                       v-for="prog in programs[editData.problem + participant.team_id + 'generator']"
                       :value="prog"
@@ -354,6 +355,7 @@ const datetimeStep = computed(() => {
                     v-model="participant.solver"
                     @click="getPrograms(participant.team_id, 'solver')"
                   >
+                    <option :value="null">None</option>
                     <option
                       v-for="prog in programs[editData.problem + participant.team_id + 'solver']"
                       :value="prog"
