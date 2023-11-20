@@ -15,6 +15,7 @@ import { computed, onMounted, ref, toRaw } from "vue";
 import DownloadButton from "@/components/DownloadButton.vue";
 import FileInput from "@/components/FileInput.vue";
 import ResultChart from "@/components/ResultChart.vue";
+import { DateTime } from "luxon";
 
 const problems = ref<ModelDict<Problem>>({});
 const results = ref<ModelDict<MatchResult>>({});
@@ -46,7 +47,7 @@ onMounted(async () => {
     var offset = 0;
     while (remaining) {
       const res = await TeamService.get({ tournament: store.tournament?.id, offset: offset });
-      teams.value = {...teams.value, ...res.teams};
+      teams.value = { ...teams.value, ...res.teams };
       const numResults = Object.keys(res.teams).length;
       if (res.total > offset + numResults) {
         offset += numResults;
@@ -175,12 +176,25 @@ function openDetail(result: MatchResult) {
   detailView.value = result;
   detailModal.show();
 }
+
+const datetimeStep = computed(() => {
+  if (!editData.value.time) {
+    return 60;
+  }
+  return DateTime.fromISO(editData.value.time).second !== 0 ? 1 : 60;
+});
 </script>
 
 <template>
   <template v-if="store.tournament">
     <h1>Tournament overview</h1>
-    <ResultChart v-if="sortedResults.length !== 0" :results="sortedResults" :teams="teams" :problems="problems" id="overallChart"/>
+    <ResultChart
+      v-if="sortedResults.length !== 0"
+      :results="sortedResults"
+      :teams="teams"
+      :problems="problems"
+      id="overallChart"
+    />
     <table v-if="sortedResults.length !== 0" class="table">
       <thead>
         <tr>
@@ -247,7 +261,14 @@ function openDetail(result: MatchResult) {
         </div>
         <div class="modal-body">
           <label for="time" class="form-label">Time</label>
-          <input id="time" class="form-control" type="datetime-local" required v-model="editData.time" />
+          <input
+            id="time"
+            class="form-control"
+            type="datetime-local"
+            :step="datetimeStep"
+            required
+            v-model="editData.time"
+          />
           <label for="problem" class="form-label">Problem</label>
           <select
             id="problem"
@@ -439,5 +460,4 @@ function openDetail(result: MatchResult) {
 #overallChart {
   margin-bottom: 4rem;
 }
-
 </style>
