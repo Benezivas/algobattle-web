@@ -43,7 +43,7 @@ const props = defineProps<{
 }>();
 
 const orderedResults = computed(() => {
-  const results = [...props.results];
+  const results = props.results.filter(r => r.participants.map(p => p.points).reduce((a, b) => a + b, 0) !== 0);
   results.sort((a, b) => a.time.localeCompare(b.time));
   return results;
 });
