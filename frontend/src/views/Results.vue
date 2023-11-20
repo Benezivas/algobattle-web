@@ -170,11 +170,13 @@ function getPrograms(team: string, role: Role) {
   });
 }
 
-function getAllPrograms() {
+function selectProblem() {
   for (const participant of editData.value.participants) {
     if (participant.team_id) {
       getPrograms(participant.team_id, "generator");
       getPrograms(participant.team_id, "solver");
+      participant.generator = null;
+      participant.solver = null;
     }
   }
 }
@@ -292,7 +294,7 @@ const datetimeStep = computed(() => {
             class="form-select"
             required
             v-model="editData.problem"
-            @click="getAllPrograms"
+            @click="selectProblem"
           >
             <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>
           </select>
