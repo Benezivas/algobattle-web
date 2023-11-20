@@ -56,6 +56,23 @@ onMounted(async () => {
       }
     }
   }
+  programs.value = {};
+  Object.values(res.results)
+  .flatMap((r) => r.participants.flatMap((p) => [p.generator, p.solver]))
+  .forEach(prog => {
+    if (!prog) {
+      return
+    }
+    const tag = prog.problem + prog.team + prog.role;
+    if (tag in programs.value) {
+      if (programs.value[tag].findIndex(p => p.id === prog.id) !== -1) {
+        return
+      }
+      programs.value[tag].push(prog);
+    } else {
+      programs.value[tag] = [prog];
+    }
+  })
   editModal = Modal.getOrCreateInstance("#editModal");
   if (store.team == "admin") {
     problems.value = await ProblemService.get({
