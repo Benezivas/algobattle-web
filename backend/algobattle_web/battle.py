@@ -106,7 +106,8 @@ def main():
                     print(f"{datetime.now()}: no matches to run")
                 last_check = datetime.now()
         now = datetime.now()
-        sleep(60 - (now.second - now.microsecond / 1_000_000))
+        for _ in range(60 - now.second):
+            sleep(1)
 
 
 if __name__ == "__main__":
