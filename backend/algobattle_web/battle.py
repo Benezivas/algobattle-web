@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from os import environ
 from time import sleep
 from zipfile import ZipFile
@@ -26,22 +26,28 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         for team in scheduled_match.problem.tournament.teams:
             gen = (
                 db.scalars(
-                    select(Program).where(
+                    select(Program)
+                    .where(
                         Program.team_id == team.id,
                         Program.problem_id == scheduled_match.problem_id,
                         Program.role == Role.generator,
-                    ).order_by(Program.creation_time.desc()).limit(1)
+                    )
+                    .order_by(Program.creation_time.desc())
+                    .limit(1)
                 )
                 .unique()
                 .first()
             )
             sol = (
                 db.scalars(
-                    select(Program).where(
+                    select(Program)
+                    .where(
                         Program.team_id == team.id,
                         Program.problem_id == scheduled_match.problem_id,
                         Program.role == Role.solver,
-                    ).order_by(Program.creation_time.desc()).limit(1)
+                    )
+                    .order_by(Program.creation_time.desc())
+                    .limit(1)
                 )
                 .unique()
                 .first()
@@ -52,7 +58,13 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
             else:
                 excluded_teams.add(team.name)
             participants[team.name] = ResultParticipant(team, gen, sol, 0)
-        db_result = MatchResult(MatchStatus.running, datetime.now(), scheduled_match.problem, set(participants.values()))
+        now = datetime.now()
+        db_result = MatchResult(
+            MatchStatus.running,
+            now - timedelta(seconds=now.second, microseconds=now.microsecond),
+            scheduled_match.problem,
+            set(participants.values()),
+        )
         db.add(db_result)
         db.commit()
 
