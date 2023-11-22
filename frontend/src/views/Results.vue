@@ -368,7 +368,7 @@ const datetimeStep = computed(() => {
                 </td>
                 <td>
                   <template v-if="participant.team_id">
-                    <input class="form-control" type="number" v-model="participant.points" required />
+                    <input class="form-control" type="number" step="any" v-model="participant.points" required />
                   </template>
                 </td>
                 <td>
