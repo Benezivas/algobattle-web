@@ -16,12 +16,12 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "algobattle-base>=4.0.1",
+    "algobattle-base>=4.1.0",
     "uvicorn>=0.23.2",
     "fastapi>=0.103.0",
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.6",
-    "sqlalchemy>=2.0.22",
+    "sqlalchemy>=2.0.23",
     "pydantic>=2.4.2",
     "pydantic-extra-types>=2.1.0",
     "markdown>=3.5",
