@@ -950,8 +950,8 @@ def add_result(
     time: datetime,
     problem: UUID,
     teams: InForm[list[UUID]],
-    generators: InForm[list[UUID]],
-    solvers: InForm[list[UUID]],
+    generators: InForm[list[UUID | None | Literal["undefined"]]],
+    solvers: InForm[list[UUID | None | Literal["undefined"]]],
     points: InForm[list[float]],
     logs: UploadFile | None = None,
 ) -> MatchResult:
@@ -965,8 +965,8 @@ def add_result(
         participants = {
             ResultParticipant(
                 team=Team.get_unwrap(db, team),
-                generator=Program.get_unwrap(db, gen),
-                solver=Program.get_unwrap(db, sol),
+                generator=Program.get_unwrap(db, gen) if isinstance(gen, UUID) else None,
+                solver=Program.get_unwrap(db, sol) if isinstance(sol, UUID) else None,
                 points=p,
             )
             for team, gen, sol, p in zip(teams, generators, solvers, points, strict=True)
