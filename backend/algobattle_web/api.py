@@ -4,7 +4,7 @@ from email.message import EmailMessage
 from enum import Enum
 from os import environ
 from smtplib import SMTP
-from typing import Annotated, Any, Callable, Literal, Self, TypeVar
+from typing import Annotated, Any, Callable, Literal, Self, Sequence, TypeVar
 from uuid import UUID
 from urllib.parse import quote
 from annotated_types import Interval
@@ -21,6 +21,7 @@ from pydantic import ByteSize, Field, WithJsonSchema, TypeAdapter
 from algobattle.util import Role
 from algobattle_web import schemas
 from algobattle_web.models import (
+    ExtraPoints,
     File as DbFile,
     ProblemPageData,
     ResultParticipant,
@@ -987,7 +988,7 @@ def update_result(
     problem: InForm[UUID],
     status: InForm[MatchStatus],
     teams: InForm[list[UUID]],
-    generators: InForm[list[UUID | None | Literal["undefined"]]],   # hack to make form parsing work
+    generators: InForm[list[UUID | None | Literal["undefined"]]],  # hack to make form parsing work
     solvers: InForm[list[UUID | None | Literal["undefined"]]],
     points: InForm[list[float]],
     logs: UploadFile | UUID | None = None,
@@ -1018,6 +1019,67 @@ def update_result(
         raise HTTPException(422, "Length of participant field infos was not equal")
     db.commit()
     return res
+
+
+# *******************************************************************************
+# * Match
+# *******************************************************************************
+
+
+@router.get("/extrapoints", tags=["extrapoints"], name="get", response_model=list[ExtraPoints])
+def get_extra_points(
+    db: Database, login: LoggedIn, tournament: UUID | None = None, tag: str | None = None
+) -> Sequence[ExtraPoints]:
+    filters = [ExtraPoints.visible_sql(login.team)]
+    if tournament is not None:
+        filters.append(ExtraPoints.team.has(Team.tournament_id == tournament))
+    if tag is not None:
+        filters.append(ExtraPoints.tag == tag)
+    return db.scalars(select(ExtraPoints).where(*filters)).all()
+
+
+@admin.post("/extrapoints", tags=["extrapoints"], name="create")
+def create_extra_points(
+    db: Database,
+    tag: str32,
+    team: InBody[UUID],
+    points: InBody[float],
+    description: InBody[str],
+) -> ExtraPoints:
+    t = Team.get_unwrap(db, team)
+    new = ExtraPoints(tag=tag, team=t, points=points, description=description)
+    db.add(new)
+    db.commit()
+    return new
+
+
+@admin.post("/extrapoints/{id}", tags=["extrapoints"], name="edit")
+def edit_extra_points(
+    db: Database,
+    id: UUID,
+    tag: InBody[str32 | None],
+    team: InBody[UUID | None],
+    points: InBody[float | None],
+    description: InBody[str | None],
+) -> ExtraPoints:
+    obj = ExtraPoints.get_unwrap(db, id)
+    if tag is not None:
+        obj.tag = tag
+    if team is not None:
+        obj.team = Team.get_unwrap(db, team)
+    if points is not None:
+        obj.points = points
+    if description is not None:
+        obj.description = description
+    db.commit()
+    return obj
+
+
+@admin.delete("/extrapoints/{id}", tags=["extrapoints"], name="delete")
+def delete_extra_points(db: Database, id: UUID) -> None:
+    points = ExtraPoints.get_unwrap(db, id)
+    db.delete(points)
+    db.commit()
 
 
 # * has to be executed after all route defns
