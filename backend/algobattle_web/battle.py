@@ -7,6 +7,7 @@ from sqlalchemy import select, create_engine
 
 from algobattle.match import Match, AlgobattleConfig, TeamInfo, ProjectConfig
 from algobattle.util import Role, TempDir, ExceptionInfo
+from algobattle.battle import ProgramLogConfigTime
 from algobattle_web.models import MatchResult, Program, ResultParticipant, ScheduledMatch, File, Session
 from algobattle_web.util import EnvConfig, MatchStatus, install_packages, SessionLocal
 
@@ -18,7 +19,12 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
             zipped.extractall(folder)
         config = AlgobattleConfig.from_file(folder / "algobattle.toml")
         config.teams = {}
-        config.project = ProjectConfig(name_images=False, cleanup_images=True)
+        config.project = ProjectConfig(
+            name_images=False,
+            cleanup_images=True,
+            error_detail="low",
+            log_program_io=ProjectConfig.ProgramOutputConfig(when=ProgramLogConfigTime.never),
+        )
         install_packages(config.problem.dependencies)
 
         participants: dict[str, ResultParticipant] = {}
