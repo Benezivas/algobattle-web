@@ -1,4 +1,4 @@
-"""empty message
+"""adds the extra points model
 
 Revision ID: 9ce0127fdc78
 Revises: 1791b4c03b50

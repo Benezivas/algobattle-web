@@ -1,4 +1,4 @@
-"""empty message
+"""Adds the home page setting
 
 Revision ID: 6aee42c9b57d
 Revises: 5602c700dd37
