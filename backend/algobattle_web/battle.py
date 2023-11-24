@@ -89,7 +89,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
             for orig_name, team in participants.items():
                 team.points = points.get(orig_name, 0)
             db_result.status = MatchStatus.complete
-            folder.joinpath("result.json").write_text(result.model_dump_json(exclude_defaults=True))
+            folder.joinpath("result.json").write_text(result.format(error_detail=config.project.error_detail))
             db_result.logs = File.from_file(folder / "result.json", action="move")
         finally:
             db.delete(scheduled_match)
