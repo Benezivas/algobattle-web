@@ -1022,11 +1022,11 @@ def update_result(
 
 
 # *******************************************************************************
-# * Match
+# * Extra Points
 # *******************************************************************************
 
 
-@router.get("/extrapoints", tags=["extrapoints"], name="get", response_model=list[ExtraPoints])
+@router.get("/extrapoints", tags=["extrapoints"], name="get", response_model=list[schemas.ExtraPoints])
 def get_extra_points(
     db: Database, login: LoggedIn, tournament: UUID | None = None, tag: str | None = None
 ) -> Sequence[ExtraPoints]:
@@ -1041,13 +1041,14 @@ def get_extra_points(
 @admin.post("/extrapoints", tags=["extrapoints"], name="create")
 def create_extra_points(
     db: Database,
+    time: InBody[datetime],
     tag: str32,
     team: InBody[UUID],
     points: InBody[float],
     description: InBody[str],
 ) -> ExtraPoints:
     t = Team.get_unwrap(db, team)
-    new = ExtraPoints(tag=tag, team=t, points=points, description=description)
+    new = ExtraPoints(time=time, tag=tag, team=t, points=points, description=description)
     db.add(new)
     db.commit()
     return new
@@ -1057,12 +1058,15 @@ def create_extra_points(
 def edit_extra_points(
     db: Database,
     id: UUID,
+    time: InBody[datetime | None],
     tag: InBody[str32 | None],
     team: InBody[UUID | None],
     points: InBody[float | None],
     description: InBody[str | None],
 ) -> ExtraPoints:
     obj = ExtraPoints.get_unwrap(db, id)
+    if time is not None:
+        obj.time = time
     if tag is not None:
         obj.tag = tag
     if team is not None:

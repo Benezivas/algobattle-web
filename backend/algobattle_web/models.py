@@ -697,8 +697,9 @@ class MatchResult(Base, PermissionCheck):
 
 class ExtraPoints(Base, PermissionCheck):
     __tablename__ = "extrapoints"  # type: ignore
-    schema = schemas.ExtraPoints
+    Schema = schemas.ExtraPoints
 
+    time: Mapped[datetime]
     tag: Mapped[str32]
     team: Mapped[Team] = relationship()
     points: Mapped[float]
