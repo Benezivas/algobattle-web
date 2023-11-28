@@ -17,7 +17,7 @@ import {
 } from "chart.js";
 import { Line } from "vue-chartjs";
 import { TournamentService, type MatchEvent, type MatchResult, type Problem, type ScoreData, type Team, type Tournament } from "@client";
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import type { ModelDict } from "@/shared";
 import { DateTime } from "luxon";
 import "chartjs-adapter-luxon";
@@ -43,11 +43,14 @@ const props = defineProps<{
 }>();
 
 const scoreData = ref<ScoreData>();
-const matchEvents = computed(() => scoreData.value?.events.filter(e => e.type === "match") as MatchEvent[]);
+const matchEvents = computed(() => scoreData.value?.events.filter(e => e.type === "match") as MatchEvent[] || []);
 
 watch(() => props.state, async () => {
   scoreData.value = await TournamentService.getScores({id: props.tournament.id});
 });
+onMounted(async () => {
+  scoreData.value = await TournamentService.getScores({id: props.tournament.id});
+})
 
 function scores(team: string) {
   return scoreData.value!.events
@@ -67,7 +70,7 @@ const labels = computed(() => {
 
 const data = computed(() => {
   const data: ChartData<"line", Point[], string> = {
-    datasets: Object.entries(scoreData.value!.teams).map(([id, name]) => ({
+    datasets: Object.entries(scoreData.value?.teams || {}).map(([id, name]) => ({
       label: name,
       data: scores(id),
       cubicInterpolationMode: "monotone",

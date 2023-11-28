@@ -500,10 +500,10 @@ def get_scores(db: Database, login: LoggedIn, id: ID) -> ScoreData:
         for r in results
     ]
     parsed_extra = [ExtraEvent(time=e.time, points={e.team_id: e.points}) for e in extra_points]
-    teams = db.scalars(select(Team).where(Team.tournament_id == tournament.id)).all()
+    teams = db.scalars(select(Team).where(Team.tournament_id == tournament.id)).unique().all()
     problems = db.scalars(
         select(Problem).where(Problem.tournament_id == tournament.id, Problem.visible_sql(login.team))
-    )
+    ).unique().all()
     return ScoreData(
         events=sorted(parsed_results + parsed_extra, key=lambda e: e.time),
         teams={team.id: team.name for team in teams},
