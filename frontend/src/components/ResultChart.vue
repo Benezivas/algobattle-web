@@ -16,7 +16,15 @@ import {
   type Point,
 } from "chart.js";
 import { Line } from "vue-chartjs";
-import { TournamentService, type MatchEvent, type MatchResult, type Problem, type ScoreData, type Team, type Tournament } from "@client";
+import {
+  TournamentService,
+  type MatchEvent,
+  type MatchResult,
+  type Problem,
+  type ScoreData,
+  type Team,
+  type Tournament,
+} from "@client";
 import { computed, onMounted, ref, watch } from "vue";
 import type { ModelDict } from "@/shared";
 import { DateTime } from "luxon";
@@ -38,29 +46,20 @@ ChartJS.register(
 );
 
 const props = defineProps<{
-  tournament: Tournament,
-  state: number,
+  tournament: Tournament;
+  state: number;
 }>();
 
 const scoreData = ref<ScoreData>();
-const matchEvents = computed(() => scoreData.value?.events.filter(e => e.type === "match") as MatchEvent[] || []);
+const matchEvents = computed(
+  () => (scoreData.value?.events.filter((e) => e.type === "match") as MatchEvent[]) || []
+);
 
-watch(() => props.state, async () => {
-  scoreData.value = await TournamentService.getScores({id: props.tournament.id});
-});
-onMounted(async () => {
-  scoreData.value = await TournamentService.getScores({id: props.tournament.id});
-})
-
-function scores(team: string) {
-  return scoreData.value!.events
-    .map(e => e.points[team] || 0)
-    .reduce((acc, next) => acc.concat(acc[acc.length - 1] + next), [0])
-    .map((points, i) => ({
-      x: i,
-      y: points,
-    }));
+async function getData() {
+  scoreData.value = await TournamentService.getScores({ id: props.tournament.id });
 }
+watch(() => props.state, getData);
+onMounted(getData);
 
 const labels = computed(() => {
   const t = matchEvents.value.map((e) => DateTime.fromISO(e.time).toLocaleString(DateTime.DATE_MED));
@@ -68,9 +67,56 @@ const labels = computed(() => {
   return t;
 });
 
+const positionedEvents = computed(() => {
+  const events = scoreData.value?.events;
+  if (!events || events.length === 0) {
+    return [];
+  }
+  var last = DateTime.fromISO(events[0].time);
+  var interval: number | undefined;
+  var index = 0;
+  return events.map((event, i) => {
+    if ("problem" in event) {
+      last = DateTime.fromISO(event.time);
+      interval = undefined;
+      index++;
+      return { ...event, position: index };
+    } else {
+      if (!interval) {
+        var nextEvent = events.find((e) => e.type === "match" && e.time > event.time);
+        if (!nextEvent) {
+          nextEvent = events[events.length - 1];
+        }
+        interval = DateTime.fromISO(nextEvent.time).diff(last).toMillis();
+      }
+      var fractional = DateTime.fromISO(event.time).diff(last).toMillis() / interval;
+      if (index === 0) {
+        fractional = fractional * 0.7 + 0.3;
+      } else if (index === matchEvents.value.length) {
+        fractional = fractional * 0.7;
+      }
+      return { ...event, position: index + fractional };
+    }
+  });
+});
+
+function scores(team: string) {
+  return positionedEvents.value
+    .filter(e => team in e.points)
+    .map((e) => ({ points: e.points[team] || 0, position: e.position }))
+    .reduce(
+      (acc, event) => acc.concat({ x: event.position, y: acc[acc.length - 1].y + event.points }),
+      [{ x: 0, y: 0 }]
+    );
+}
+
 const data = computed(() => {
+  const orig = scoreData.value;
+  if (!orig) {
+    return { datasets: [] };
+  }
   const data: ChartData<"line", Point[], string> = {
-    datasets: Object.entries(scoreData.value?.teams || {}).map(([id, name]) => ({
+    datasets: Object.entries(orig.teams).map(([id, name]) => ({
       label: name,
       data: scores(id),
       cubicInterpolationMode: "monotone",
@@ -86,6 +132,7 @@ const options = computed<ChartOptions<"line">>(() => {
     problem: string;
     id: string;
   }
+  const lastIndex = positionedEvents.value[positionedEvents.value.length - 1]?.position || 0;
   const blocks = matchEvents.value
     .reduce((blocks, event, index) => {
       if (blocks[blocks.length - 1]?.problem !== event.problem) {
@@ -105,7 +152,7 @@ const options = computed<ChartOptions<"line">>(() => {
       return {
         ...b,
         start: b.start + 0.7,
-        end: Math.min(b.end + 1.3, matchEvents.value.length),
+        end: Math.min(b.end + 1.3, lastIndex),
       };
     });
   const o: ChartOptions<"line"> = {
