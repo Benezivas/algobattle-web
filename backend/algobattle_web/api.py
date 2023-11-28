@@ -1035,7 +1035,7 @@ def get_extra_points(
         filters.append(ExtraPoints.team.has(Team.tournament_id == tournament))
     if tag is not None:
         filters.append(ExtraPoints.tag == tag)
-    return db.scalars(select(ExtraPoints).where(*filters)).all()
+    return sorted(db.scalars(select(ExtraPoints).where(*filters)).all(), key=lambda p: p.time)
 
 
 @admin.post("/extrapoints", tags=["extrapoints"], name="create")
@@ -1045,7 +1045,7 @@ def create_extra_points(
     tag: str32,
     team: InBody[UUID],
     points: InBody[float],
-    description: InBody[str],
+    description: InBody[str] = "",
 ) -> ExtraPoints:
     t = Team.get_unwrap(db, team)
     new = ExtraPoints(time=time, tag=tag, team=t, points=points, description=description)
@@ -1054,15 +1054,15 @@ def create_extra_points(
     return new
 
 
-@admin.post("/extrapoints/{id}", tags=["extrapoints"], name="edit")
+@admin.patch("/extrapoints/{id}", tags=["extrapoints"], name="edit")
 def edit_extra_points(
     db: Database,
     id: UUID,
-    time: InBody[datetime | None],
-    tag: InBody[str32 | None],
-    team: InBody[UUID | None],
-    points: InBody[float | None],
-    description: InBody[str | None],
+    time: InBody[datetime | None] = None,
+    tag: InBody[str32 | None] = None,
+    team: InBody[UUID | None] = None,
+    points: InBody[float | None] = None,
+    description: InBody[str | None] = None,
 ) -> ExtraPoints:
     obj = ExtraPoints.get_unwrap(db, id)
     if time is not None:

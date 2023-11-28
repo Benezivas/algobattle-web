@@ -34,8 +34,8 @@ const searchData = ref({
 });
 const activeProblems = computed(() => {
   const now = DateTime.now();
-  const probs = Object.values(problems.value).filter((p) => 
-    (!p.start || DateTime.fromISO(p.start) <= now) && (!p.end || DateTime.fromISO(p.end) > now)
+  const probs = Object.values(problems.value).filter(
+    (p) => (!p.start || DateTime.fromISO(p.start) <= now) && (!p.end || DateTime.fromISO(p.end) > now)
   );
   if (probs.length == 1) {
     newProgData.value.problem = probs[0].id;
@@ -137,6 +137,7 @@ onMounted(() => {
           <td class="text-end">
             <DeleteButton
               v-if="store.team === 'admin' || program.user_editable"
+              class="btn-sm"
               position="after"
               @delete="deleteProgram(program)"
             />

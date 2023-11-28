@@ -8,15 +8,27 @@ import {
   ProgramService,
   type Role,
   TeamService,
+  ExtrapointsService,
 } from "@client";
 import { Modal } from "bootstrap";
-import type { Problem, Tournament, MatchResult, Team, DbFile, ResultParticipant, Program } from "@client";
-import { computed, onMounted, ref, toRaw } from "vue";
+import type {
+  Problem,
+  Tournament,
+  MatchResult,
+  Team,
+  DbFile,
+  ResultParticipant,
+  Program,
+  ExtraPoints,
+} from "@client";
+import { computed, onMounted, ref, toRaw, watch } from "vue";
 import DownloadButton from "@/components/DownloadButton.vue";
 import FileInput from "@/components/FileInput.vue";
 import ResultChart from "@/components/ResultChart.vue";
 import { DateTime } from "luxon";
+import DeleteButton from "@/components/DeleteButton.vue";
 
+const activePage = ref<"results" | "extrapoints">("results");
 const problems = ref<ModelDict<Problem>>({});
 const results = ref<ModelDict<MatchResult>>({});
 const teams = ref<ModelDict<Team>>({});
@@ -58,27 +70,28 @@ onMounted(async () => {
   }
   programs.value = {};
   Object.values(res.results)
-  .flatMap((r) => r.participants.flatMap((p) => [p.generator, p.solver]))
-  .forEach(prog => {
-    if (!prog) {
-      return
-    }
-    const tag = prog.problem + prog.team + prog.role;
-    if (tag in programs.value) {
-      if (programs.value[tag].findIndex(p => p.id === prog.id) !== -1) {
-        return
+    .flatMap((r) => r.participants.flatMap((p) => [p.generator, p.solver]))
+    .forEach((prog) => {
+      if (!prog) {
+        return;
       }
-      programs.value[tag].push(prog);
-    } else {
-      programs.value[tag] = [prog];
-    }
-  })
+      const tag = prog.problem + prog.team + prog.role;
+      if (tag in programs.value) {
+        if (programs.value[tag].findIndex((p) => p.id === prog.id) !== -1) {
+          return;
+        }
+        programs.value[tag].push(prog);
+      } else {
+        programs.value[tag] = [prog];
+      }
+    });
   editModal = Modal.getOrCreateInstance("#editModal");
   if (store.team == "admin") {
     problems.value = await ProblemService.get({
       tournament: store.tournament?.id,
     });
   }
+  extrapoints.value = await ExtrapointsService.get({ tournament: store.tournament?.id });
   detailModal = Modal.getOrCreateInstance("#detailModal");
 });
 
@@ -202,6 +215,41 @@ const datetimeStep = computed(() => {
   }
   return DateTime.fromISO(editData.value.time).second !== 0 ? 1 : 60;
 });
+
+const extrapoints = ref<ExtraPoints[]>([]);
+const extraEditData = ref<Partial<ExtraPoints>>({});
+
+async function openExtraEdit(extra: ExtraPoints | undefined) {
+  extraEditData.value = extra
+    ? { ...extra,  time: extra.time.slice(0, 19) }
+    : { time: DateTime.now().startOf("minute").toISO({ includeOffset: false })! };
+  Modal.getOrCreateInstance("#extraPointsModal").show();
+}
+
+async function sendExtraPointsData() {
+  var res;
+  if (extraEditData.value.id) {
+    res = await ExtrapointsService.edit({
+      id: extraEditData.value.id,
+      requestBody: { ...extraEditData.value, team: extraEditData.value.team?.id },
+    });
+  } else {
+    res = await ExtrapointsService.create({
+      requestBody: { ...extraEditData.value as ExtraPoints, team: extraEditData.value.team!.id },
+    });
+  }
+  extrapoints.value.push(res);
+  Modal.getOrCreateInstance("#extraPointsModal").hide();
+}
+
+async function deleteExtraPoints() {
+  if (extraEditData.value.id) {
+    await ExtrapointsService.delete({id: extraEditData.value.id});
+    const i = extrapoints.value.findIndex(e => e.id === extraEditData.value.id);
+    extrapoints.value.splice(i, 1);
+    Modal.getOrCreateInstance("#extraPointsModal").hide();
+  }
+}
 </script>
 
 <template>
@@ -214,52 +262,120 @@ const datetimeStep = computed(() => {
       :problems="problems"
       id="overallChart"
     />
-    <table v-if="sortedResults.length !== 0" class="table">
-      <thead>
-        <tr>
-          <th scope="col">Time</th>
-          <th scope="col">Problem</th>
-          <th scope="col">Status</th>
-          <th scope="col">Details</th>
-          <th v-if="store.team == 'admin'" scope="col"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="result in sortedResults" :result="result" :key="result.id">
-          <td>{{ formatDateTime(result.time) }}</td>
-          <td>
-            <RouterLink :to="problems[result.problem].link">{{ problems[result.problem].name }}</RouterLink>
-          </td>
-          <td>{{ result.status }}</td>
-          <td>
-            <button type="button" class="btn btn-outline-primary btn-sm" @click="openDetail(result)">
-              <i class="bi bi-eye-fill"></i>
-            </button>
-          </td>
-          <td v-if="store.team == 'admin'" class="text-end">
-            <button
-              type="button"
-              class="btn btn-sm btn-warning"
-              title="Edit"
-              @click="(e) => openEdit(result)"
-            >
-              <i class="bi bi-pencil"></i>
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div v-else class="alert alert-info" role="alert">
-      There aren't any results in the {{ store.tournament.name }} tournament yet.
-    </div>
-    <button
-      v-if="store.team == 'admin'"
-      type="button"
-      class="btn btn-primary btn-sm me-auto"
-      @click="(e) => openEdit(undefined)"
-    >
-      Add new result
-    </button>
+    <ul class="nav nav-tabs">
+      <li class="nav-item">
+        <button
+          class="nav-link"
+          :class="{ active: activePage === 'results' }"
+          :aria-current="activePage === 'results'"
+          @click="(e) => (activePage = 'results')"
+        >
+          Match Results
+        </button>
+      </li>
+      <li class="nav-item">
+        <button
+          class="nav-link"
+          :class="{ active: activePage === 'extrapoints' }"
+          :aria-current="activePage === 'extrapoints'"
+          @click="(e) => (activePage = 'extrapoints')"
+        >
+          Extra Points
+        </button>
+      </li>
+    </ul>
+    <template v-if="activePage === 'results'">
+      <table v-if="sortedResults.length !== 0" class="table">
+        <thead>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Problem</th>
+            <th scope="col">Status</th>
+            <th scope="col">Details</th>
+            <th v-if="store.team == 'admin'" scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="result in sortedResults" :key="result.id">
+            <td>{{ formatDateTime(result.time) }}</td>
+            <td>
+              <RouterLink :to="problems[result.problem].link">{{ problems[result.problem].name }}</RouterLink>
+            </td>
+            <td>{{ result.status }}</td>
+            <td>
+              <button type="button" class="btn btn-outline-primary btn-sm" @click="openDetail(result)">
+                <i class="bi bi-eye-fill"></i>
+              </button>
+            </td>
+            <td v-if="store.team == 'admin'" class="text-end">
+              <button
+                type="button"
+                class="btn btn-sm btn-warning"
+                title="Edit"
+                @click="(e) => openEdit(result)"
+              >
+                <i class="bi bi-pencil"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-else class="alert alert-info" role="alert">
+        There aren't any results in the {{ store.tournament.name }} tournament yet.
+      </div>
+      <button
+        v-if="store.team == 'admin'"
+        type="button"
+        class="btn btn-primary btn-sm me-auto"
+        @click="(e) => openEdit(undefined)"
+      >
+        Add new result
+      </button>
+    </template>
+    <template v-if="activePage === 'extrapoints'">
+      <table v-if="extrapoints.length !== 0" class="table">
+        <thead>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Tag</th>
+            <th scope="col">Team</th>
+            <th scope="col">Points</th>
+            <th scope="col">Description</th>
+            <th v-if="store.team == 'admin'" scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="extra in extrapoints" :key="extra.id">
+            <td>{{ formatDateTime(extra.time) }}</td>
+            <td>{{ extra.tag }}</td>
+            <td>{{ extra.team.name }}</td>
+            <td>{{ extra.points }}</td>
+            <td>{{ extra.description }}</td>
+            <td v-if="store.team == 'admin'" class="text-end">
+              <button
+                type="button"
+                class="btn btn-sm btn-warning"
+                title="Edit"
+                @click="(e) => openExtraEdit(extra)"
+              >
+                <i class="bi bi-pencil"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-else class="alert alert-info" role="alert">
+        There haven't been any extra points distributed in the {{ store.tournament.name }} tournament yet.
+      </div>
+      <button
+        v-if="store.team == 'admin'"
+        type="button"
+        class="btn btn-primary btn-sm me-auto"
+        @click="(e) => openExtraEdit(undefined)"
+      >
+        Distribute extra points
+      </button>
+    </template>
   </template>
   <div v-else-if="!store.user" class="alert alert-danger" role="alert">
     You need to log in before you can view the results.
@@ -289,13 +405,7 @@ const datetimeStep = computed(() => {
             v-model="editData.time"
           />
           <label for="problem" class="form-label">Problem</label>
-          <select
-            id="problem"
-            class="form-select"
-            required
-            v-model="editData.problem"
-            @click="selectProblem"
-          >
+          <select id="problem" class="form-select" required v-model="editData.problem" @click="selectProblem">
             <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>
           </select>
           <label for="status" class="form-label">Status</label>
@@ -368,7 +478,13 @@ const datetimeStep = computed(() => {
                 </td>
                 <td>
                   <template v-if="participant.team_id">
-                    <input class="form-control" type="number" step="any" v-model="participant.points" required />
+                    <input
+                      class="form-control"
+                      type="number"
+                      step="any"
+                      v-model="participant.points"
+                      required
+                    />
                   </template>
                 </td>
                 <td>
@@ -475,10 +591,77 @@ const datetimeStep = computed(() => {
       </div>
     </div>
   </div>
+
+  <div class="modal fade" id="extraPointsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <form class="modal-content" @submit.prevent="sendExtraPointsData">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="extraPointsModalLabel">
+            <span v-if="extraEditData.id">Edit Extra Points</span>
+            <span v-else>Distribute Extra Points</span>
+          </h1>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="extraPointsModal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <label for="extraTime" class="form-label">Time</label>
+          <input
+            id="extratime"
+            class="form-control"
+            type="datetime-local"
+            step="60"
+            required
+            v-model="extraEditData.time"
+          />
+          <label for="extraTag" class="form-label">Tag</label>
+          <input
+            id="extraTag"
+            class="form-control"
+            type="text"
+            maxlength="32"
+            required
+            v-model="extraEditData.tag"
+          />
+          <label for="extraTeam" class="form-label">Team</label>
+          <select id="extraTeam" class="form-select" required v-model="extraEditData.team">
+            <option v-for="team in teams" :value="team" :key="team.id">{{ team.name }}</option>
+          </select>
+          <label for="extraPoints" class="form-label">Points</label>
+          <input
+            id="extraPoints"
+            class="form-control"
+            type="number"
+            step="any"
+            v-model="extraEditData.points"
+            required
+          />
+          <label for="extraDescription" class="form-label">Description</label>
+          <textarea class="form-control" id="extraDescription" v-model="extraEditData.description"></textarea>
+        </div>
+        <div class="modal-footer">
+          <DeleteButton v-if="extraEditData.id" position="before" @delete="deleteExtraPoints" />
+          <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal">Discard</button>
+          <button type="submit" class="btn btn-primary">{{ extraEditData.id ? "Save" : "Create" }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </template>
 
 <style>
 #overallChart {
   margin-bottom: 4rem;
+}
+
+#extraDescription {
+  height: 4rem;
+}
+
+.alert {
+  margin-top: 1rem;
 }
 </style>
