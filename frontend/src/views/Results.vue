@@ -219,12 +219,13 @@ const datetimeStep = computed(() => {
 });
 
 const extrapoints = ref<ExtraPoints[]>([]);
-const extraEditData = ref<Partial<ExtraPoints>>({});
+const extraEditData = ref<Partial<ExtraPoints> & { freeformTag?: boolean }>({});
 
 async function openExtraEdit(extra: ExtraPoints | undefined) {
+  const freeform = tags.value.length === 0;
   extraEditData.value = extra
-    ? { ...extra,  time: extra.time.slice(0, 19) }
-    : { time: DateTime.now().startOf("minute").toISO({ includeOffset: false })! };
+    ? { ...extra, time: extra.time.slice(0, 19), freeformTag: freeform }
+    : { time: DateTime.now().startOf("minute").toISO({ includeOffset: false })!, freeformTag: freeform };
   Modal.getOrCreateInstance("#extraPointsModal").show();
 }
 
@@ -234,11 +235,11 @@ async function sendExtraPointsData() {
       id: extraEditData.value.id,
       requestBody: { ...extraEditData.value, team: extraEditData.value.team?.id },
     });
-    const i = extrapoints.value.findIndex(e => e.id === res.id);
+    const i = extrapoints.value.findIndex((e) => e.id === res.id);
     extrapoints.value[i] = res;
   } else {
     const res = await ExtrapointsService.create({
-      requestBody: { ...extraEditData.value as ExtraPoints, team: extraEditData.value.team!.id },
+      requestBody: { ...(extraEditData.value as ExtraPoints), team: extraEditData.value.team!.id },
     });
     extrapoints.value.push(res);
   }
@@ -248,11 +249,19 @@ async function sendExtraPointsData() {
 
 async function deleteExtraPoints() {
   if (extraEditData.value.id) {
-    await ExtrapointsService.delete({id: extraEditData.value.id});
-    const i = extrapoints.value.findIndex(e => e.id === extraEditData.value.id);
+    await ExtrapointsService.delete({ id: extraEditData.value.id });
+    const i = extrapoints.value.findIndex((e) => e.id === extraEditData.value.id);
     extrapoints.value.splice(i, 1);
     Modal.getOrCreateInstance("#extraPointsModal").hide();
     chartState.value++;
+  }
+}
+
+const tags = computed(() => Array.from(new Set(extrapoints.value.map(e => e.tag))));
+function makeFreeform() {
+  if (extraEditData.value.tag === null) {
+    extraEditData.value.tag = "";
+    extraEditData.value.freeformTag = true;
   }
 }
 </script>
@@ -260,11 +269,7 @@ async function deleteExtraPoints() {
 <template>
   <template v-if="store.tournament">
     <h1>Tournament overview</h1>
-    <ResultChart
-      :tournament="store.tournament"
-      :state="chartState"
-      id="overallChart"
-    />
+    <ResultChart :tournament="store.tournament" :state="chartState" id="overallChart" />
     <ul class="nav nav-tabs">
       <li class="nav-item">
         <button
@@ -603,12 +608,7 @@ async function deleteExtraPoints() {
             <span v-if="extraEditData.id">Edit Extra Points</span>
             <span v-else>Distribute Extra Points</span>
           </h1>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <label for="extraTime" class="form-label">Time</label>
@@ -622,6 +622,7 @@ async function deleteExtraPoints() {
           />
           <label for="extraTag" class="form-label">Tag</label>
           <input
+            v-if="extraEditData.freeformTag"
             id="extraTag"
             class="form-control"
             type="text"
@@ -629,6 +630,11 @@ async function deleteExtraPoints() {
             required
             v-model="extraEditData.tag"
           />
+          <select v-else id="extraTag" class="form-select" required v-model="extraEditData.tag" @change="makeFreeform">
+            <option v-for="tag in tags" :value="tag">{{ tag }}</option>
+            <hr />
+            <option :value="null">New tag</option>
+          </select>
           <label for="extraTeam" class="form-label">Team</label>
           <select id="extraTeam" class="form-select" required v-model="extraEditData.team">
             <option v-for="team in teams" :value="team" :key="team.id">{{ team.name }}</option>
