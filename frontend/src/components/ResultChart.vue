@@ -16,8 +16,8 @@ import {
   type Point,
 } from "chart.js";
 import { Line } from "vue-chartjs";
-import type { MatchResult, Problem, Team } from "@client";
-import { computed } from "vue";
+import { TournamentService, type MatchEvent, type MatchResult, type Problem, type ScoreData, type Team, type Tournament } from "@client";
+import { computed, ref, watch } from "vue";
 import type { ModelDict } from "@/shared";
 import { DateTime } from "luxon";
 import "chartjs-adapter-luxon";
@@ -38,20 +38,20 @@ ChartJS.register(
 );
 
 const props = defineProps<{
-  results: MatchResult[];
-  teams: ModelDict<Team>;
-  problems: ModelDict<Problem>;
+  tournament: Tournament,
+  state: number,
 }>();
 
-const orderedResults = computed(() => {
-  const results = props.results.filter((r) => r.participants.reduce((s, p) => s + p.points, 0) !== 0);
-  results.sort((a, b) => a.time.localeCompare(b.time));
-  return results;
+const scoreData = ref<ScoreData>();
+const matchEvents = computed(() => scoreData.value?.events.filter(e => e.type === "match") as MatchEvent[]);
+
+watch(() => props.state, async () => {
+  scoreData.value = await TournamentService.getScores({id: props.tournament.id});
 });
 
-function scores(team: Team) {
-  return orderedResults.value
-    .map((r) => r.participants.find((p) => p.team_id == team.id)?.points || 0)
+function scores(team: string) {
+  return scoreData.value!.events
+    .map(e => e.points[team] || 0)
     .reduce((acc, next) => acc.concat(acc[acc.length - 1] + next), [0])
     .map((points, i) => ({
       x: i,
@@ -60,20 +60,16 @@ function scores(team: Team) {
 }
 
 const labels = computed(() => {
-  const t = orderedResults.value.map((r) => DateTime.fromISO(r.time).toLocaleString(DateTime.DATE_MED));
-  if (t.length == 0) {
-    return t;
-  } else {
-    t.splice(0, 0, "Start");
-    return t;
-  }
+  const t = matchEvents.value.map((e) => DateTime.fromISO(e.time).toLocaleString(DateTime.DATE_MED));
+  t.splice(0, 0, "Start");
+  return t;
 });
 
 const data = computed(() => {
   const data: ChartData<"line", Point[], string> = {
-    datasets: Object.values(props.teams).map((t) => ({
-      label: t.name,
-      data: scores(t),
+    datasets: Object.entries(scoreData.value!.teams).map(([id, name]) => ({
+      label: name,
+      data: scores(id),
       cubicInterpolationMode: "monotone",
     })),
   };
@@ -87,14 +83,14 @@ const options = computed<ChartOptions<"line">>(() => {
     problem: string;
     id: string;
   }
-  const blocks = orderedResults.value
-    .reduce((blocks, result, index) => {
-      if (blocks[blocks.length - 1]?.problem !== result.problem) {
+  const blocks = matchEvents.value
+    .reduce((blocks, event, index) => {
+      if (blocks[blocks.length - 1]?.problem !== event.problem) {
         blocks.push({
           id: "block" + index,
           start: index,
           end: index,
-          problem: result.problem,
+          problem: event.problem,
         });
         return blocks;
       } else {
@@ -106,7 +102,7 @@ const options = computed<ChartOptions<"line">>(() => {
       return {
         ...b,
         start: b.start + 0.7,
-        end: Math.min(b.end + 1.3, orderedResults.value.length),
+        end: Math.min(b.end + 1.3, matchEvents.value.length),
       };
     });
   const o: ChartOptions<"line"> = {
@@ -138,10 +134,10 @@ const options = computed<ChartOptions<"line">>(() => {
                 type: "box",
                 xMin: b.start,
                 xMax: b.end,
-                backgroundColor: props.problems[b.problem].colour + "4D",
+                backgroundColor: scoreData.value!.problems[b.problem].colour + "4D",
                 borderWidth: 0,
                 label: {
-                  content: props.problems[b.problem].name,
+                  content: scoreData.value!.problems[b.problem].name,
                   display: true,
                   position: {
                     x: "center",

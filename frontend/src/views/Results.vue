@@ -33,6 +33,7 @@ const problems = ref<ModelDict<Problem>>({});
 const results = ref<ModelDict<MatchResult>>({});
 const teams = ref<ModelDict<Team>>({});
 const programs = ref<{ [key: string]: Program[] }>({});
+const chartState = ref(0);
 const sortedResults = computed(() => {
   const sorted = Object.values(results.value);
   sorted.sort((a, b) => {
@@ -125,8 +126,9 @@ function openEdit(match: MatchResult | undefined) {
 }
 
 async function sendData() {
+  var res;
   if (editData.value.id) {
-    const res = await MatchService.editResult({
+    res = await MatchService.editResult({
       id: editData.value.id,
       formData: {
         problem: editData.value.problem!,
@@ -139,10 +141,8 @@ async function sendData() {
         points: editData.value.participants.map((p) => p.points!),
       },
     });
-    results.value[res.id] = res;
-    editModal.hide();
   } else {
-    const res = await MatchService.createResult({
+    res = await MatchService.createResult({
       problem: editData.value.problem!,
       status: editData.value.status!,
       time: editData.value.time!,
@@ -154,9 +154,10 @@ async function sendData() {
         points: editData.value.participants.map((p) => p.points!),
       },
     });
-    results.value[res.id] = res;
-    editModal.hide();
   }
+  results.value[res.id] = res;
+  editModal.hide();
+  chartState.value++;
 }
 
 async function deleteResult() {
@@ -166,6 +167,7 @@ async function deleteResult() {
     });
     delete results.value[editData.value.id];
     editModal.hide();
+    chartState.value++;
   }
 }
 
@@ -240,6 +242,7 @@ async function sendExtraPointsData() {
   }
   extrapoints.value.push(res);
   Modal.getOrCreateInstance("#extraPointsModal").hide();
+  chartState.value++;
 }
 
 async function deleteExtraPoints() {
@@ -248,6 +251,7 @@ async function deleteExtraPoints() {
     const i = extrapoints.value.findIndex(e => e.id === extraEditData.value.id);
     extrapoints.value.splice(i, 1);
     Modal.getOrCreateInstance("#extraPointsModal").hide();
+    chartState.value++;
   }
 }
 </script>
@@ -256,10 +260,8 @@ async function deleteExtraPoints() {
   <template v-if="store.tournament">
     <h1>Tournament overview</h1>
     <ResultChart
-      v-if="sortedResults.length !== 0"
-      :results="sortedResults"
-      :teams="teams"
-      :problems="problems"
+      :tournament="store.tournament"
+      :state="0"
       id="overallChart"
     />
     <ul class="nav nav-tabs">

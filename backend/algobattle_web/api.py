@@ -1,7 +1,7 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
 from email.message import EmailMessage
-from enum import Enum
+from enum import Enum, StrEnum
 from os import environ
 from smtplib import SMTP
 from typing import Annotated, Any, Callable, Literal, Self, Sequence, TypeVar
@@ -453,6 +453,62 @@ def delete_tournament(*, db: Database, id: ID) -> None:
     tournament = unwrap(Tournament.get(db, id))
     db.delete(tournament)
     db.commit()
+
+
+class ScoreEventType(StrEnum):
+    match = "match"
+    extra = "extra"
+
+
+class ScoreEvent(BaseSchema):
+    type: ScoreEventType
+    time: schemas.LocalDatetime
+    points: dict[ID, float]
+
+
+class MatchEvent(ScoreEvent):
+    type: ScoreEventType = ScoreEventType.match
+    problem: ID
+
+
+class ExtraEvent(ScoreEvent):
+    type: ScoreEventType = ScoreEventType.extra
+
+
+class ScoreData(BaseSchema):
+    events: list[MatchEvent | ExtraEvent]
+    teams: dict[ID, str]
+    problems: dict[ID, schemas.Problem]
+
+
+@router.get("/tournament/{id}/scores/", tags=["tournament"], name="getScores")
+def get_scores(db: Database, login: LoggedIn, id: ID) -> ScoreData:
+    tournament = Tournament.get_unwrap(db, id)
+    tournament.assert_visible(login.team)
+    results = db.scalars(
+        select(MatchResult).where(
+            MatchResult.problem.has(Problem.tournament_id == tournament.id),
+            MatchResult.participants.any(ResultParticipant.points != 0),
+        )
+    ).all()
+    extra_points = db.scalars(
+        select(ExtraPoints).where(ExtraPoints.team.has(Team.tournament_id == tournament.id))
+    ).all()
+
+    parsed_results = [
+        MatchEvent(time=r.time, points={p.team_id: p.points for p in r.participants}, problem=r.problem_id)
+        for r in results
+    ]
+    parsed_extra = [ExtraEvent(time=e.time, points={e.team_id: e.points}) for e in extra_points]
+    teams = db.scalars(select(Team).where(Team.tournament_id == tournament.id)).all()
+    problems = db.scalars(
+        select(Problem).where(Problem.tournament_id == tournament.id, Problem.visible_sql(login.team))
+    )
+    return ScoreData(
+        events=sorted(parsed_results + parsed_extra, key=lambda e: e.time),
+        teams={team.id: team.name for team in teams},
+        problems={p.id: schemas.Problem.model_validate(p) for p in problems},
+    )
 
 
 # *******************************************************************************
