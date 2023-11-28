@@ -229,18 +229,19 @@ async function openExtraEdit(extra: ExtraPoints | undefined) {
 }
 
 async function sendExtraPointsData() {
-  var res;
   if (extraEditData.value.id) {
-    res = await ExtrapointsService.edit({
+    const res = await ExtrapointsService.edit({
       id: extraEditData.value.id,
       requestBody: { ...extraEditData.value, team: extraEditData.value.team?.id },
     });
+    const i = extrapoints.value.findIndex(e => e.id === res.id);
+    extrapoints.value[i] = res;
   } else {
-    res = await ExtrapointsService.create({
+    const res = await ExtrapointsService.create({
       requestBody: { ...extraEditData.value as ExtraPoints, team: extraEditData.value.team!.id },
     });
+    extrapoints.value.push(res);
   }
-  extrapoints.value.push(res);
   Modal.getOrCreateInstance("#extraPointsModal").hide();
   chartState.value++;
 }
@@ -261,7 +262,7 @@ async function deleteExtraPoints() {
     <h1>Tournament overview</h1>
     <ResultChart
       :tournament="store.tournament"
-      :state="0"
+      :state="chartState"
       id="overallChart"
     />
     <ul class="nav nav-tabs">
