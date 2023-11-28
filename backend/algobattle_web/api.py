@@ -1,10 +1,10 @@
 "Module specifying the json api actions."
 from datetime import datetime, timedelta
 from email.message import EmailMessage
-from enum import Enum
+from enum import Enum, StrEnum
 from os import environ
 from smtplib import SMTP
-from typing import Annotated, Any, Callable, Literal, Self, TypeVar
+from typing import Annotated, Any, Callable, Literal, Self, Sequence, TypeVar
 from uuid import UUID
 from urllib.parse import quote
 from annotated_types import Interval
@@ -21,6 +21,7 @@ from pydantic import ByteSize, Field, WithJsonSchema, TypeAdapter
 from algobattle.util import Role
 from algobattle_web import schemas
 from algobattle_web.models import (
+    ExtraPoints,
     File as DbFile,
     ProblemPageData,
     ResultParticipant,
@@ -452,6 +453,62 @@ def delete_tournament(*, db: Database, id: ID) -> None:
     tournament = unwrap(Tournament.get(db, id))
     db.delete(tournament)
     db.commit()
+
+
+class ScoreEventType(StrEnum):
+    match = "match"
+    extra = "extra"
+
+
+class ScoreEvent(BaseSchema):
+    type: ScoreEventType
+    time: schemas.LocalDatetime
+    points: dict[ID, float]
+
+
+class MatchEvent(ScoreEvent):
+    type: ScoreEventType = ScoreEventType.match
+    problem: ID
+
+
+class ExtraEvent(ScoreEvent):
+    type: ScoreEventType = ScoreEventType.extra
+
+
+class ScoreData(BaseSchema):
+    events: list[MatchEvent | ExtraEvent]
+    teams: dict[ID, str]
+    problems: dict[ID, schemas.Problem]
+
+
+@router.get("/tournament/{id}/scores/", tags=["tournament"], name="getScores")
+def get_scores(db: Database, login: LoggedIn, id: ID) -> ScoreData:
+    tournament = Tournament.get_unwrap(db, id)
+    tournament.assert_visible(login.team)
+    results = db.scalars(
+        select(MatchResult).where(
+            MatchResult.problem.has(Problem.tournament_id == tournament.id),
+            MatchResult.participants.any(ResultParticipant.points != 0),
+        )
+    ).all()
+    extra_points = db.scalars(
+        select(ExtraPoints).where(ExtraPoints.team.has(Team.tournament_id == tournament.id))
+    ).all()
+
+    parsed_results = [
+        MatchEvent(time=r.time, points={p.team_id: p.points for p in r.participants}, problem=r.problem_id)
+        for r in results
+    ]
+    parsed_extra = [ExtraEvent(time=e.time, points={e.team_id: e.points}) for e in extra_points]
+    teams = db.scalars(select(Team).where(Team.tournament_id == tournament.id)).unique().all()
+    problems = db.scalars(
+        select(Problem).where(Problem.tournament_id == tournament.id, Problem.visible_sql(login.team))
+    ).unique().all()
+    return ScoreData(
+        events=sorted(parsed_results + parsed_extra, key=lambda e: e.time),
+        teams={team.id: team.name for team in teams},
+        problems={p.id: schemas.Problem.model_validate(p) for p in problems},
+    )
 
 
 # *******************************************************************************
@@ -987,7 +1044,7 @@ def update_result(
     problem: InForm[UUID],
     status: InForm[MatchStatus],
     teams: InForm[list[UUID]],
-    generators: InForm[list[UUID | None | Literal["undefined"]]],   # hack to make form parsing work
+    generators: InForm[list[UUID | None | Literal["undefined"]]],  # hack to make form parsing work
     solvers: InForm[list[UUID | None | Literal["undefined"]]],
     points: InForm[list[float]],
     logs: UploadFile | UUID | None = None,
@@ -1018,6 +1075,71 @@ def update_result(
         raise HTTPException(422, "Length of participant field infos was not equal")
     db.commit()
     return res
+
+
+# *******************************************************************************
+# * Extra Points
+# *******************************************************************************
+
+
+@router.get("/extrapoints", tags=["extrapoints"], name="get", response_model=list[schemas.ExtraPoints])
+def get_extra_points(
+    db: Database, login: LoggedIn, tournament: UUID | None = None, tag: str | None = None
+) -> Sequence[ExtraPoints]:
+    filters = [ExtraPoints.visible_sql(login.team)]
+    if tournament is not None:
+        filters.append(ExtraPoints.team.has(Team.tournament_id == tournament))
+    if tag is not None:
+        filters.append(ExtraPoints.tag == tag)
+    return sorted(db.scalars(select(ExtraPoints).where(*filters)).all(), key=lambda p: p.time)
+
+
+@admin.post("/extrapoints", tags=["extrapoints"], name="create")
+def create_extra_points(
+    db: Database,
+    time: InBody[datetime],
+    tag: str32,
+    team: InBody[UUID],
+    points: InBody[float],
+    description: InBody[str] = "",
+) -> ExtraPoints:
+    t = Team.get_unwrap(db, team)
+    new = ExtraPoints(time=time, tag=tag, team=t, points=points, description=description)
+    db.add(new)
+    db.commit()
+    return new
+
+
+@admin.patch("/extrapoints/{id}", tags=["extrapoints"], name="edit")
+def edit_extra_points(
+    db: Database,
+    id: UUID,
+    time: InBody[datetime | None] = None,
+    tag: InBody[str32 | None] = None,
+    team: InBody[UUID | None] = None,
+    points: InBody[float | None] = None,
+    description: InBody[str | None] = None,
+) -> ExtraPoints:
+    obj = ExtraPoints.get_unwrap(db, id)
+    if time is not None:
+        obj.time = time
+    if tag is not None:
+        obj.tag = tag
+    if team is not None:
+        obj.team = Team.get_unwrap(db, team)
+    if points is not None:
+        obj.points = points
+    if description is not None:
+        obj.description = description
+    db.commit()
+    return obj
+
+
+@admin.delete("/extrapoints/{id}", tags=["extrapoints"], name="delete")
+def delete_extra_points(db: Database, id: UUID) -> None:
+    points = ExtraPoints.get_unwrap(db, id)
+    db.delete(points)
+    db.commit()
 
 
 # * has to be executed after all route defns

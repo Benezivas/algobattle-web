@@ -139,3 +139,11 @@ class MatchResult(Base):
     problem: ObjID
     participants: list[ResultParticipant]
     logs: DbFile | None = None
+
+
+class ExtraPoints(Base):
+    time: LocalDatetime
+    tag: str
+    team: Team
+    points: float
+    description: str

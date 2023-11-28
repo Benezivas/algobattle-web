@@ -693,3 +693,30 @@ class MatchResult(Base, PermissionCheck):
     @classmethod
     def _visible_sql(cls, team: Team) -> ColumnElement[bool]:
         return MatchResult.participants.any(ResultParticipant.team_id == team.id)
+
+
+class ExtraPoints(Base, PermissionCheck):
+    __tablename__ = "extrapoints"  # type: ignore
+    Schema = schemas.ExtraPoints
+
+    time: Mapped[datetime]
+    tag: Mapped[str32]
+    team: Mapped[Team] = relationship()
+    points: Mapped[float]
+    description: Mapped[strText] = mapped_column(default="")
+
+    team_id: Mapped[ID] = mapped_column(ForeignKey("teams.id"), init=False)
+
+    def _visible(self, team: Team) -> bool:
+        return team.tournament == self.team.tournament
+
+    @classmethod
+    def _visible_sql(cls, team: Team) -> ColumnElement[bool]:
+        return ExtraPoints.team.has(Team.tournament_id == team.tournament_id)
+    
+    def _editable(self, team: Team) -> bool:
+        return False
+
+    @classmethod
+    def _editable_sql(cls, team: Team) -> ColumnElement[bool]:
+        return sql_false()

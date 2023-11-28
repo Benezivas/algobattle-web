@@ -1,4 +1,4 @@
-"""empty message
+"""Adds the upload limit setting
 
 Revision ID: 1791b4c03b50
 Revises: 6aee42c9b57d
