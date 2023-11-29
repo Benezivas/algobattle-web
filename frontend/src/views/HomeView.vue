@@ -23,7 +23,6 @@ const next_match = ref<ScheduledMatch>();
 const generator = ref<Program>();
 const solver = ref<Program>();
 const report = ref<Report>();
-const results = ref<MatchResultData>();
 onMounted(async () => {
   home_page.value = await SettingsService.home();
   if (!store.team) {
@@ -72,7 +71,6 @@ onMounted(async () => {
       (await ReportService.get({ problem: curr_prob.value.id, team: store.team.id })).reports
     )[0];
   }
-  results.value = await MatchService.getResult({ tournament: store.tournament?.id });
 });
 function until(timestamp: string): string {
   return DateTime.fromISO(timestamp).diff(DateTime.now().startOf("minute"), ["minutes"]).rescale().toHuman();
@@ -141,12 +139,11 @@ function until(timestamp: string): string {
     <div v-else class="alert alert-danger" role="alert">
       You haven't selected a team. You can do so in the <RouterLink to="settings">user settings</RouterLink>.
     </div>
-    <template v-if="results && Object.values(results.results).length !== 0">
+    <template v-if="store.tournament">
       <h1 id="resultsHeading">Tournament results overview</h1>
       <ResultChart
-        :results="Object.values(results.results)"
-        :teams="results.teams"
-        :problems="results.problems"
+        :tournament="store.tournament"
+        :state="0"
         id="overallChart"
       />
     </template>
