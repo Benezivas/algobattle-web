@@ -19,12 +19,13 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
             zipped.extractall(folder)
         config = AlgobattleConfig.from_file(folder / "algobattle.toml")
         config.teams = {}
-        config.project = ProjectConfig(
-            name_images=False,
-            cleanup_images=True,
-            error_detail="low",
-            log_program_io=ProjectConfig.ProgramOutputConfig(when=ProgramLogConfigTime.never),
-        )
+        if "project" not in config.model_fields_set:
+            config.project = ProjectConfig(
+                name_images=False,
+                cleanup_images=True,
+                error_detail="low",
+                log_program_io=ProjectConfig.ProgramOutputConfig(when=ProgramLogConfigTime.never),
+            )
         install_packages(config.problem.dependencies)
 
         participants: dict[str, ResultParticipant] = {}
