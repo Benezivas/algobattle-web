@@ -307,7 +307,7 @@ function makeFreeform() {
           <tr v-for="result in sortedResults" :key="result.id">
             <td>{{ formatDateTime(result.time) }}</td>
             <td>
-              <RouterLink :to="problems[result.problem].link">{{ problems[result.problem].name }}</RouterLink>
+              <RouterLink v-if="problems[result.problem]" :to="problems[result.problem].link">{{ problems[result.problem].name }}</RouterLink>
             </td>
             <td>{{ result.status }}</td>
             <td>
