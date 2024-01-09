@@ -128,7 +128,7 @@ onMounted(async () => {
             <i class="bi bi-person-circle me-2"></i> <strong>{{ displayName }}</strong>
           </a>
           <ul v-if="store.user" class="dropdown-menu" id="loggedInDropdown">
-            <li><RouterLink class="dropdown-item" to="settings">Settings</RouterLink></li>
+            <li><RouterLink class="dropdown-item" :to="{name: 'settings'}">Settings</RouterLink></li>
             <template v-if="store.user.teams.length >= (store.user.is_admin ? 1 : 2)">
               <li><hr class="dropdown-divider" /></li>
               <li class="dropdown-header">View as</li>
