@@ -166,7 +166,7 @@ const options = computed<ChartOptions<"line">>(() => {
       x: {
         type: "linear",
         ticks: {
-          callback: (value, index, ticks) => labels.value[index],
+          callback: (value, index, ticks) => labels.value[value as number],
         },
       },
     },
