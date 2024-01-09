@@ -139,11 +139,11 @@ watch(() => data.value.file, () => data.value.copyFrom = undefined);
             </div>
             <div class="mb-3">
               <label for="start_time" class="form-label">Starting time</label>
-              <input type="datetime-local" class="form-control" id="start_time" v-model="data.start" />
+              <input type="datetime-local" step="60" class="form-control" id="start_time" v-model="data.start" />
             </div>
             <div class="mb-3">
               <label for="end_time" class="form-label">Ending time</label>
-              <input type="datetime-local" class="form-control" id="end_time" v-model="data.end" />
+              <input type="datetime-local" step="60" class="form-control" id="end_time" v-model="data.end" />
             </div>
 
             <div class="d-flex mt-3">
