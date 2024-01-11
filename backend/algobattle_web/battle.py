@@ -76,7 +76,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         db.commit()
 
         try:
-            result = run(Match().run, config)
+            result = run(Match(config=config).run, None)
         except Exception as e:
             db_result.status = MatchStatus.failed
             folder.joinpath("result.json").write_text(ExceptionInfo.from_exception(e).model_dump_json())
@@ -85,7 +85,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
             result.excluded_teams |= {
                 team: ExceptionInfo(type="RuntimeError", message="missing program") for team in excluded_teams
             }
-            points = result.calculate_points(scheduled_match.points)
+            points = result.calculate_points()
 
             for orig_name, team in participants.items():
                 team.points = points.get(orig_name, 0)
