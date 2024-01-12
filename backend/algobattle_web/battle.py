@@ -21,6 +21,7 @@ def run_match(db: Session, scheduled_match: ScheduledMatch):
         config.teams = {}
         if "project" not in config.model_fields_set:
             config.project = ProjectConfig(
+                points=scheduled_match.points,
                 name_images=False,
                 cleanup_images=True,
                 error_detail="low",
