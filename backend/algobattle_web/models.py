@@ -2,8 +2,7 @@
 from abc import abstractmethod
 from datetime import timedelta, datetime
 from secrets import token_bytes
-from typing import IO, Callable, ClassVar, Iterable, Any, TypeAlias
-from typing import Any, BinaryIO, Iterable, Literal, Self, cast, overload, Annotated, Sequence
+from typing import IO, Callable, ClassVar, Iterable, Any, TypeAlias, BinaryIO, Literal, Self, cast, overload, Annotated, Sequence
 from typing_extensions import TypedDict
 from uuid import UUID, uuid4
 from pathlib import Path
@@ -264,9 +263,9 @@ class File(Base):
 
     @property
     def extension(self) -> str | None:
-        l = self.filename.split(".")
-        if l:
-            return l[-1]
+        components = self.filename.split(".")
+        if components:
+            return components[-1]
 
     def remove(self) -> None:
         """Removes the associated file from disk."""
@@ -339,7 +338,7 @@ class ServerSettings(Base, kw_only=True):
 
     @classmethod
     def get(cls, db: Session) -> Self:
-        obj = db.scalar(select(ServerSettings))
+        obj = db.scalar(select(cls))
         if not obj:
             raise RuntimeError
         return obj
@@ -445,7 +444,7 @@ class User(Base):
         try:
             payload = jwt.decode(token, ServerSettings.get(db).secret_key, "HS256")
             if payload["type"] == "login":
-                user = User.get(db, cast(str, payload["email"]))
+                user = cls.get(db, cast(str, payload["email"]))
                 if user is not None:
                     return user
         except (ExpiredSignatureError, JWTError, NameError):

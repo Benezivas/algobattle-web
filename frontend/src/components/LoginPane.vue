@@ -29,7 +29,7 @@ async function login() {
       <label for="email" class="form-label">Email address</label>
       <input type="email" class="form-control" id="email" autocomplete="email" required v-model="email" @keyup.enter="login" />
     </div>
-    <button type="button" class="btn btn-primary" @click="login">Login</button>
+    <button type="button" class="btn btn-primary" @click="login">Send login link</button>
   </div>
 </template>
 

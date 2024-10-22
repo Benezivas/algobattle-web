@@ -138,7 +138,7 @@ async function deleteMatch() {
           <label for="name" class="form-label">Name</label>
           <input id="name" class="form-control" type="text" maxlength="32" v-model="editData.name" />
           <label for="time" class="form-label">Time</label>
-          <input id="time" class="form-control" type="datetime-local" required v-model="editData.time" />
+          <input id="time" class="form-control" type="datetime-local" step="60" required v-model="editData.time" />
           <label for="problem" class="form-label">Problem</label>
           <select id="problem" class="form-select" required v-model="editData.problem">
             <option v-for="(problem, id) in problems" :value="id">{{ problem.name }}</option>

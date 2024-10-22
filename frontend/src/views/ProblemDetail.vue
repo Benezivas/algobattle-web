@@ -388,6 +388,7 @@ async function deleteProblem() {
               <label for="start_time" class="form-label">Starting time</label>
               <input
                 type="datetime-local"
+                step="60"
                 name="start"
                 class="form-control"
                 id="start_time"
@@ -415,6 +416,7 @@ async function deleteProblem() {
               <label for="end_time" class="form-label">Ending time</label>
               <input
                 type="datetime-local"
+                step="60"
                 name="end"
                 class="form-control"
                 id="end_time"

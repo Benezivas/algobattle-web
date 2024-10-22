@@ -137,7 +137,7 @@ function until(timestamp: string): string {
       administrators to do so.
     </div>
     <div v-else class="alert alert-danger" role="alert">
-      You haven't selected a team. You can do so in the <RouterLink to="settings">user settings</RouterLink>.
+      You haven't selected a team. You can do so in the <RouterLink :to="{name: 'settings'}">user settings</RouterLink>.
     </div>
     <template v-if="store.tournament">
       <h1 id="resultsHeading">Tournament results overview</h1>

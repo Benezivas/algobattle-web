@@ -4,8 +4,8 @@ build-backend = "pdm.backend"
 
 [project]
 name = "algobattle_web"
-version = "0.17.0"
-requires-python = ">=3.11"
+version = "0.17.3"
+requires-python = "~=3.11"
 license = {text = "MIT"}
 authors = [{name = "Imogen Hergeth"}, {name = "Henri Lotze"}]
 urls = {github = "https://github.com/Benezivas/algobattle-web"}
@@ -17,22 +17,22 @@ classifiers = [
 ]
 dependencies = [
     "algobattle-base~=4.3.0",
-    "uvicorn~=0.23.2",
-    "fastapi~=0.103.0",
+    "uvicorn~=0.25.0",
+    "fastapi~=0.108.0",
     "python-jose[cryptography]~=3.3.0",
     "python-multipart~=0.0.6",
-    "sqlalchemy~=2.0.23",
+    "sqlalchemy~=2.0.25",
     "pydantic~=2.5.3",
-    "pydantic-extra-types~=2.1.0",
-    "markdown~=3.5",
-    "mysqlclient~=2.2.0",
+    "pydantic-extra-types~=2.4.0",
+    "markdown~=3.5.2",
+    "mysqlclient~=2.2.1",
     "sqlalchemy-utils~=0.41.1",
-    "alembic~=1.12.0",
+    "alembic~=1.13.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "watchfiles",
+    "watchfiles~=0.21.0",
 ]
 
 [project.scripts]

@@ -19,6 +19,7 @@ import { Line } from "vue-chartjs";
 import {
   TournamentService,
   type MatchEvent,
+  type ExtraEvent,
   type MatchResult,
   type Problem,
   type ScoreData,
@@ -44,6 +45,13 @@ ChartJS.register(
   TimeSeriesScale,
   annotationPlugin
 );
+
+type DataObject = {
+  x: number;
+  y: number;
+  points: number;
+  event?: MatchEvent | ExtraEvent;
+};
 
 const props = defineProps<{
   tournament: Tournament;
@@ -102,11 +110,17 @@ const positionedEvents = computed(() => {
 
 function scores(team: string) {
   return positionedEvents.value
-    .filter(e => team in e.points)
-    .map((e) => ({ points: e.points[team] || 0, position: e.position }))
+    .filter((e) => team in e.points)
+    .map((e) => ({ points: e.points[team] || 0, position: e.position, event: e }))
     .reduce(
-      (acc, event) => acc.concat({ x: event.position, y: acc[acc.length - 1].y + event.points }),
-      [{ x: 0, y: 0 }]
+      (acc, event) =>
+        acc.concat({
+          x: event.position,
+          y: acc[acc.length - 1].y + event.points,
+          event: event.event,
+          points: event.points,
+        }),
+      [{ x: 0, y: 0, points: 0 } as DataObject]
     );
 }
 
@@ -115,7 +129,7 @@ const data = computed(() => {
   if (!orig) {
     return { datasets: [] };
   }
-  const data: ChartData<"line", Point[], string> = {
+  const data: ChartData<"line", DataObject[], string> = {
     datasets: Object.entries(orig.teams).map(([id, name]) => ({
       label: name,
       data: scores(id),
@@ -166,7 +180,7 @@ const options = computed<ChartOptions<"line">>(() => {
       x: {
         type: "linear",
         ticks: {
-          callback: (value, index, ticks) => labels.value[index],
+          callback: (value, index, ticks) => labels.value[value as number],
         },
       },
     },
@@ -174,6 +188,21 @@ const options = computed<ChartOptions<"line">>(() => {
       title: {
         display: true,
         text: "Total points",
+      },
+      tooltip: {
+        callbacks: {
+          title: function (tooltipItems) {
+            const event = (tooltipItems[0].raw as DataObject).event;
+            if (!event) {
+              return "Start";
+            }
+            const matchType = event.type === "match" ? "Match" : "Bonus Points";
+            return `${matchType} on ${DateTime.fromISO(event.time).toLocaleString(DateTime.DATE_SHORT)}`;
+          },
+          label: function (tooltipItem) {
+            return `${(tooltipItem.raw as DataObject).points.toString()} points`;
+          },
+        },
       },
       annotation: {
         annotations: Object.fromEntries(
